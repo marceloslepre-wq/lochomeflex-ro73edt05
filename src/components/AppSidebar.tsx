@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Package, Users, FileText, Settings, LogOut } from 'lucide-react'
+import { LayoutDashboard, Package, Users, FileText, Settings, BookOpen, LogOut } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -9,31 +9,45 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
 } from '@/components/ui/sidebar'
+import useMainStore from '@/stores/main'
 
 const navItems = [
   { title: 'Painel', url: '/dashboard', icon: LayoutDashboard },
   { title: 'Estoque', url: '/inventory', icon: Package },
   { title: 'Locações', url: '/rentals', icon: FileText },
   { title: 'Clientes', url: '/customers', icon: Users },
+  { title: 'Guia de Uso', url: '/guide', icon: BookOpen },
   { title: 'Configurações', url: '/settings', icon: Settings },
 ]
 
 export function AppSidebar() {
   const location = useLocation()
+  const { settings } = useMainStore()
 
   return (
-    <Sidebar className="border-r border-border bg-sidebar">
-      <SidebarHeader className="p-4 flex items-center justify-center border-b">
+    <Sidebar className="border-r border-border bg-sidebar print:hidden">
+      <SidebarHeader className="p-4 flex items-center justify-center border-b h-16">
         <div className="flex items-center gap-2 font-bold text-xl text-primary">
-          <Package className="w-6 h-6" />
-          <span>LocaWeb</span>
+          {settings.logoUrl ? (
+            <img src={settings.logoUrl} alt="Logo" className="max-h-8 w-auto object-contain" />
+          ) : (
+            <>
+              <Package className="w-6 h-6" />
+              <span>LocaWeb</span>
+            </>
+          )}
         </div>
       </SidebarHeader>
       <SidebarContent className="px-2 py-4">
         <SidebarMenu>
           {navItems.map((item) => (
             <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton asChild isActive={location.pathname === item.url}>
+              <SidebarMenuButton
+                asChild
+                isActive={
+                  location.pathname === item.url || location.pathname.startsWith(item.url + '/')
+                }
+              >
                 <Link to={item.url} className="flex items-center gap-3">
                   <item.icon className="w-5 h-5" />
                   <span>{item.title}</span>

@@ -7,9 +7,11 @@ import Layout from './components/Layout'
 import Index from './pages/Index'
 import Dashboard from './pages/Dashboard'
 import Inventory from './pages/Inventory'
+import ItemDetail from './pages/ItemDetail'
 import Customers from './pages/Customers'
 import Rentals from './pages/Rentals'
 import Settings from './pages/Settings'
+import Guide from './pages/Guide'
 import NotFound from './pages/NotFound'
 
 const App = () => (
@@ -23,9 +25,11 @@ const App = () => (
           <Route element={<Layout />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/inventory" element={<Inventory />} />
+            <Route path="/inventory/:id" element={<ItemDetail />} />
             <Route path="/customers" element={<Customers />} />
             <Route path="/rentals" element={<Rentals />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/guide" element={<Guide />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

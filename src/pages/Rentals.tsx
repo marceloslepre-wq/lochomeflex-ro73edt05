@@ -12,7 +12,21 @@ import {
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Search, Eye, ArrowDownToLine } from 'lucide-react'
+import { Search, Eye, ArrowDownToLine, Download } from 'lucide-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu'
+import { handleExport } from '@/lib/export'
 import { CreateRentalDialog } from '@/components/rentals/CreateRentalDialog'
 import { ContractPreviewDialog } from '@/components/rentals/ContractPreviewDialog'
 import { ReturnDialog } from '@/components/rentals/ReturnDialog'
@@ -20,6 +34,7 @@ import { ReturnDialog } from '@/components/rentals/ReturnDialog'
 export default function Rentals() {
   const { rentals, customers } = useMainStore()
   const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('Todos')
 
   const [selectedRental, setSelectedRental] = useState<Rental | null>(null)
   const [contractOpen, setContractOpen] = useState(false)
@@ -27,47 +42,101 @@ export default function Rentals() {
 
   const filtered = rentals.filter((r) => {
     const c = customers.find((cust) => cust.id === r.customerId)
-    return (
+    const matchesSearch =
       r.id.toLowerCase().includes(search.toLowerCase()) ||
       (c && c.name.toLowerCase().includes(search.toLowerCase()))
-    )
+    const matchesStatus = statusFilter === 'Todos' || r.status === statusFilter
+    return matchesSearch && matchesStatus
   })
+
+  const exportData = () => {
+    const headers = ['ID', 'Cliente', 'Retirada', 'Previsão', 'Status', 'Total']
+    const data = filtered.map((r) => {
+      const c = customers.find((cust) => cust.id === r.customerId)
+      return [
+        r.id,
+        c?.name || '-',
+        new Date(r.startDate).toLocaleDateString('pt-BR'),
+        new Date(r.expectedReturnDate).toLocaleDateString('pt-BR'),
+        r.status,
+        r.total.toFixed(2),
+      ]
+    })
+    return { headers, data }
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 print:hidden">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Locações</h1>
           <p className="text-muted-foreground mt-1">
             Acompanhe contratos ativos, atrasos e devoluções.
           </p>
         </div>
-        <CreateRentalDialog />
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <Download className="w-4 h-4 mr-2" /> Exportar
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem
+                onClick={() => {
+                  const { headers, data } = exportData()
+                  handleExport('csv', 'locacoes', headers, data)
+                }}
+              >
+                Exportar CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  handleExport('pdf', 'locacoes', [], [])
+                }}
+              >
+                Exportar PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <CreateRentalDialog />
+        </div>
       </div>
 
       <Card>
-        <div className="p-4 border-b flex flex-col sm:flex-row gap-4 bg-muted/20">
-          <div className="relative max-w-md w-full">
+        <div className="p-4 border-b flex flex-wrap items-center gap-4 bg-muted/20 print:hidden">
+          <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar por ID ou Cliente..."
+              placeholder="Buscar por Contrato (LOC-) ou Cliente..."
               className="pl-9 bg-background"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[180px] bg-background">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Todos">Todos os Status</SelectItem>
+              <SelectItem value="Ativo">Ativos</SelectItem>
+              <SelectItem value="Atrasado">Atrasados</SelectItem>
+              <SelectItem value="Devolvido">Devolvidos</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50">
-                <TableHead>ID</TableHead>
+                <TableHead>Contrato</TableHead>
                 <TableHead>Cliente</TableHead>
                 <TableHead>Retirada</TableHead>
                 <TableHead>Previsão</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Total</TableHead>
-                <TableHead className="text-center">Ações</TableHead>
+                <TableHead className="text-center print:hidden">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -81,7 +150,7 @@ export default function Rentals() {
                 filtered.map((rental) => {
                   const customer = customers.find((c) => c.id === rental.customerId)
                   return (
-                    <TableRow key={rental.id} className="group">
+                    <TableRow key={rental.id} className="group hover:bg-muted/30">
                       <TableCell className="font-medium">{rental.id}</TableCell>
                       <TableCell>{customer?.name}</TableCell>
                       <TableCell className="text-muted-foreground">
@@ -106,7 +175,7 @@ export default function Rentals() {
                       <TableCell className="text-right font-medium">
                         R$ {rental.total.toFixed(2)}
                       </TableCell>
-                      <TableCell className="text-center">
+                      <TableCell className="text-center print:hidden">
                         <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Button
                             variant="outline"

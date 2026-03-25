@@ -31,6 +31,7 @@ export const MOCK_INVENTORY = [
     totalQty: 15,
     availableQty: 12,
     rentedQty: 3,
+    conditionStatus: 'Disponível',
     image: 'https://img.usecurling.com/p/200/200?q=drill&color=blue',
   },
   {
@@ -41,6 +42,7 @@ export const MOCK_INVENTORY = [
     totalQty: 50,
     availableQty: 20,
     rentedQty: 30,
+    conditionStatus: 'Disponível',
     image: 'https://img.usecurling.com/p/200/200?q=scaffolding&color=gray',
   },
   {
@@ -51,6 +53,7 @@ export const MOCK_INVENTORY = [
     totalQty: 5,
     availableQty: 1,
     rentedQty: 4,
+    conditionStatus: 'Manutenção',
     image: 'https://img.usecurling.com/p/200/200?q=cement%20mixer&color=yellow',
   },
   {
@@ -61,6 +64,7 @@ export const MOCK_INVENTORY = [
     totalQty: 8,
     availableQty: 8,
     rentedQty: 0,
+    conditionStatus: 'Disponível',
     image: 'https://img.usecurling.com/p/200/200?q=jackhammer&color=red',
   },
 ]
@@ -105,4 +109,41 @@ export const MOCK_RENTALS = [
     status: 'Devolvido',
     total: 3000.0,
   },
+  {
+    id: 'LOC-0004',
+    customerId: '1',
+    items: [{ itemId: '4', qty: 1 }],
+    startDate: lastWeek.toISOString().split('T')[0],
+    expectedReturnDate: today.toISOString().split('T')[0],
+    status: 'Ativo',
+    total: 120.0,
+  },
 ]
+
+export const MOCK_USERS = [
+  {
+    id: '1',
+    name: 'Admin Silva',
+    email: 'admin@loja.com.br',
+    role: 'Administrador',
+    active: true,
+  },
+  {
+    id: '2',
+    name: 'Operador João',
+    email: 'joao@loja.com.br',
+    role: 'Operador',
+    active: true,
+  },
+]
+
+export const MOCK_SETTINGS = {
+  primaryColor: '#1e40af',
+  logoUrl: null as string | null,
+  contractFileName: null as string | null,
+  lateFeeType: 'daily',
+  lateFeeValue: 2,
+  companyName: 'LocaWeb Gestão de Ativos LTDA',
+  companyDocument: '00.000.000/0001-00',
+  companyAddress: 'Av. Central, 1000 - Centro, São Paulo/SP',
+}
