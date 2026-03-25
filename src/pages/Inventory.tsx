@@ -28,10 +28,11 @@ import {
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu'
 import { CreateItemDialog } from '@/components/inventory/CreateItemDialog'
+import { EditItemDialog } from '@/components/inventory/EditItemDialog'
 import { handleExport } from '@/lib/export'
 
 export default function Inventory() {
-  const { inventory } = useMainStore()
+  const { inventory, globalSearch } = useMainStore()
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('Todas')
   const [statusFilter, setStatusFilter] = useState('Todos')
@@ -39,15 +40,19 @@ export default function Inventory() {
   const categories = Array.from(new Set(inventory.map((i) => i.category)))
 
   const filtered = inventory.filter((i) => {
+    const term = search || globalSearch
     const matchesSearch =
-      i.name.toLowerCase().includes(search.toLowerCase()) ||
-      i.code.toLowerCase().includes(search.toLowerCase())
+      i.name.toLowerCase().includes(term.toLowerCase()) ||
+      i.code.toLowerCase().includes(term.toLowerCase())
     const matchesCategory = categoryFilter === 'Todas' || i.category === categoryFilter
 
     let matchesStatus = true
-    if (statusFilter === 'Disponíveis') matchesStatus = i.availableQty > 0
-    else if (statusFilter === 'Esgotados') matchesStatus = i.availableQty === 0
+    if (statusFilter === 'Disponíveis')
+      matchesStatus = i.conditionStatus === 'Disponível' && i.availableQty > 0
+    else if (statusFilter === 'Esgotados')
+      matchesStatus = i.conditionStatus === 'Disponível' && i.availableQty === 0
     else if (statusFilter === 'Em Manutenção') matchesStatus = i.conditionStatus === 'Manutenção'
+    else if (statusFilter === 'Indisponíveis') matchesStatus = i.conditionStatus === 'Indisponível'
 
     return matchesSearch && matchesCategory && matchesStatus
   })
@@ -68,7 +73,7 @@ export default function Inventory() {
       i.category,
       i.totalQty,
       i.rentedQty,
-      i.availableQty,
+      i.conditionStatus === 'Disponível' ? i.availableQty : 0,
       i.conditionStatus || 'Disponível',
     ])
     return { headers, data }
@@ -143,6 +148,7 @@ export default function Inventory() {
               <SelectItem value="Disponíveis">Disponíveis</SelectItem>
               <SelectItem value="Esgotados">Esgotados</SelectItem>
               <SelectItem value="Em Manutenção">Em Manutenção</SelectItem>
+              <SelectItem value="Indisponíveis">Indisponíveis</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -169,7 +175,7 @@ export default function Inventory() {
                 </TableRow>
               ) : (
                 filtered.map((item) => (
-                  <TableRow key={item.id} className="hover:bg-muted/30">
+                  <TableRow key={item.id} className="hover:bg-muted/30 group">
                     <TableCell>
                       <div className="w-12 h-12 rounded-md overflow-hidden bg-muted border">
                         <img
@@ -189,7 +195,7 @@ export default function Inventory() {
                       {item.rentedQty}
                     </TableCell>
                     <TableCell className="text-right font-bold text-emerald-600">
-                      {item.availableQty}
+                      {item.conditionStatus === 'Disponível' ? item.availableQty : 0}
                     </TableCell>
                     <TableCell className="text-center">
                       {item.conditionStatus === 'Manutenção' ? (
@@ -198,6 +204,10 @@ export default function Inventory() {
                           className="bg-amber-100 text-amber-800 hover:bg-amber-200 border-none"
                         >
                           Manutenção
+                        </Badge>
+                      ) : item.conditionStatus === 'Indisponível' ? (
+                        <Badge variant="destructive" className="border-none">
+                          Indisponível
                         </Badge>
                       ) : item.availableQty > 0 ? (
                         <Badge className="bg-emerald-500 hover:bg-emerald-600 border-none">
@@ -208,11 +218,20 @@ export default function Inventory() {
                       )}
                     </TableCell>
                     <TableCell className="text-center print:hidden">
-                      <Button variant="ghost" size="sm" className="h-8" asChild>
-                        <Link to={`/inventory/${item.id}`}>
-                          <ExternalLink className="w-4 h-4 mr-1" /> Ver
-                        </Link>
-                      </Button>
+                      <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          asChild
+                          title="Ver Detalhes"
+                        >
+                          <Link to={`/inventory/${item.id}`}>
+                            <ExternalLink className="w-4 h-4" />
+                          </Link>
+                        </Button>
+                        <EditItemDialog item={item} />
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

@@ -33,13 +33,25 @@ export function CreateRentalDialog() {
   const [dates, setDates] = useState({ start: '', end: '' })
   const [totalStr, setTotalStr] = useState('')
 
-  const availableItems = useMemo(() => inventory.filter((i) => i.availableQty > 0), [inventory])
+  const availableItems = useMemo(
+    () => inventory.filter((i) => i.availableQty > 0 && i.conditionStatus === 'Disponível'),
+    [inventory],
+  )
 
   const handleAddItem = () => {
     if (!selectedItemId) return
     const item = inventory.find((i) => i.id === selectedItemId)
     const numQty = parseInt(qty)
     if (!item || isNaN(numQty) || numQty <= 0) return
+
+    if (item.conditionStatus !== 'Disponível') {
+      toast({
+        title: 'Item Indisponível',
+        description: 'Este item está marcado como indisponível ou em manutenção.',
+        variant: 'destructive',
+      })
+      return
+    }
 
     if (numQty > item.availableQty) {
       toast({

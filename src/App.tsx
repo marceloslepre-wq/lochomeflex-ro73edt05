@@ -10,6 +10,7 @@ import Inventory from './pages/Inventory'
 import ItemDetail from './pages/ItemDetail'
 import Customers from './pages/Customers'
 import Rentals from './pages/Rentals'
+import RentalDetail from './pages/RentalDetail'
 import Settings from './pages/Settings'
 import Guide from './pages/Guide'
 import NotFound from './pages/NotFound'
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/inventory/:id" element={<ItemDetail />} />
             <Route path="/customers" element={<Customers />} />
             <Route path="/rentals" element={<Rentals />} />
+            <Route path="/rentals/:id" element={<RentalDetail />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/guide" element={<Guide />} />
           </Route>

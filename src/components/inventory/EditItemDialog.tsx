@@ -11,21 +11,21 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Plus } from 'lucide-react'
-import useMainStore from '@/stores/main'
+import { Edit } from 'lucide-react'
+import useMainStore, { InventoryItem } from '@/stores/main'
 import { useToast } from '@/hooks/use-toast'
 
-export function CreateItemDialog() {
-  const { addInventoryItem } = useMainStore()
+export function EditItemDialog({ item }: { item: InventoryItem }) {
+  const { updateInventoryItem } = useMainStore()
   const { toast } = useToast()
   const [open, setOpen] = useState(false)
   const [formData, setFormData] = useState({
-    name: '',
-    code: '',
-    category: '',
-    qty: '',
-    description: '',
-    image: '',
+    name: item.name,
+    code: item.code,
+    category: item.category,
+    qty: item.totalQty.toString(),
+    description: item.description || '',
+    image: item.image,
   })
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -33,36 +33,33 @@ export function CreateItemDialog() {
     const qty = parseInt(formData.qty, 10)
     if (!formData.name || !formData.code || isNaN(qty)) return
 
-    addInventoryItem({
-      id: Math.random().toString(),
+    const diff = qty - item.totalQty
+    const newAvailable = Math.max(0, item.availableQty + diff)
+
+    updateInventoryItem(item.id, {
       name: formData.name,
       code: formData.code,
       category: formData.category || 'Geral',
       description: formData.description,
       totalQty: qty,
-      availableQty: qty,
-      rentedQty: 0,
-      conditionStatus: 'Disponível',
-      image:
-        formData.image ||
-        `https://img.usecurling.com/p/200/200?q=${encodeURIComponent(formData.category || 'tool')}`,
+      availableQty: newAvailable,
+      image: formData.image || item.image,
     })
 
-    toast({ title: 'Item Cadastrado', description: `${formData.name} adicionado ao estoque.` })
+    toast({ title: 'Item Atualizado', description: `${formData.name} modificado com sucesso.` })
     setOpen(false)
-    setFormData({ name: '', code: '', category: '', qty: '', description: '', image: '' })
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <Plus className="w-4 h-4 mr-2" /> Novo Modelo
+        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Editar">
+          <Edit className="w-4 h-4 text-primary" />
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Cadastrar Novo Modelo</DialogTitle>
+          <DialogTitle>Editar Item: {item.name}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-4">
           <div className="grid gap-2">
@@ -71,7 +68,6 @@ export function CreateItemDialog() {
               value={formData.name}
               onChange={(e) => setFormData((f) => ({ ...f, name: e.target.value }))}
               required
-              placeholder="Ex: Furadeira Makita"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -81,7 +77,6 @@ export function CreateItemDialog() {
                 value={formData.code}
                 onChange={(e) => setFormData((f) => ({ ...f, code: e.target.value }))}
                 required
-                placeholder="FUR-002"
               />
             </div>
             <div className="grid gap-2">
@@ -89,7 +84,6 @@ export function CreateItemDialog() {
               <Input
                 value={formData.category}
                 onChange={(e) => setFormData((f) => ({ ...f, category: e.target.value }))}
-                placeholder="Ferramentas"
               />
             </div>
           </div>
@@ -108,17 +102,17 @@ export function CreateItemDialog() {
               <Input
                 value={formData.image}
                 onChange={(e) => setFormData((f) => ({ ...f, image: e.target.value }))}
-                placeholder="https://..."
               />
             </div>
             <div className="grid gap-2">
-              <Label>Quantidade Inicial</Label>
+              <Label>Estoque Total</Label>
               <Input
                 type="number"
-                min="1"
+                min={item.rentedQty}
                 value={formData.qty}
                 onChange={(e) => setFormData((f) => ({ ...f, qty: e.target.value }))}
                 required
+                title={`Não pode ser menor que locados (${item.rentedQty})`}
               />
             </div>
           </div>
@@ -126,7 +120,7 @@ export function CreateItemDialog() {
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancelar
             </Button>
-            <Button type="submit">Salvar</Button>
+            <Button type="submit">Salvar Alterações</Button>
           </DialogFooter>
         </form>
       </DialogContent>

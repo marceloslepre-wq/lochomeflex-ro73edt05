@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import useMainStore, { Rental } from '@/stores/main'
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -28,23 +29,22 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { handleExport } from '@/lib/export'
 import { CreateRentalDialog } from '@/components/rentals/CreateRentalDialog'
-import { ContractPreviewDialog } from '@/components/rentals/ContractPreviewDialog'
 import { ReturnDialog } from '@/components/rentals/ReturnDialog'
 
 export default function Rentals() {
-  const { rentals, customers } = useMainStore()
+  const { rentals, customers, globalSearch } = useMainStore()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('Todos')
 
   const [selectedRental, setSelectedRental] = useState<Rental | null>(null)
-  const [contractOpen, setContractOpen] = useState(false)
   const [returnOpen, setReturnOpen] = useState(false)
 
   const filtered = rentals.filter((r) => {
     const c = customers.find((cust) => cust.id === r.customerId)
+    const term = search || globalSearch
     const matchesSearch =
-      r.id.toLowerCase().includes(search.toLowerCase()) ||
-      (c && c.name.toLowerCase().includes(search.toLowerCase()))
+      r.id.toLowerCase().includes(term.toLowerCase()) ||
+      (c && c.name.toLowerCase().includes(term.toLowerCase()))
     const matchesStatus = statusFilter === 'Todos' || r.status === statusFilter
     return matchesSearch && matchesStatus
   })
@@ -181,13 +181,12 @@ export default function Rentals() {
                             variant="outline"
                             size="icon"
                             className="h-8 w-8"
-                            onClick={() => {
-                              setSelectedRental(rental)
-                              setContractOpen(true)
-                            }}
+                            asChild
                             title="Ver Contrato"
                           >
-                            <Eye className="h-4 w-4 text-primary" />
+                            <Link to={`/rentals/${rental.id}`}>
+                              <Eye className="h-4 w-4 text-primary" />
+                            </Link>
                           </Button>
                           {rental.status !== 'Devolvido' && (
                             <Button
@@ -214,11 +213,6 @@ export default function Rentals() {
         </CardContent>
       </Card>
 
-      <ContractPreviewDialog
-        rental={selectedRental}
-        open={contractOpen}
-        onOpenChange={setContractOpen}
-      />
       <ReturnDialog rental={selectedRental} open={returnOpen} onOpenChange={setReturnOpen} />
     </div>
   )

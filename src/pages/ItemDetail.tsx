@@ -64,6 +64,14 @@ export default function ItemDetail() {
                 <p className="text-sm font-medium text-muted-foreground mb-1">Categoria</p>
                 <p className="font-medium">{item.category}</p>
               </div>
+
+              {item.description && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Descrição</p>
+                  <p className="text-sm leading-relaxed">{item.description}</p>
+                </div>
+              )}
+
               <div className="grid grid-cols-3 gap-2 text-center border-t border-b py-4">
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Total</p>
@@ -75,7 +83,9 @@ export default function ItemDetail() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Livres</p>
-                  <p className="font-bold text-emerald-600 text-lg">{item.availableQty}</p>
+                  <p className="font-bold text-emerald-600 text-lg">
+                    {item.conditionStatus === 'Disponível' ? item.availableQty : 0}
+                  </p>
                 </div>
               </div>
               <div>
@@ -92,11 +102,11 @@ export default function ItemDetail() {
                   <SelectContent>
                     <SelectItem value="Disponível">Disponível para Locação</SelectItem>
                     <SelectItem value="Manutenção">Em Manutenção / Defeito</SelectItem>
+                    <SelectItem value="Indisponível">Indisponível para locação</SelectItem>
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Altere para manutenção se os itens apresentarem defeito, impedindo novas locações
-                  até o reparo.
+                  Altere o status para impedir novas locações deste modelo.
                 </p>
               </div>
             </div>

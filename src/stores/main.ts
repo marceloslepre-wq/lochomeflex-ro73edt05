@@ -1,13 +1,18 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react'
 import { MOCK_CUSTOMERS, MOCK_INVENTORY, MOCK_RENTALS, MOCK_USERS, MOCK_SETTINGS } from './mockData'
 
-export type InventoryItem = (typeof MOCK_INVENTORY)[0]
+export type InventoryItem = Omit<(typeof MOCK_INVENTORY)[0], 'conditionStatus'> & {
+  description?: string
+  conditionStatus: 'Disponível' | 'Manutenção' | 'Indisponível'
+}
 export type Customer = (typeof MOCK_CUSTOMERS)[0]
-export type Rental = (typeof MOCK_RENTALS)[0]
+export type Rental = (typeof MOCK_RENTALS)[0] & { customContractText?: string }
 export type User = (typeof MOCK_USERS)[0]
 export type Settings = typeof MOCK_SETTINGS
 
 interface MainStore {
+  globalSearch: string
+  setGlobalSearch: (search: string) => void
   inventory: InventoryItem[]
   customers: Customer[]
   rentals: Rental[]
@@ -15,6 +20,7 @@ interface MainStore {
   settings: Settings
   addRental: (rental: Rental) => void
   returnRental: (rentalId: string, actualReturnDate: string) => void
+  updateRental: (id: string, data: Partial<Rental>) => void
   addInventoryItem: (item: InventoryItem) => void
   updateInventoryItem: (id: string, data: Partial<InventoryItem>) => void
   updateSettings: (data: Partial<Settings>) => void
@@ -25,7 +31,8 @@ interface MainStore {
 const StoreContext = createContext<MainStore | null>(null)
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [inventory, setInventory] = useState<InventoryItem[]>(MOCK_INVENTORY)
+  const [globalSearch, setGlobalSearch] = useState('')
+  const [inventory, setInventory] = useState<InventoryItem[]>(MOCK_INVENTORY as InventoryItem[])
   const [customers, setCustomers] = useState<Customer[]>(MOCK_CUSTOMERS)
   const [rentals, setRentals] = useState<Rental[]>(MOCK_RENTALS)
   const [users, setUsers] = useState<User[]>(MOCK_USERS)
@@ -72,6 +79,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     )
   }
 
+  const updateRental = (id: string, data: Partial<Rental>) => {
+    setRentals((prev) => prev.map((r) => (r.id === id ? { ...r, ...data } : r)))
+  }
+
   const addInventoryItem = (item: InventoryItem) => {
     setInventory((prev) => [item, ...prev])
   }
@@ -96,6 +107,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     StoreContext.Provider,
     {
       value: {
+        globalSearch,
+        setGlobalSearch,
         inventory,
         customers,
         rentals,
@@ -103,6 +116,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         settings,
         addRental,
         returnRental,
+        updateRental,
         addInventoryItem,
         updateInventoryItem,
         updateSettings,

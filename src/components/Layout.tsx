@@ -12,7 +12,7 @@ import { hexToHSL } from '@/lib/utils'
 export default function Layout() {
   const location = useLocation()
   const isLoginPage = location.pathname === '/'
-  const { rentals, settings, users } = useMainStore()
+  const { rentals, settings, users, globalSearch, setGlobalSearch } = useMainStore()
 
   useEffect(() => {
     if (settings.primaryColor) {
@@ -43,12 +43,14 @@ export default function Layout() {
           <header className="h-16 border-b bg-card flex items-center justify-between px-4 sticky top-0 z-10 shadow-sm print:hidden">
             <div className="flex items-center gap-4 flex-1">
               <SidebarTrigger />
-              <div className="relative max-w-md hidden sm:block">
+              <div className="relative max-w-md hidden sm:block w-full">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="search"
-                  placeholder="Buscar locações, clientes..."
+                  placeholder="Buscar locações, itens ou clientes..."
                   className="pl-9 bg-muted/50 border-none w-full"
+                  value={globalSearch}
+                  onChange={(e) => setGlobalSearch(e.target.value)}
                 />
               </div>
             </div>
