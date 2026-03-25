@@ -35,12 +35,12 @@ export function CreateRentalDialog() {
   const [dates, setDates] = useState({ start: '', end: '' })
   const [totalStr, setTotalStr] = useState('')
 
-  if (!can('rentals:manage')) return null
-
   const availableItems = useMemo(
     () => inventory.filter((i) => i.availableQty > 0 && i.conditionStatus === 'Disponível'),
     [inventory],
   )
+
+  if (!can('rentals:manage')) return null
 
   const handleAddItem = () => {
     if (!selectedItemId) return
