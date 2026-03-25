@@ -13,7 +13,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Search, Download, ExternalLink } from 'lucide-react'
+import { Search, Download, ExternalLink, Trash2 } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -27,12 +27,27 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { CreateItemDialog } from '@/components/inventory/CreateItemDialog'
 import { EditItemDialog } from '@/components/inventory/EditItemDialog'
 import { handleExport } from '@/lib/export'
+import { usePermissions } from '@/hooks/use-permissions'
+import { useToast } from '@/hooks/use-toast'
 
 export default function Inventory() {
-  const { inventory, globalSearch } = useMainStore()
+  const { inventory, globalSearch, deleteInventoryItem } = useMainStore()
+  const { can } = usePermissions()
+  const { toast } = useToast()
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('Todas')
   const [statusFilter, setStatusFilter] = useState('Todos')
@@ -79,6 +94,11 @@ export default function Inventory() {
     return { headers, data }
   }
 
+  const handleDelete = (id: string) => {
+    deleteInventoryItem(id)
+    toast({ title: 'Excluído', description: 'O item foi removido permanentemente.' })
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 print:hidden">
@@ -102,11 +122,7 @@ export default function Inventory() {
               >
                 Exportar CSV
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  handleExport('pdf', 'estoque', [], [])
-                }}
-              >
+              <DropdownMenuItem onClick={() => handleExport('pdf', 'estoque', [], [])}>
                 Exportar PDF
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -231,6 +247,37 @@ export default function Inventory() {
                           </Link>
                         </Button>
                         <EditItemDialog item={item} />
+                        {can('items:delete') && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tem certeza que deseja excluir este registro? Esta ação não pode
+                                  ser desfeita.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDelete(item.id)}
+                                  className="bg-destructive text-destructive-foreground"
+                                >
+                                  Excluir
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

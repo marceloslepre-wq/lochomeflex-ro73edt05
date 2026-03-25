@@ -20,10 +20,12 @@ import {
 import { Plus, Trash2 } from 'lucide-react'
 import useMainStore from '@/stores/main'
 import { useToast } from '@/hooks/use-toast'
+import { usePermissions } from '@/hooks/use-permissions'
 
 export function CreateRentalDialog() {
   const { customers, inventory, addRental } = useMainStore()
   const { toast } = useToast()
+  const { can } = usePermissions()
   const [open, setOpen] = useState(false)
 
   const [customerId, setCustomerId] = useState('')
@@ -32,6 +34,8 @@ export function CreateRentalDialog() {
   const [items, setItems] = useState<{ itemId: string; qty: number }[]>([])
   const [dates, setDates] = useState({ start: '', end: '' })
   const [totalStr, setTotalStr] = useState('')
+
+  if (!can('rentals:manage')) return null
 
   const availableItems = useMemo(
     () => inventory.filter((i) => i.availableQty > 0 && i.conditionStatus === 'Disponível'),

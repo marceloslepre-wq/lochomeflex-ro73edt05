@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react'
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react'
 import { MOCK_CUSTOMERS, MOCK_INVENTORY, MOCK_RENTALS, MOCK_USERS, MOCK_SETTINGS } from './mockData'
+import { PermissionKey } from '@/hooks/use-permissions'
 
 export type InventoryItem = Omit<(typeof MOCK_INVENTORY)[0], 'conditionStatus'> & {
   description?: string
@@ -7,10 +8,12 @@ export type InventoryItem = Omit<(typeof MOCK_INVENTORY)[0], 'conditionStatus'> 
 }
 export type Customer = (typeof MOCK_CUSTOMERS)[0]
 export type Rental = (typeof MOCK_RENTALS)[0] & { customContractText?: string }
-export type User = (typeof MOCK_USERS)[0]
+export type User = Omit<(typeof MOCK_USERS)[0], 'permissions'> & { permissions: PermissionKey[] }
 export type Settings = typeof MOCK_SETTINGS
 
 interface MainStore {
+  currentUser: User | null
+  setCurrentUser: (user: User | null) => void
   globalSearch: string
   setGlobalSearch: (search: string) => void
   inventory: InventoryItem[]
@@ -23,20 +26,37 @@ interface MainStore {
   updateRental: (id: string, data: Partial<Rental>) => void
   addInventoryItem: (item: InventoryItem) => void
   updateInventoryItem: (id: string, data: Partial<InventoryItem>) => void
+  deleteInventoryItem: (id: string) => void
+  addCustomer: (customer: Customer) => void
+  updateCustomer: (id: string, data: Partial<Customer>) => void
+  deleteCustomer: (id: string) => void
   updateSettings: (data: Partial<Settings>) => void
   addUser: (user: User) => void
   updateUser: (id: string, data: Partial<User>) => void
+  deleteUser: (id: string) => void
 }
 
 const StoreContext = createContext<MainStore | null>(null)
 
 export function StoreProvider({ children }: { children: ReactNode }) {
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    const saved = localStorage.getItem('currentUser')
+    return saved ? JSON.parse(saved) : null
+  })
   const [globalSearch, setGlobalSearch] = useState('')
   const [inventory, setInventory] = useState<InventoryItem[]>(MOCK_INVENTORY as InventoryItem[])
   const [customers, setCustomers] = useState<Customer[]>(MOCK_CUSTOMERS)
   const [rentals, setRentals] = useState<Rental[]>(MOCK_RENTALS)
-  const [users, setUsers] = useState<User[]>(MOCK_USERS)
+  const [users, setUsers] = useState<User[]>(MOCK_USERS as User[])
   const [settings, setSettings] = useState<Settings>(MOCK_SETTINGS)
+
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem('currentUser', JSON.stringify(currentUser))
+    } else {
+      localStorage.removeItem('currentUser')
+    }
+  }, [currentUser])
 
   const addRental = (rental: Rental) => {
     setRentals((prev) => [rental, ...prev])
@@ -83,30 +103,30 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setRentals((prev) => prev.map((r) => (r.id === id ? { ...r, ...data } : r)))
   }
 
-  const addInventoryItem = (item: InventoryItem) => {
-    setInventory((prev) => [item, ...prev])
-  }
-
-  const updateInventoryItem = (id: string, data: Partial<InventoryItem>) => {
+  const addInventoryItem = (item: InventoryItem) => setInventory((prev) => [item, ...prev])
+  const updateInventoryItem = (id: string, data: Partial<InventoryItem>) =>
     setInventory((prev) => prev.map((i) => (i.id === id ? { ...i, ...data } : i)))
-  }
+  const deleteInventoryItem = (id: string) =>
+    setInventory((prev) => prev.filter((i) => i.id !== id))
 
-  const updateSettings = (data: Partial<Settings>) => {
-    setSettings((prev) => ({ ...prev, ...data }))
-  }
+  const addCustomer = (c: Customer) => setCustomers((prev) => [c, ...prev])
+  const updateCustomer = (id: string, data: Partial<Customer>) =>
+    setCustomers((prev) => prev.map((c) => (c.id === id ? { ...c, ...data } : c)))
+  const deleteCustomer = (id: string) => setCustomers((prev) => prev.filter((c) => c.id !== id))
 
-  const addUser = (user: User) => {
-    setUsers((prev) => [...prev, user])
-  }
+  const updateSettings = (data: Partial<Settings>) => setSettings((prev) => ({ ...prev, ...data }))
 
-  const updateUser = (id: string, data: Partial<User>) => {
+  const addUser = (user: User) => setUsers((prev) => [...prev, user])
+  const updateUser = (id: string, data: Partial<User>) =>
     setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...data } : u)))
-  }
+  const deleteUser = (id: string) => setUsers((prev) => prev.filter((u) => u.id !== id))
 
   return React.createElement(
     StoreContext.Provider,
     {
       value: {
+        currentUser,
+        setCurrentUser,
         globalSearch,
         setGlobalSearch,
         inventory,
@@ -119,9 +139,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         updateRental,
         addInventoryItem,
         updateInventoryItem,
+        deleteInventoryItem,
+        addCustomer,
+        updateCustomer,
+        deleteCustomer,
         updateSettings,
         addUser,
         updateUser,
+        deleteUser,
       },
     },
     children,

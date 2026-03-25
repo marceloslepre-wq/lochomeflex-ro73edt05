@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { LayoutDashboard, Package, Users, FileText, Settings, BookOpen, LogOut } from 'lucide-react'
 import {
   Sidebar,
@@ -10,19 +10,32 @@ import {
   SidebarMenuButton,
 } from '@/components/ui/sidebar'
 import useMainStore from '@/stores/main'
-
-const navItems = [
-  { title: 'Painel', url: '/dashboard', icon: LayoutDashboard },
-  { title: 'Estoque', url: '/inventory', icon: Package },
-  { title: 'Locações', url: '/rentals', icon: FileText },
-  { title: 'Clientes', url: '/customers', icon: Users },
-  { title: 'Guia de Uso', url: '/guide', icon: BookOpen },
-  { title: 'Configurações', url: '/settings', icon: Settings },
-]
+import { usePermissions } from '@/hooks/use-permissions'
 
 export function AppSidebar() {
   const location = useLocation()
-  const { settings } = useMainStore()
+  const navigate = useNavigate()
+  const { settings, setCurrentUser } = useMainStore()
+  const { can } = usePermissions()
+
+  const navItems = [
+    { title: 'Painel', url: '/dashboard', icon: LayoutDashboard, show: true },
+    { title: 'Estoque', url: '/inventory', icon: Package, show: true },
+    { title: 'Locações', url: '/rentals', icon: FileText, show: true },
+    { title: 'Clientes', url: '/customers', icon: Users, show: true },
+    { title: 'Guia de Uso', url: '/guide', icon: BookOpen, show: true },
+    {
+      title: 'Configurações',
+      url: '/settings',
+      icon: Settings,
+      show: can('users:manage') || can('reports:view'),
+    },
+  ].filter((i) => i.show)
+
+  const handleLogout = () => {
+    setCurrentUser(null)
+    navigate('/')
+  }
 
   return (
     <Sidebar className="border-r border-border bg-sidebar print:hidden">
@@ -63,12 +76,13 @@ export function AppSidebar() {
             <SidebarMenuButton
               asChild
               variant="ghost"
-              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              className="text-destructive hover:text-destructive hover:bg-destructive/10 cursor-pointer"
+              onClick={handleLogout}
             >
-              <Link to="/">
+              <div>
                 <LogOut className="w-5 h-5" />
                 <span>Sair</span>
-              </Link>
+              </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

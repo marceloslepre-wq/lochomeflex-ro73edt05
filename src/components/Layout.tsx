@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Outlet, useLocation } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { AppSidebar } from './AppSidebar'
 import { Bell, Search, UserCircle } from 'lucide-react'
@@ -11,8 +11,15 @@ import { hexToHSL } from '@/lib/utils'
 
 export default function Layout() {
   const location = useLocation()
+  const navigate = useNavigate()
   const isLoginPage = location.pathname === '/'
-  const { rentals, settings, users, globalSearch, setGlobalSearch } = useMainStore()
+  const { rentals, settings, currentUser, globalSearch, setGlobalSearch } = useMainStore()
+
+  useEffect(() => {
+    if (!isLoginPage && !currentUser) {
+      navigate('/')
+    }
+  }, [currentUser, isLoginPage, navigate])
 
   useEffect(() => {
     if (settings.primaryColor) {
@@ -24,7 +31,7 @@ export default function Layout() {
     }
   }, [settings.primaryColor])
 
-  if (isLoginPage) {
+  if (isLoginPage || !currentUser) {
     return <Outlet />
   }
 
@@ -33,13 +40,11 @@ export default function Layout() {
   const dueToday = rentals.filter((r) => r.status === 'Ativo' && r.expectedReturnDate === today)
   const notifsCount = overdue.length + dueToday.length
 
-  const loggedUser = users.find((u) => u.active) || users[0]
-
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background overflow-hidden">
         <AppSidebar />
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 h-screen">
           <header className="h-16 border-b bg-card flex items-center justify-between px-4 sticky top-0 z-10 shadow-sm print:hidden">
             <div className="flex items-center gap-4 flex-1">
               <SidebarTrigger />
@@ -48,7 +53,7 @@ export default function Layout() {
                 <Input
                   type="search"
                   placeholder="Buscar locações, itens ou clientes..."
-                  className="pl-9 bg-muted/50 border-none w-full"
+                  className="pl-9 bg-muted/50 border-none w-full focus-visible:ring-1"
                   value={globalSearch}
                   onChange={(e) => setGlobalSearch(e.target.value)}
                 />
@@ -111,17 +116,13 @@ export default function Layout() {
               <div className="flex items-center gap-2 border-l pl-4">
                 <UserCircle className="w-8 h-8 text-primary" />
                 <div className="hidden md:flex flex-col text-sm">
-                  <span className="font-semibold leading-none">
-                    {loggedUser?.name || 'Usuário'}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {loggedUser?.role || 'Admin'}
-                  </span>
+                  <span className="font-semibold leading-none">{currentUser.name}</span>
+                  <span className="text-xs text-muted-foreground">{currentUser.role}</span>
                 </div>
               </div>
             </div>
           </header>
-          <main className="flex-1 p-6 overflow-y-auto animate-fade-in-up pb-20">
+          <main className="flex-1 p-6 overflow-y-auto animate-fade-in-up pb-20 print:p-0 print:overflow-visible print:h-auto">
             <Outlet />
           </main>
         </div>

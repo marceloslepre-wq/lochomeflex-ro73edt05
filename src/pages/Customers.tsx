@@ -10,16 +10,38 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
+import { Search, User, Trash2 } from 'lucide-react'
+import { CustomerFormDialog } from '@/components/customers/CustomerFormDialog'
 import { Button } from '@/components/ui/button'
-import { Search, Plus, User } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import { usePermissions } from '@/hooks/use-permissions'
+import { useToast } from '@/hooks/use-toast'
 
 export default function Customers() {
-  const { customers } = useMainStore()
+  const { customers, globalSearch, deleteCustomer } = useMainStore()
+  const { can } = usePermissions()
+  const { toast } = useToast()
   const [search, setSearch] = useState('')
 
+  const term = search || globalSearch
   const filtered = customers.filter(
-    (c) => c.name.toLowerCase().includes(search.toLowerCase()) || c.document.includes(search),
+    (c) => c.name.toLowerCase().includes(term.toLowerCase()) || c.document.includes(term),
   )
+
+  const handleDelete = (id: string) => {
+    deleteCustomer(id)
+    toast({ title: 'Cliente Excluído', description: 'O registro foi removido.' })
+  }
 
   return (
     <div className="space-y-6">
@@ -28,9 +50,7 @@ export default function Customers() {
           <h1 className="text-3xl font-bold tracking-tight">Clientes</h1>
           <p className="text-muted-foreground mt-1">Gerencie a base de clientes e empresas.</p>
         </div>
-        <Button>
-          <Plus className="w-4 h-4 mr-2" /> Novo Cliente
-        </Button>
+        {can('customers:write') && <CustomerFormDialog />}
       </div>
 
       <Card>
@@ -53,18 +73,19 @@ export default function Customers() {
                 <TableHead>Documento</TableHead>
                 <TableHead>Contato</TableHead>
                 <TableHead>Email</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                     Nenhum cliente encontrado.
                   </TableCell>
                 </TableRow>
               ) : (
                 filtered.map((customer) => (
-                  <TableRow key={customer.id}>
+                  <TableRow key={customer.id} className="group">
                     <TableCell className="font-medium flex items-center gap-2">
                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
                         <User className="w-4 h-4" />
@@ -74,6 +95,42 @@ export default function Customers() {
                     <TableCell>{customer.document}</TableCell>
                     <TableCell>{customer.phone}</TableCell>
                     <TableCell className="text-muted-foreground">{customer.email}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {can('customers:write') && <CustomerFormDialog customer={customer} />}
+                        {can('customers:delete') && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tem certeza que deseja excluir este registro? Esta ação não pode
+                                  ser desfeita.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDelete(customer.id)}
+                                  className="bg-destructive text-destructive-foreground"
+                                >
+                                  Excluir
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))
               )}

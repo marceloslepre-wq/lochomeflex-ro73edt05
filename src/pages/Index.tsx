@@ -6,12 +6,14 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Package } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import useMainStore from '@/stores/main'
 
 export default function Index() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const navigate = useNavigate()
   const { toast } = useToast()
+  const { users, setCurrentUser } = useMainStore()
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
@@ -19,8 +21,20 @@ export default function Index() {
       toast({ title: 'Erro', description: 'Preencha todos os campos.', variant: 'destructive' })
       return
     }
-    toast({ title: 'Sucesso', description: 'Login realizado com sucesso!' })
-    navigate('/dashboard')
+
+    const user = users.find((u) => u.email.toLowerCase() === email.toLowerCase() && u.active)
+
+    if (user) {
+      setCurrentUser(user)
+      toast({ title: 'Sucesso', description: `Bem-vindo, ${user.name}!` })
+      navigate('/dashboard')
+    } else {
+      toast({
+        title: 'Acesso Negado',
+        description: 'Credenciais inválidas ou usuário inativo.',
+        variant: 'destructive',
+      })
+    }
   }
 
   return (
@@ -64,8 +78,15 @@ export default function Index() {
               Entrar no Sistema
             </Button>
           </form>
-          <div className="mt-6 text-center text-sm text-muted-foreground">
-            Acesso demonstração. Use qualquer dado.
+          <div className="mt-6 text-center text-sm text-muted-foreground space-y-1">
+            <p>Acesso demonstração:</p>
+            <p>
+              Admin: <strong>admin@loja.com.br</strong>
+            </p>
+            <p>
+              Operador: <strong>joao@loja.com.br</strong>
+            </p>
+            <p className="text-xs pt-2">Qualquer senha é aceita.</p>
           </div>
         </CardContent>
       </Card>

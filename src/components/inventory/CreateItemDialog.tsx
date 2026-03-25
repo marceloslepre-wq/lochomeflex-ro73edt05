@@ -14,10 +14,12 @@ import { Textarea } from '@/components/ui/textarea'
 import { Plus } from 'lucide-react'
 import useMainStore from '@/stores/main'
 import { useToast } from '@/hooks/use-toast'
+import { usePermissions } from '@/hooks/use-permissions'
 
 export function CreateItemDialog() {
   const { addInventoryItem } = useMainStore()
   const { toast } = useToast()
+  const { can } = usePermissions()
   const [open, setOpen] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
@@ -27,6 +29,19 @@ export function CreateItemDialog() {
     description: '',
     image: '',
   })
+
+  if (!can('items:write')) return null
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setFormData((f) => ({ ...f, image: reader.result as string }))
+      }
+      reader.readAsDataURL(file)
+    }
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -104,11 +119,11 @@ export function CreateItemDialog() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label>URL da Imagem</Label>
+              <Label>Upload de Imagem</Label>
               <Input
-                value={formData.image}
-                onChange={(e) => setFormData((f) => ({ ...f, image: e.target.value }))}
-                placeholder="https://..."
+                type="file"
+                accept="image/jpeg, image/png, image/webp"
+                onChange={handleImageUpload}
               />
             </div>
             <div className="grid gap-2">
@@ -122,6 +137,15 @@ export function CreateItemDialog() {
               />
             </div>
           </div>
+          {formData.image && formData.image.startsWith('data:') && (
+            <div className="flex justify-center mt-2">
+              <img
+                src={formData.image}
+                alt="Preview"
+                className="h-24 w-24 object-cover rounded shadow-sm border"
+              />
+            </div>
+          )}
           <DialogFooter className="pt-4">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancelar

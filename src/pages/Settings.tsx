@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import useMainStore from '@/stores/main'
+import useMainStore, { User } from '@/stores/main'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -28,16 +28,46 @@ import {
   DialogTrigger,
   DialogFooter,
 } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import { useToast } from '@/hooks/use-toast'
-import { CheckCircle, FileText, Plus, Upload } from 'lucide-react'
+import { CheckCircle, FileText, Plus, Trash2, Upload, Edit } from 'lucide-react'
+import { PermissionKey } from '@/hooks/use-permissions'
+
+const PERMISSIONS_LIST: { id: PermissionKey; label: string }[] = [
+  { id: 'items:write', label: 'Cadastrar/Editar Itens' },
+  { id: 'items:delete', label: 'Excluir Itens' },
+  { id: 'customers:write', label: 'Cadastrar/Editar Clientes' },
+  { id: 'customers:delete', label: 'Excluir Clientes' },
+  { id: 'rentals:manage', label: 'Gerenciar Locações' },
+  { id: 'users:manage', label: 'Gerenciar Usuários' },
+  { id: 'reports:view', label: 'Visualizar Relatórios' },
+]
 
 export default function Settings() {
-  const { settings, users, updateSettings, addUser, updateUser } = useMainStore()
+  const { settings, users, updateSettings, addUser, updateUser, deleteUser } = useMainStore()
   const { toast } = useToast()
 
-  const [newUserOpen, setNewUserOpen] = useState(false)
-  const [newUser, setNewUser] = useState({ name: '', email: '', role: 'Operador', password: '' })
+  const [userDialogOpen, setUserDialogOpen] = useState(false)
+  const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [userForm, setUserForm] = useState({
+    name: '',
+    email: '',
+    role: 'Operador',
+    password: '',
+    permissions: [] as PermissionKey[],
+  })
 
   const handleContractUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -45,7 +75,7 @@ export default function Settings() {
       updateSettings({ contractFileName: file.name })
       toast({
         title: 'Template de Contrato Salvo',
-        description: `O arquivo ${file.name} será usado como padrão.`,
+        description: `O arquivo ${file.name} será usado como base.`,
       })
     }
   }
@@ -59,18 +89,57 @@ export default function Settings() {
     }
   }
 
-  const handleCreateUser = (e: React.FormEvent) => {
+  const handleOpenUserForm = (u?: User) => {
+    if (u) {
+      setEditingUser(u)
+      setUserForm({
+        name: u.name,
+        email: u.email,
+        role: u.role,
+        password: '',
+        permissions: u.permissions || [],
+      })
+    } else {
+      setEditingUser(null)
+      setUserForm({ name: '', email: '', role: 'Operador', password: '', permissions: [] })
+    }
+    setUserDialogOpen(true)
+  }
+
+  const handleSaveUser = (e: React.FormEvent) => {
     e.preventDefault()
-    addUser({
-      id: Math.random().toString(),
-      name: newUser.name,
-      email: newUser.email,
-      role: newUser.role,
-      active: true,
-    })
-    toast({ title: 'Usuário Criado', description: `${newUser.name} agora tem acesso ao sistema.` })
-    setNewUserOpen(false)
-    setNewUser({ name: '', email: '', role: 'Operador', password: '' })
+    if (editingUser) {
+      updateUser(editingUser.id, {
+        name: userForm.name,
+        email: userForm.email,
+        role: userForm.role,
+        permissions: userForm.role === 'Administrador' ? [] : userForm.permissions,
+      })
+      toast({ title: 'Usuário Atualizado', description: 'Dados salvos.' })
+    } else {
+      addUser({
+        id: Math.random().toString(),
+        name: userForm.name,
+        email: userForm.email,
+        role: userForm.role,
+        active: true,
+        permissions: userForm.role === 'Administrador' ? [] : userForm.permissions,
+      })
+      toast({
+        title: 'Usuário Criado',
+        description: `${userForm.name} agora tem acesso ao sistema.`,
+      })
+    }
+    setUserDialogOpen(false)
+  }
+
+  const handlePermToggle = (perm: PermissionKey, checked: boolean) => {
+    setUserForm((prev) => ({
+      ...prev,
+      permissions: checked
+        ? [...prev.permissions, perm]
+        : prev.permissions.filter((p) => p !== perm),
+    }))
   }
 
   return (
@@ -98,7 +167,6 @@ export default function Settings() {
           </TabsTrigger>
         </TabsList>
 
-        {/* Tab Geral */}
         <TabsContent value="geral" className="space-y-6">
           <Card>
             <CardHeader>
@@ -111,7 +179,10 @@ export default function Settings() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Tipo de Multa</Label>
-                  <Select defaultValue={settings.lateFeeType}>
+                  <Select
+                    defaultValue={settings.lateFeeType}
+                    onValueChange={(v) => updateSettings({ lateFeeType: v as 'daily' | 'fixed' })}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -123,7 +194,11 @@ export default function Settings() {
                 </div>
                 <div className="space-y-2">
                   <Label>Valor / Percentual</Label>
-                  <Input type="number" defaultValue={settings.lateFeeValue} />
+                  <Input
+                    type="number"
+                    defaultValue={settings.lateFeeValue}
+                    onChange={(e) => updateSettings({ lateFeeValue: Number(e.target.value) })}
+                  />
                 </div>
               </div>
               <Button
@@ -147,15 +222,24 @@ export default function Settings() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Razão Social</Label>
-                  <Input defaultValue={settings.companyName} />
+                  <Input
+                    defaultValue={settings.companyName}
+                    onChange={(e) => updateSettings({ companyName: e.target.value })}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>CNPJ</Label>
-                  <Input defaultValue={settings.companyDocument} />
+                  <Input
+                    defaultValue={settings.companyDocument}
+                    onChange={(e) => updateSettings({ companyDocument: e.target.value })}
+                  />
                 </div>
                 <div className="space-y-2 md:col-span-2">
                   <Label>Endereço Completo</Label>
-                  <Input defaultValue={settings.companyAddress} />
+                  <Input
+                    defaultValue={settings.companyAddress}
+                    onChange={(e) => updateSettings({ companyAddress: e.target.value })}
+                  />
                 </div>
               </div>
               <Button
@@ -169,14 +253,12 @@ export default function Settings() {
           </Card>
         </TabsContent>
 
-        {/* Tab Contrato */}
         <TabsContent value="contrato" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Template de Contrato Personalizado</CardTitle>
               <CardDescription>
-                Faça upload de um arquivo (PDF ou DOCX) para substituir o contrato padrão do
-                sistema.
+                Faça upload de um arquivo para ser referenciado nos novos contratos gerados.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -189,7 +271,7 @@ export default function Settings() {
                   >
                     Clique para selecionar um arquivo
                   </Label>
-                  <p className="text-sm text-muted-foreground mt-1">Suporta .pdf, .docx até 10MB</p>
+                  <p className="text-sm text-muted-foreground mt-1">Suporta .pdf, .docx</p>
                   <Input
                     id="contract-upload"
                     type="file"
@@ -206,8 +288,8 @@ export default function Settings() {
                   <div>
                     <p className="font-semibold">Template Ativo</p>
                     <p className="text-sm">
-                      O arquivo <strong>{settings.contractFileName}</strong> está sendo usado nas
-                      novas locações.
+                      O arquivo <strong>{settings.contractFileName}</strong> está sendo referenciado
+                      nas novas locações.
                     </p>
                   </div>
                   <Button
@@ -224,32 +306,33 @@ export default function Settings() {
           </Card>
         </TabsContent>
 
-        {/* Tab Equipe */}
         <TabsContent value="equipe" className="space-y-6">
           <div className="flex justify-between items-center">
             <div>
               <h3 className="text-xl font-semibold">Gerenciamento de Equipe</h3>
               <p className="text-sm text-muted-foreground">
-                Cadastre operadores e administradores que acessarão a loja.
+                Cadastre operadores e gerencie permissões.
               </p>
             </div>
-            <Dialog open={newUserOpen} onOpenChange={setNewUserOpen}>
+            <Dialog open={userDialogOpen} onOpenChange={setUserDialogOpen}>
               <DialogTrigger asChild>
-                <Button>
+                <Button onClick={() => handleOpenUserForm()}>
                   <Plus className="w-4 h-4 mr-2" /> Novo Usuário
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-md">
                 <DialogHeader>
-                  <DialogTitle>Cadastrar Novo Usuário</DialogTitle>
+                  <DialogTitle>
+                    {editingUser ? 'Editar Usuário' : 'Cadastrar Novo Usuário'}
+                  </DialogTitle>
                 </DialogHeader>
-                <form onSubmit={handleCreateUser} className="space-y-4 pt-4">
+                <form onSubmit={handleSaveUser} className="space-y-4 pt-4">
                   <div className="space-y-2">
                     <Label>Nome Completo</Label>
                     <Input
                       required
-                      value={newUser.name}
-                      onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                      value={userForm.name}
+                      onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
                     />
                   </div>
                   <div className="space-y-2">
@@ -257,41 +340,66 @@ export default function Settings() {
                     <Input
                       type="email"
                       required
-                      value={newUser.email}
-                      onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                      value={userForm.email}
+                      onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Senha</Label>
+                      <Label>{editingUser ? 'Nova Senha (opcional)' : 'Senha'}</Label>
                       <Input
                         type="password"
-                        required
-                        value={newUser.password}
-                        onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                        required={!editingUser}
+                        value={userForm.password}
+                        onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
                       />
                     </div>
                     <div className="space-y-2">
                       <Label>Papel</Label>
                       <Select
-                        value={newUser.role}
-                        onValueChange={(v) => setNewUser({ ...newUser, role: v })}
+                        value={userForm.role}
+                        onValueChange={(v) => setUserForm({ ...userForm, role: v })}
                       >
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Operador">Operador (Acesso Restrito)</SelectItem>
-                          <SelectItem value="Administrador">Administrador (Total)</SelectItem>
+                          <SelectItem value="Operador">Operador</SelectItem>
+                          <SelectItem value="Administrador">Administrador</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
+
+                  {userForm.role !== 'Administrador' && (
+                    <div className="pt-2 border-t mt-4">
+                      <Label className="text-base mb-3 block">Permissões de Acesso</Label>
+                      <div className="grid grid-cols-1 gap-3">
+                        {PERMISSIONS_LIST.map((p) => (
+                          <div key={p.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={p.id}
+                              checked={userForm.permissions.includes(p.id)}
+                              onCheckedChange={(c) => handlePermToggle(p.id, !!c)}
+                            />
+                            <Label htmlFor={p.id} className="font-normal cursor-pointer">
+                              {p.label}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <DialogFooter className="pt-4">
-                    <Button type="button" variant="outline" onClick={() => setNewUserOpen(false)}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setUserDialogOpen(false)}
+                    >
                       Cancelar
                     </Button>
-                    <Button type="submit">Salvar Usuário</Button>
+                    <Button type="submit">Salvar</Button>
                   </DialogFooter>
                 </form>
               </DialogContent>
@@ -310,7 +418,7 @@ export default function Settings() {
               </TableHeader>
               <TableBody>
                 {users.map((u) => (
-                  <TableRow key={u.id}>
+                  <TableRow key={u.id} className="group">
                     <TableCell className="font-medium">{u.name}</TableCell>
                     <TableCell>{u.email}</TableCell>
                     <TableCell>{u.role}</TableCell>
@@ -323,13 +431,55 @@ export default function Settings() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => updateUser(u.id, { active: !u.active })}
-                      >
-                        {u.active ? 'Desativar Acesso' : 'Ativar Acesso'}
-                      </Button>
+                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => updateUser(u.id, { active: !u.active })}
+                        >
+                          {u.active ? 'Desativar' : 'Ativar'}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleOpenUserForm(u)}
+                          className="h-8 w-8"
+                        >
+                          <Edit className="w-4 h-4 text-primary" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Excluir Usuário</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Tem certeza que deseja excluir este registro? Esta ação não pode ser
+                                desfeita.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => {
+                                  deleteUser(u.id)
+                                  toast({ title: 'Excluído' })
+                                }}
+                                className="bg-destructive text-white"
+                              >
+                                Excluir
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -338,7 +488,6 @@ export default function Settings() {
           </Card>
         </TabsContent>
 
-        {/* Tab Aparência */}
         <TabsContent value="aparencia" className="space-y-6">
           <Card>
             <CardHeader>
@@ -374,7 +523,7 @@ export default function Settings() {
                 <div className="space-y-4">
                   <Label className="text-base">Logotipo da Empresa</Label>
                   <p className="text-sm text-muted-foreground">
-                    Adicione a marca que aparecerá no menu principal.
+                    Adicione a marca que aparecerá no menu principal e contratos.
                   </p>
                   <div className="flex items-center gap-4">
                     {settings.logoUrl ? (

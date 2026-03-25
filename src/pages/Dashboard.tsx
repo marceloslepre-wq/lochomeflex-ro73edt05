@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Link } from 'react-router-dom'
 
 export default function Dashboard() {
-  const { inventory, rentals, customers } = useMainStore()
+  const { inventory, rentals, customers, globalSearch } = useMainStore()
 
   const stats = useMemo(() => {
     const totalItems = inventory.reduce((acc, curr) => acc + curr.totalQty, 0)
@@ -20,6 +20,21 @@ export default function Dashboard() {
 
     return { totalItems, activeRentals, dueToday, overdueRentals }
   }, [inventory, rentals])
+
+  const filteredRentals = useMemo(() => {
+    const sorted = [...rentals].reverse()
+    if (!globalSearch) return sorted.slice(0, 5)
+
+    return sorted
+      .filter((r) => {
+        const c = customers.find((cust) => cust.id === r.customerId)
+        return (
+          r.id.toLowerCase().includes(globalSearch.toLowerCase()) ||
+          c?.name.toLowerCase().includes(globalSearch.toLowerCase())
+        )
+      })
+      .slice(0, 5)
+  }, [rentals, customers, globalSearch])
 
   return (
     <div className="space-y-6">
@@ -76,44 +91,52 @@ export default function Dashboard() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="lg:col-span-4 shadow-sm">
           <CardHeader>
-            <CardTitle>Últimas Movimentações</CardTitle>
+            <CardTitle>{globalSearch ? 'Resultados da Busca' : 'Últimas Movimentações'}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {rentals.slice(0, 5).map((rental) => {
-                const customer = customers.find((c) => c.id === rental.customerId)
-                return (
-                  <div
-                    key={rental.id}
-                    className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0"
-                  >
-                    <div>
-                      <p className="text-sm font-medium leading-none">
-                        {customer?.name || 'Cliente Desconhecido'}
-                      </p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {rental.id} • {rental.items.length} itens
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Badge
-                        variant={
-                          rental.status === 'Ativo'
-                            ? 'default'
-                            : rental.status === 'Atrasado'
-                              ? 'destructive'
-                              : 'secondary'
-                        }
-                      >
-                        {rental.status}
-                      </Badge>
-                      <div className="text-sm font-medium text-right w-20">
-                        R$ {rental.total.toFixed(2)}
+              {filteredRentals.length === 0 ? (
+                <div className="text-sm text-muted-foreground py-4 text-center">
+                  Nenhuma locação encontrada.
+                </div>
+              ) : (
+                filteredRentals.map((rental) => {
+                  const customer = customers.find((c) => c.id === rental.customerId)
+                  return (
+                    <div
+                      key={rental.id}
+                      className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0"
+                    >
+                      <div>
+                        <Link to={`/rentals/${rental.id}`} className="hover:underline">
+                          <p className="text-sm font-medium leading-none text-primary">
+                            {customer?.name || 'Cliente Desconhecido'}
+                          </p>
+                        </Link>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {rental.id} • {rental.items.length} itens
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Badge
+                          variant={
+                            rental.status === 'Ativo'
+                              ? 'default'
+                              : rental.status === 'Atrasado'
+                                ? 'destructive'
+                                : 'secondary'
+                          }
+                        >
+                          {rental.status}
+                        </Badge>
+                        <div className="text-sm font-medium text-right w-20">
+                          R$ {rental.total.toFixed(2)}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )
-              })}
+                  )
+                })
+              )}
             </div>
           </CardContent>
         </Card>

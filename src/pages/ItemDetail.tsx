@@ -18,14 +18,27 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { ArrowLeft, Clock } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import { ArrowLeft, Clock, Trash2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { usePermissions } from '@/hooks/use-permissions'
 
 export default function ItemDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { inventory, rentals, customers, updateInventoryItem } = useMainStore()
+  const { inventory, rentals, customers, updateInventoryItem, deleteInventoryItem } = useMainStore()
   const { toast } = useToast()
+  const { can } = usePermissions()
 
   const item = inventory.find((i) => i.id === id)
   if (!item) return <div className="p-6">Item não encontrado no sistema.</div>
@@ -37,16 +50,55 @@ export default function ItemDetail() {
     toast({ title: 'Status Atualizado', description: `O status do item mudou para ${val}.` })
   }
 
+  const handleDelete = () => {
+    deleteInventoryItem(item.id)
+    toast({ title: 'Excluído', description: 'Item removido permanentemente.' })
+    navigate('/inventory')
+  }
+
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{item.name}</h1>
-          <p className="text-muted-foreground mt-1">Referência: {item.code}</p>
+      <div className="flex items-center gap-4 justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">{item.name}</h1>
+            <p className="text-muted-foreground mt-1">Referência: {item.code}</p>
+          </div>
         </div>
+
+        {can('items:delete') && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="destructive"
+                variant="outline"
+                className="border-destructive text-destructive hover:bg-destructive hover:text-white"
+              >
+                <Trash2 className="w-4 h-4 mr-2" /> Excluir
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tem certeza que deseja excluir este registro? Esta ação não pode ser desfeita.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDelete}
+                  className="bg-destructive text-destructive-foreground"
+                >
+                  Excluir
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
@@ -95,6 +147,7 @@ export default function ItemDetail() {
                 <Select
                   value={item.conditionStatus || 'Disponível'}
                   onValueChange={handleStatusChange}
+                  disabled={!can('items:write')}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -105,9 +158,11 @@ export default function ItemDetail() {
                     <SelectItem value="Indisponível">Indisponível para locação</SelectItem>
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Altere o status para impedir novas locações deste modelo.
-                </p>
+                {can('items:write') && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Altere o status para impedir novas locações deste modelo.
+                  </p>
+                )}
               </div>
             </div>
           </CardContent>

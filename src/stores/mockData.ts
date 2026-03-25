@@ -131,6 +131,7 @@ export const MOCK_USERS = [
     email: 'admin@loja.com.br',
     role: 'Administrador',
     active: true,
+    permissions: [],
   },
   {
     id: '2',
@@ -138,6 +139,7 @@ export const MOCK_USERS = [
     email: 'joao@loja.com.br',
     role: 'Operador',
     active: true,
+    permissions: ['items:write', 'customers:write', 'rentals:manage'] as any[],
   },
 ]
 
