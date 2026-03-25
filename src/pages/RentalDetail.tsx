@@ -3,7 +3,7 @@ import useMainStore from '@/stores/main'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Save, Edit2, FileText, Printer } from 'lucide-react'
+import { ArrowLeft, Save, Edit2, Printer } from 'lucide-react'
 import { useState, useMemo } from 'react'
 import { useToast } from '@/hooks/use-toast'
 import { usePermissions } from '@/hooks/use-permissions'
@@ -48,6 +48,50 @@ export default function RentalDetail() {
   const [contractText, setContractText] = useState(
     rental?.customContractText || defaultContractText,
   )
+
+  const generateContractHtml = () => {
+    if (!rental) return null
+    if (rental.customContractHtml) return rental.customContractHtml
+    if (settings.contractTemplateHtml) {
+      let html = settings.contractTemplateHtml
+      html = html.replace(/{{rentalId}}/g, rental.id)
+      html = html.replace(/{{companyName}}/g, settings.companyName)
+      html = html.replace(/{{companyDocument}}/g, settings.companyDocument)
+      html = html.replace(/{{companyAddress}}/g, settings.companyAddress)
+      html = html.replace(/{{customerName}}/g, customer?.name || '')
+      html = html.replace(/{{customerDocument}}/g, customer?.document || '')
+      html = html.replace(/{{customerPhone}}/g, customer?.phone || '')
+      html = html.replace(/{{customerEmail}}/g, customer?.email || '')
+      html = html.replace(/{{startDate}}/g, new Date(rental.startDate).toLocaleDateString('pt-BR'))
+      html = html.replace(
+        /{{expectedReturnDate}}/g,
+        new Date(rental.expectedReturnDate).toLocaleDateString('pt-BR'),
+      )
+      html = html.replace(/{{totalValue}}/g, rental.total.toFixed(2))
+      html = html.replace(
+        /{{lateFeeInfo}}/g,
+        settings.lateFeeType === 'daily'
+          ? settings.lateFeeValue + '% ao dia'
+          : 'R$ ' + settings.lateFeeValue + ' ao dia',
+      )
+
+      const itemsHtml = rental.items
+        .map((ri) => {
+          const item = inventory.find((i) => i.id === ri.itemId)
+          return `<tr>
+          <td style="border: 1px solid #000; padding: 8px; text-align: center;">${ri.qty}</td>
+          <td style="border: 1px solid #000; padding: 8px;">${item?.name || 'Item Removido'}</td>
+          <td style="border: 1px solid #000; padding: 8px;">${item?.code || '-'}</td>
+        </tr>`
+        })
+        .join('')
+      html = html.replace(/{{itemsList}}/g, itemsHtml)
+      return html
+    }
+    return null
+  }
+
+  const finalHtml = useMemo(generateContractHtml, [rental, settings, customer, inventory])
 
   if (!rental) return <div className="p-6">Locação não encontrada no sistema.</div>
 
@@ -110,6 +154,13 @@ export default function RentalDetail() {
 
       {isEditing ? (
         <div className="print:hidden">
+          {finalHtml && (
+            <div className="mb-4 p-4 bg-amber-50 text-amber-800 rounded-md text-sm">
+              <strong>Aviso:</strong> Este contrato está usando um template de alta fidelidade
+              configurado nas configurações. A edição de texto simples abaixo pode não refletir na
+              impressão se o template estiver ativo.
+            </div>
+          )}
           <Textarea
             className="min-h-[500px] font-mono text-sm leading-relaxed whitespace-pre-wrap resize-y"
             value={contractText}
@@ -117,33 +168,48 @@ export default function RentalDetail() {
           />
         </div>
       ) : (
-        <div className="print-contract-container w-full max-w-[210mm] mx-auto bg-white sm:p-12 p-6 sm:shadow-lg sm:border rounded-sm text-black relative">
-          <div className="text-center border-b pb-6 mb-6">
-            {settings.logoUrl && (
-              <img src={settings.logoUrl} className="h-16 mx-auto mb-4 object-contain" alt="Logo" />
-            )}
-            <h1 className="text-2xl font-bold uppercase tracking-widest">Contrato de Locação</h1>
-            <p className="text-sm text-gray-500 mt-1">Contrato nº {rental.id}</p>
-          </div>
-
-          <div className="font-serif text-[15px] leading-loose whitespace-pre-wrap">
-            {rental.customContractText || defaultContractText}
-          </div>
-
-          <div className="mt-24 grid grid-cols-2 gap-12 text-center pt-8">
-            <div>
-              <div className="border-t border-black w-4/5 mx-auto pt-2">
-                <p className="font-bold text-sm">{settings.companyName}</p>
-                <p className="text-xs text-gray-600">LOCADORA</p>
+        <div
+          className="print-contract-container w-full max-w-[210mm] mx-auto bg-white sm:shadow-lg sm:border rounded-sm text-black relative"
+          style={{ padding: finalHtml ? '0' : '48px' }}
+        >
+          {finalHtml ? (
+            <div dangerouslySetInnerHTML={{ __html: finalHtml }} />
+          ) : (
+            <>
+              <div className="text-center border-b pb-6 mb-6">
+                {settings.logoUrl && (
+                  <img
+                    src={settings.logoUrl}
+                    className="h-16 mx-auto mb-4 object-contain"
+                    alt="Logo"
+                  />
+                )}
+                <h1 className="text-2xl font-bold uppercase tracking-widest">
+                  Contrato de Locação
+                </h1>
+                <p className="text-sm text-gray-500 mt-1">Contrato nº {rental.id}</p>
               </div>
-            </div>
-            <div>
-              <div className="border-t border-black w-4/5 mx-auto pt-2">
-                <p className="font-bold text-sm">{customer?.name}</p>
-                <p className="text-xs text-gray-600">LOCATÁRIO</p>
+
+              <div className="font-serif text-[15px] leading-loose whitespace-pre-wrap">
+                {rental.customContractText || defaultContractText}
               </div>
-            </div>
-          </div>
+
+              <div className="mt-24 grid grid-cols-2 gap-12 text-center pt-8">
+                <div>
+                  <div className="border-t border-black w-4/5 mx-auto pt-2">
+                    <p className="font-bold text-sm">{settings.companyName}</p>
+                    <p className="text-xs text-gray-600">LOCADORA</p>
+                  </div>
+                </div>
+                <div>
+                  <div className="border-t border-black w-4/5 mx-auto pt-2">
+                    <p className="font-bold text-sm">{customer?.name}</p>
+                    <p className="text-xs text-gray-600">LOCATÁRIO</p>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>

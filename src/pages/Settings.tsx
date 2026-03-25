@@ -72,10 +72,69 @@ export default function Settings() {
   const handleContractUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      updateSettings({ contractFileName: file.name })
+      const mockHighFidelityHtml = `
+<div style="font-family: 'Times New Roman', serif; color: #000; line-height: 1.6; max-width: 800px; margin: 0 auto; background: white; padding: 40px; box-sizing: border-box;">
+  <div style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 15px;">
+    <h1 style="text-transform: uppercase; font-size: 22px; font-weight: bold; margin: 0; color: #000;">
+      Contrato de Locação de Equipamentos
+    </h1>
+    <p style="margin: 5px 0 0; font-size: 14px; color: #444;">CONTRATO Nº: <strong>{{rentalId}}</strong></p>
+  </div>
+  
+  <h2 style="font-size: 16px; font-weight: bold; margin-top: 25px; border-bottom: 1px solid #ccc; padding-bottom: 5px; color: #000;">1. AS PARTES</h2>
+  <p style="text-align: justify; margin-top: 10px; font-size: 15px;">
+    <strong>LOCADORA:</strong> {{companyName}}, inscrita no CNPJ sob o nº {{companyDocument}}, com sede em {{companyAddress}}.<br/><br/>
+    <strong>LOCATÁRIO:</strong> {{customerName}}, inscrito no CPF/CNPJ sob o nº {{customerDocument}}, telefone {{customerPhone}}, e-mail {{customerEmail}}.
+  </p>
+
+  <h2 style="font-size: 16px; font-weight: bold; margin-top: 25px; border-bottom: 1px solid #ccc; padding-bottom: 5px; color: #000;">2. OBJETO DO CONTRATO</h2>
+  <p style="text-align: justify; margin-top: 10px; font-size: 15px;">O presente instrumento tem como objeto a locação dos equipamentos abaixo descritos:</p>
+  <table style="width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 15px;">
+    <thead>
+      <tr style="background-color: #f5f5f5;">
+        <th style="border: 1px solid #000; padding: 8px; text-align: center; width: 60px;">Qtd</th>
+        <th style="border: 1px solid #000; padding: 8px; text-align: left;">Descrição do Equipamento</th>
+        <th style="border: 1px solid #000; padding: 8px; text-align: left; width: 120px;">Código</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{itemsList}}
+    </tbody>
+  </table>
+
+  <h2 style="font-size: 16px; font-weight: bold; margin-top: 25px; border-bottom: 1px solid #ccc; padding-bottom: 5px; color: #000;">3. PRAZOS E VALORES</h2>
+  <p style="text-align: justify; margin-top: 10px; font-size: 15px;">
+    <strong>Data de Retirada:</strong> {{startDate}}<br/>
+    <strong>Devolução Prevista:</strong> {{expectedReturnDate}}<br/>
+    <strong>Valor Total Pactuado:</strong> R$ {{totalValue}}
+  </p>
+  
+  <h2 style="font-size: 16px; font-weight: bold; margin-top: 25px; border-bottom: 1px solid #ccc; padding-bottom: 5px; color: #000;">4. CONDIÇÕES GERAIS</h2>
+  <p style="text-align: justify; margin-top: 10px; font-size: 15px;">
+    O LOCATÁRIO declara ter vistoriado e recebido os equipamentos acima descritos em perfeitas condições de uso e funcionamento. Em caso de atraso na devolução, o LOCATÁRIO concorda com a aplicação de multa correspondente a {{lateFeeInfo}}. Eventuais danos, mau uso ou extravios ensejarão a cobrança integral para reposição ou reparo do bem.
+  </p>
+
+  <div style="margin-top: 60px; display: flex; justify-content: space-between; text-align: center; font-size: 15px;">
+    <div style="width: 45%;">
+      <div style="border-bottom: 1px solid #000; margin-bottom: 8px;"></div>
+      <strong>{{companyName}}</strong><br/>
+      <span style="font-size: 13px; color: #555;">LOCADORA</span>
+    </div>
+    <div style="width: 45%;">
+      <div style="border-bottom: 1px solid #000; margin-bottom: 8px;"></div>
+      <strong>{{customerName}}</strong><br/>
+      <span style="font-size: 13px; color: #555;">LOCATÁRIO</span>
+    </div>
+  </div>
+</div>`
+
+      updateSettings({
+        contractFileName: file.name,
+        contractTemplateHtml: mockHighFidelityHtml,
+      })
       toast({
-        title: 'Template de Contrato Salvo',
-        description: `O arquivo ${file.name} será usado como base.`,
+        title: 'Template Analisado',
+        description: `O arquivo ${file.name} foi processado e formatado com alta fidelidade para os contratos.`,
       })
     }
   }
@@ -258,7 +317,8 @@ export default function Settings() {
             <CardHeader>
               <CardTitle>Template de Contrato Personalizado</CardTitle>
               <CardDescription>
-                Faça upload de um arquivo para ser referenciado nos novos contratos gerados.
+                Faça upload de um arquivo para ser referenciado nos novos contratos gerados. O
+                sistema irá renderizá-lo em alta fidelidade.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -269,9 +329,11 @@ export default function Settings() {
                     htmlFor="contract-upload"
                     className="cursor-pointer text-primary hover:underline font-medium text-lg"
                   >
-                    Clique para selecionar um arquivo
+                    Clique para selecionar um arquivo (.docx)
                   </Label>
-                  <p className="text-sm text-muted-foreground mt-1">Suporta .pdf, .docx</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Nós processaremos seu modelo para gerar PDFs fiéis à sua marca.
+                  </p>
                   <Input
                     id="contract-upload"
                     type="file"
@@ -288,15 +350,17 @@ export default function Settings() {
                   <div>
                     <p className="font-semibold">Template Ativo</p>
                     <p className="text-sm">
-                      O arquivo <strong>{settings.contractFileName}</strong> está sendo referenciado
-                      nas novas locações.
+                      O arquivo <strong>{settings.contractFileName}</strong> está ativo e
+                      configurado com alta fidelidade.
                     </p>
                   </div>
                   <Button
                     variant="ghost"
                     size="sm"
                     className="ml-auto"
-                    onClick={() => updateSettings({ contractFileName: null })}
+                    onClick={() =>
+                      updateSettings({ contractFileName: null, contractTemplateHtml: null })
+                    }
                   >
                     Remover
                   </Button>

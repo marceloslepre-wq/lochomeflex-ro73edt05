@@ -11,6 +11,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Edit } from 'lucide-react'
 import useMainStore, { InventoryItem } from '@/stores/main'
 import { useToast } from '@/hooks/use-toast'
@@ -28,6 +35,7 @@ export function EditItemDialog({ item }: { item: InventoryItem }) {
     qty: item.totalQty.toString(),
     description: item.description || '',
     image: item.image,
+    conditionStatus: item.conditionStatus,
   })
 
   if (!can('items:write')) return null
@@ -59,6 +67,7 @@ export function EditItemDialog({ item }: { item: InventoryItem }) {
       totalQty: qty,
       availableQty: newAvailable,
       image: formData.image || item.image,
+      conditionStatus: formData.conditionStatus,
     })
 
     toast({ title: 'Item Atualizado', description: `${formData.name} modificado com sucesso.` })
@@ -112,14 +121,6 @@ export function EditItemDialog({ item }: { item: InventoryItem }) {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label>Alterar Imagem</Label>
-              <Input
-                type="file"
-                accept="image/jpeg, image/png, image/webp"
-                onChange={handleImageUpload}
-              />
-            </div>
-            <div className="grid gap-2">
               <Label>Estoque Total</Label>
               <Input
                 type="number"
@@ -130,6 +131,31 @@ export function EditItemDialog({ item }: { item: InventoryItem }) {
                 title={`Não pode ser menor que locados (${item.rentedQty})`}
               />
             </div>
+            <div className="grid gap-2">
+              <Label>Status</Label>
+              <Select
+                value={formData.conditionStatus}
+                onValueChange={(v) => setFormData((f) => ({ ...f, conditionStatus: v as any }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Disponível">Disponível</SelectItem>
+                  <SelectItem value="Manutenção">Em Manutenção</SelectItem>
+                  <SelectItem value="Indisponível">Indisponível</SelectItem>
+                  <SelectItem value="Esgotado">Esgotado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid gap-2">
+            <Label>Alterar Imagem</Label>
+            <Input
+              type="file"
+              accept="image/jpeg, image/png, image/webp"
+              onChange={handleImageUpload}
+            />
           </div>
           {formData.image && (
             <div className="flex justify-center mt-2">

@@ -11,8 +11,15 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Plus } from 'lucide-react'
-import useMainStore from '@/stores/main'
+import useMainStore, { InventoryItem } from '@/stores/main'
 import { useToast } from '@/hooks/use-toast'
 import { usePermissions } from '@/hooks/use-permissions'
 
@@ -28,6 +35,7 @@ export function CreateItemDialog() {
     qty: '',
     description: '',
     image: '',
+    conditionStatus: 'Disponível' as InventoryItem['conditionStatus'],
   })
 
   if (!can('items:write')) return null
@@ -57,7 +65,7 @@ export function CreateItemDialog() {
       totalQty: qty,
       availableQty: qty,
       rentedQty: 0,
-      conditionStatus: 'Disponível',
+      conditionStatus: formData.conditionStatus,
       image:
         formData.image ||
         `https://img.usecurling.com/p/200/200?q=${encodeURIComponent(formData.category || 'tool')}`,
@@ -65,7 +73,15 @@ export function CreateItemDialog() {
 
     toast({ title: 'Item Cadastrado', description: `${formData.name} adicionado ao estoque.` })
     setOpen(false)
-    setFormData({ name: '', code: '', category: '', qty: '', description: '', image: '' })
+    setFormData({
+      name: '',
+      code: '',
+      category: '',
+      qty: '',
+      description: '',
+      image: '',
+      conditionStatus: 'Disponível',
+    })
   }
 
   return (
@@ -119,14 +135,6 @@ export function CreateItemDialog() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="grid gap-2">
-              <Label>Upload de Imagem</Label>
-              <Input
-                type="file"
-                accept="image/jpeg, image/png, image/webp"
-                onChange={handleImageUpload}
-              />
-            </div>
-            <div className="grid gap-2">
               <Label>Quantidade Inicial</Label>
               <Input
                 type="number"
@@ -136,6 +144,31 @@ export function CreateItemDialog() {
                 required
               />
             </div>
+            <div className="grid gap-2">
+              <Label>Status</Label>
+              <Select
+                value={formData.conditionStatus}
+                onValueChange={(v) => setFormData((f) => ({ ...f, conditionStatus: v as any }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Disponível">Disponível</SelectItem>
+                  <SelectItem value="Manutenção">Em Manutenção</SelectItem>
+                  <SelectItem value="Indisponível">Indisponível</SelectItem>
+                  <SelectItem value="Esgotado">Esgotado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid gap-2">
+            <Label>Upload de Imagem</Label>
+            <Input
+              type="file"
+              accept="image/jpeg, image/png, image/webp"
+              onChange={handleImageUpload}
+            />
           </div>
           {formData.image && formData.image.startsWith('data:') && (
             <div className="flex justify-center mt-2">

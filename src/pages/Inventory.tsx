@@ -45,7 +45,7 @@ import { usePermissions } from '@/hooks/use-permissions'
 import { useToast } from '@/hooks/use-toast'
 
 export default function Inventory() {
-  const { inventory, globalSearch, deleteInventoryItem } = useMainStore()
+  const { inventory, globalSearch, deleteInventoryItem, settings } = useMainStore()
   const { can } = usePermissions()
   const { toast } = useToast()
   const [search, setSearch] = useState('')
@@ -65,7 +65,9 @@ export default function Inventory() {
     if (statusFilter === 'Disponíveis')
       matchesStatus = i.conditionStatus === 'Disponível' && i.availableQty > 0
     else if (statusFilter === 'Esgotados')
-      matchesStatus = i.conditionStatus === 'Disponível' && i.availableQty === 0
+      matchesStatus =
+        i.conditionStatus === 'Esgotado' ||
+        (i.conditionStatus === 'Disponível' && i.availableQty === 0)
     else if (statusFilter === 'Em Manutenção') matchesStatus = i.conditionStatus === 'Manutenção'
     else if (statusFilter === 'Indisponíveis') matchesStatus = i.conditionStatus === 'Indisponível'
 
@@ -122,7 +124,27 @@ export default function Inventory() {
               >
                 Exportar CSV
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('pdf', 'estoque', [], [])}>
+              <DropdownMenuItem
+                onClick={() => {
+                  const { headers, data } = exportData()
+                  handleExport('excel', 'estoque', headers, data)
+                }}
+              >
+                Exportar Excel (.xlsx)
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  const { headers, data } = exportData()
+                  handleExport(
+                    'pdf',
+                    'estoque',
+                    headers,
+                    data,
+                    settings.companyName,
+                    settings.logoUrl,
+                  )
+                }}
+              >
                 Exportar PDF
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -225,12 +247,18 @@ export default function Inventory() {
                         <Badge variant="destructive" className="border-none">
                           Indisponível
                         </Badge>
+                      ) : item.conditionStatus === 'Esgotado' ? (
+                        <Badge className="bg-slate-700 hover:bg-slate-800 text-white border-none">
+                          Esgotado
+                        </Badge>
                       ) : item.availableQty > 0 ? (
                         <Badge className="bg-emerald-500 hover:bg-emerald-600 border-none">
                           Disponível
                         </Badge>
                       ) : (
-                        <Badge variant="destructive">Esgotado</Badge>
+                        <Badge className="bg-slate-700 hover:bg-slate-800 text-white border-none">
+                          Esgotado
+                        </Badge>
                       )}
                     </TableCell>
                     <TableCell className="text-center print:hidden">

@@ -32,7 +32,7 @@ import { CreateRentalDialog } from '@/components/rentals/CreateRentalDialog'
 import { ReturnDialog } from '@/components/rentals/ReturnDialog'
 
 export default function Rentals() {
-  const { rentals, customers, globalSearch } = useMainStore()
+  const { rentals, customers, globalSearch, settings } = useMainStore()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('Todos')
 
@@ -92,7 +92,23 @@ export default function Rentals() {
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => {
-                  handleExport('pdf', 'locacoes', [], [])
+                  const { headers, data } = exportData()
+                  handleExport('excel', 'locacoes', headers, data)
+                }}
+              >
+                Exportar Excel (.xlsx)
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  const { headers, data } = exportData()
+                  handleExport(
+                    'pdf',
+                    'locacoes',
+                    headers,
+                    data,
+                    settings.companyName,
+                    settings.logoUrl,
+                  )
                 }}
               >
                 Exportar PDF

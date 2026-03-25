@@ -4,10 +4,13 @@ import { PermissionKey } from '@/hooks/use-permissions'
 
 export type InventoryItem = Omit<(typeof MOCK_INVENTORY)[0], 'conditionStatus'> & {
   description?: string
-  conditionStatus: 'Disponível' | 'Manutenção' | 'Indisponível'
+  conditionStatus: 'Disponível' | 'Manutenção' | 'Indisponível' | 'Esgotado'
 }
 export type Customer = (typeof MOCK_CUSTOMERS)[0]
-export type Rental = (typeof MOCK_RENTALS)[0] & { customContractText?: string }
+export type Rental = (typeof MOCK_RENTALS)[0] & {
+  customContractText?: string
+  customContractHtml?: string
+}
 export type User = Omit<(typeof MOCK_USERS)[0], 'permissions'> & { permissions: PermissionKey[] }
 export type Settings = typeof MOCK_SETTINGS
 

@@ -71,6 +71,18 @@ export const MOCK_INVENTORY = [
     conditionStatus: 'Disponível' as const,
     image: 'https://img.usecurling.com/p/200/200?q=jackhammer&color=red',
   },
+  {
+    id: '5',
+    code: 'SER-004',
+    name: 'Serra Mármore',
+    category: 'Ferramentas',
+    description: 'Serra mármore para cortes precisos.',
+    totalQty: 2,
+    availableQty: 0,
+    rentedQty: 2,
+    conditionStatus: 'Esgotado' as const,
+    image: 'https://img.usecurling.com/p/200/200?q=saw&color=orange',
+  },
 ]
 
 const today = new Date()
@@ -147,6 +159,7 @@ export const MOCK_SETTINGS = {
   primaryColor: '#1e40af',
   logoUrl: null as string | null,
   contractFileName: null as string | null,
+  contractTemplateHtml: null as string | null,
   lateFeeType: 'daily',
   lateFeeValue: 2,
   companyName: 'LocaWeb Gestão de Ativos LTDA',
