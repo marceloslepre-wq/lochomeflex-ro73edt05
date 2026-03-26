@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -13,7 +13,13 @@ export default function Index() {
   const [password, setPassword] = useState('')
   const navigate = useNavigate()
   const { toast } = useToast()
-  const { users, setCurrentUser } = useMainStore()
+  const { users, currentUser, setCurrentUser } = useMainStore()
+
+  useEffect(() => {
+    if (currentUser) {
+      navigate('/dashboard')
+    }
+  }, [currentUser, navigate])
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()

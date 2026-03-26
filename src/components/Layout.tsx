@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Outlet, useNavigate } from 'react-router-dom'
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { AppSidebar } from './AppSidebar'
 import { Bell, Search, UserCircle } from 'lucide-react'
@@ -10,16 +10,14 @@ import useMainStore from '@/stores/main'
 import { hexToHSL } from '@/lib/utils'
 
 export default function Layout() {
-  const location = useLocation()
   const navigate = useNavigate()
-  const isLoginPage = location.pathname === '/'
   const { rentals, settings, currentUser, globalSearch, setGlobalSearch } = useMainStore()
 
   useEffect(() => {
-    if (!isLoginPage && !currentUser) {
+    if (!currentUser) {
       navigate('/')
     }
-  }, [currentUser, isLoginPage, navigate])
+  }, [currentUser, navigate])
 
   useEffect(() => {
     if (settings.primaryColor) {
@@ -31,8 +29,8 @@ export default function Layout() {
     }
   }, [settings.primaryColor])
 
-  if (isLoginPage || !currentUser) {
-    return <Outlet />
+  if (!currentUser) {
+    return null
   }
 
   const today = new Date().toISOString().split('T')[0]
