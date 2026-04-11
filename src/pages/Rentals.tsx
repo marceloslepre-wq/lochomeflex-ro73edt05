@@ -13,7 +13,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Search, Eye, ArrowDownToLine, Download } from 'lucide-react'
+import { Search, Eye, ArrowDownToLine, Download, RefreshCw } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -31,6 +31,7 @@ import { handleExport } from '@/lib/export'
 import { CreateRentalDialog } from '@/components/rentals/CreateRentalDialog'
 import { ReturnDialog } from '@/components/rentals/ReturnDialog'
 import { RentalsReportDialog } from '@/components/rentals/RentalsReportDialog'
+import { RenewDialog } from '@/components/rentals/RenewDialog'
 
 export default function Rentals() {
   const { rentals, customers, globalSearch, settings } = useMainStore()
@@ -39,6 +40,7 @@ export default function Rentals() {
 
   const [selectedRental, setSelectedRental] = useState<Rental | null>(null)
   const [returnOpen, setReturnOpen] = useState(false)
+  const [renewOpen, setRenewOpen] = useState(false)
 
   const filtered = rentals.filter((r) => {
     const c = customers.find((cust) => cust.id === r.customerId)
@@ -207,18 +209,32 @@ export default function Rentals() {
                             </Link>
                           </Button>
                           {rental.status !== 'Devolvido' && (
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8 border-emerald-500 text-emerald-600 hover:bg-emerald-50"
-                              onClick={() => {
-                                setSelectedRental(rental)
-                                setReturnOpen(true)
-                              }}
-                              title="Devolver"
-                            >
-                              <ArrowDownToLine className="h-4 w-4" />
-                            </Button>
+                            <>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8 border-blue-500 text-blue-600 hover:bg-blue-50"
+                                onClick={() => {
+                                  setSelectedRental(rental)
+                                  setRenewOpen(true)
+                                }}
+                                title="Renovar"
+                              >
+                                <RefreshCw className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8 border-emerald-500 text-emerald-600 hover:bg-emerald-50"
+                                onClick={() => {
+                                  setSelectedRental(rental)
+                                  setReturnOpen(true)
+                                }}
+                                title="Devolver"
+                              >
+                                <ArrowDownToLine className="h-4 w-4" />
+                              </Button>
+                            </>
                           )}
                         </div>
                       </TableCell>
@@ -232,6 +248,7 @@ export default function Rentals() {
       </Card>
 
       <ReturnDialog rental={selectedRental} open={returnOpen} onOpenChange={setReturnOpen} />
+      <RenewDialog rental={selectedRental} open={renewOpen} onOpenChange={setRenewOpen} />
     </div>
   )
 }
