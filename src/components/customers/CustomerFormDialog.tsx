@@ -15,7 +15,6 @@ import { Textarea } from '@/components/ui/textarea'
 import { Plus, Edit } from 'lucide-react'
 import useMainStore, { Customer, Address } from '@/stores/main'
 import { useToast } from '@/hooks/use-toast'
-import { ScrollArea } from '@/components/ui/scroll-area'
 
 const emptyAddress: Address = {
   street: '',
@@ -106,20 +105,16 @@ export function CustomerFormDialog({ customer }: { customer?: Customer }) {
       </DialogTrigger>
       <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold">
-            Formulário 12 Cadastro de clientes
-          </DialogTitle>
+          <DialogTitle className="text-xl font-bold">Cadastro de Cliente</DialogTitle>
         </DialogHeader>
-        <ScrollArea className="flex-1 pr-4 -mr-4">
+        <div className="flex-1 overflow-y-auto pr-4 -mr-4">
           <form id="customer-form" onSubmit={handleSubmit} className="space-y-6 pt-4 pb-4">
             <div className="grid gap-4">
               <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                <Label className="text-muted-foreground font-medium">
-                  Matricula: (após a inclusão gerar uma matricula por ordem numérica)
-                </Label>
+                <Label className="text-muted-foreground font-medium">Matricula:</Label>
                 <Input
                   disabled
-                  value={customer ? formData.matricula : 'Gerado após salvar'}
+                  value={customer ? formData.matricula : ''}
                   className="bg-muted w-full sm:w-32 font-mono h-8"
                 />
               </div>
@@ -282,7 +277,7 @@ export function CustomerFormDialog({ customer }: { customer?: Customer }) {
               </div>
             </div>
           </form>
-        </ScrollArea>
+        </div>
         <DialogFooter className="pt-4 border-t mt-2">
           <Button type="button" variant="outline" onClick={() => setOpen(false)}>
             Cancelar

@@ -69,6 +69,7 @@ export default function Customers() {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50">
+                <TableHead>Matrícula</TableHead>
                 <TableHead>Nome / Razão Social</TableHead>
                 <TableHead>Documento</TableHead>
                 <TableHead>Contato</TableHead>
@@ -79,13 +80,16 @@ export default function Customers() {
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                     Nenhum cliente encontrado.
                   </TableCell>
                 </TableRow>
               ) : (
                 filtered.map((customer) => (
                   <TableRow key={customer.id} className="group">
+                    <TableCell className="font-mono text-muted-foreground">
+                      {customer.matricula || '-'}
+                    </TableCell>
                     <TableCell className="font-medium flex items-center gap-2">
                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
                         <User className="w-4 h-4" />
