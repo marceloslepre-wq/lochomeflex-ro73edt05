@@ -12,8 +12,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Textarea } from '@/components/ui/textarea'
-import { CheckCircle2 } from 'lucide-react'
-import useMainStore, { Address } from '@/stores/main'
+import { CheckCircle2, Loader2 } from 'lucide-react'
+import { Address } from '@/stores/main'
+import { customerService } from '@/services/customers'
+import { useToast } from '@/hooks/use-toast'
 
 const emptyAddress: Address = {
   street: '',
@@ -25,8 +27,9 @@ const emptyAddress: Address = {
 }
 
 export default function PublicCustomerForm() {
-  const { addCustomer, customers } = useMainStore()
+  const { toast } = useToast()
   const [submitted, setSubmitted] = useState(false)
+  const [loading, setLoading] = useState(false)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -41,21 +44,30 @@ export default function PublicCustomerForm() {
     observations: '',
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.name || !formData.document) return
 
-    const nextMatricula = (customers?.length || 0) + 1
-    const generatedMatricula = String(nextMatricula).padStart(4, '0')
+    try {
+      setLoading(true)
+      const nextMatricula = await customerService.getNextMatricula()
 
-    addCustomer({
-      id: Math.random().toString(),
-      ...formData,
-      matricula: generatedMatricula,
-      phone: formData.phoneCell || formData.phoneRes || formData.phoneCom,
-    })
+      await customerService.createCustomer({
+        ...formData,
+        matricula: nextMatricula,
+        phone: formData.phoneCell || formData.phoneRes || formData.phoneCom,
+      })
 
-    setSubmitted(true)
+      setSubmitted(true)
+    } catch (error) {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível enviar o formulário.',
+        variant: 'destructive',
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   const updateAddress = (field: keyof Address, value: string, isDelivery: boolean = false) => {
@@ -260,7 +272,13 @@ export default function PublicCustomerForm() {
             </form>
           </CardContent>
           <CardFooter className="flex justify-end gap-4 border-t p-6">
-            <Button type="submit" form="public-customer-form" className="w-full sm:w-auto">
+            <Button
+              type="submit"
+              form="public-customer-form"
+              className="w-full sm:w-auto"
+              disabled={loading}
+            >
+              {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
               Enviar Cadastro
             </Button>
           </CardFooter>

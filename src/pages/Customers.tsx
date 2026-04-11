@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import useMainStore from '@/stores/main'
+import { customerService, Customer } from '@/services/customers'
 import { Card, CardContent } from '@/components/ui/card'
 import {
   Table,
@@ -29,19 +30,50 @@ import { usePermissions } from '@/hooks/use-permissions'
 import { useToast } from '@/hooks/use-toast'
 
 export default function Customers() {
-  const { customers, globalSearch, deleteCustomer } = useMainStore()
+  const { globalSearch } = useMainStore()
   const { can } = usePermissions()
   const { toast } = useToast()
   const [search, setSearch] = useState('')
+  const [customers, setCustomers] = useState<Customer[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const fetchCustomers = async () => {
+    try {
+      setLoading(true)
+      const data = await customerService.getCustomers()
+      setCustomers(data)
+    } catch (error) {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível carregar os clientes.',
+        variant: 'destructive',
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchCustomers()
+  }, [])
 
   const term = search || globalSearch
   const filtered = customers.filter(
     (c) => c.name.toLowerCase().includes(term.toLowerCase()) || c.document.includes(term),
   )
 
-  const handleDelete = (id: string) => {
-    deleteCustomer(id)
-    toast({ title: 'Cliente Excluído', description: 'O registro foi removido.' })
+  const handleDelete = async (id: string) => {
+    try {
+      await customerService.deleteCustomer(id)
+      setCustomers(customers.filter((c) => c.id !== id))
+      toast({ title: 'Cliente Excluído', description: 'O registro foi removido.' })
+    } catch (error) {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível excluir o cliente.',
+        variant: 'destructive',
+      })
+    }
   }
 
   return (
@@ -53,7 +85,7 @@ export default function Customers() {
         </div>
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto mt-2 sm:mt-0">
           <ShareCustomerLinkDialog />
-          {can('customers:write') && <CustomerFormDialog />}
+          {can('customers:write') && <CustomerFormDialog onSuccess={fetchCustomers} />}
         </div>
       </div>
 
@@ -82,7 +114,13 @@ export default function Customers() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.length === 0 ? (
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                    Carregando clientes...
+                  </TableCell>
+                </TableRow>
+              ) : filtered.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                     Nenhum cliente encontrado.
@@ -105,7 +143,12 @@ export default function Customers() {
                     <TableCell className="text-muted-foreground">{customer.email}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {can('customers:write') && <CustomerFormDialog customer={customer} />}
+                        {can('customers:write') && (
+                          <CustomerFormDialog
+                            customer={customer as any}
+                            onSuccess={fetchCustomers}
+                          />
+                        )}
                         {can('customers:delete') && (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>

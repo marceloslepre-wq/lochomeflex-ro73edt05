@@ -12,9 +12,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Textarea } from '@/components/ui/textarea'
-import { Plus, Edit } from 'lucide-react'
-import useMainStore, { Customer, Address } from '@/stores/main'
+import { Plus, Edit, Loader2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { Address } from '@/stores/main'
+import { customerService, Customer } from '@/services/customers'
 
 const emptyAddress: Address = {
   street: '',
@@ -25,59 +26,77 @@ const emptyAddress: Address = {
   zipCode: '',
 }
 
-export function CustomerFormDialog({ customer }: { customer?: Customer }) {
-  const { addCustomer, updateCustomer, customers } = useMainStore()
+export function CustomerFormDialog({
+  customer,
+  onSuccess,
+}: {
+  customer?: Customer
+  onSuccess?: () => void
+}) {
   const { toast } = useToast()
   const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
 
   const [formData, setFormData] = useState({
-    matricula: (customer as any)?.matricula || '',
+    matricula: customer?.matricula || '',
     name: customer?.name || '',
     document: customer?.document || '',
-    phoneRes: (customer as any)?.phoneRes || '',
-    phoneCell: (customer as any)?.phoneCell || customer?.phone || '',
-    phoneCom: (customer as any)?.phoneCom || '',
+    phoneRes: customer?.phoneRes || '',
+    phoneCell: customer?.phoneCell || customer?.phone || '',
+    phoneCom: customer?.phoneCom || '',
     email: customer?.email || '',
     address: { ...emptyAddress, ...(customer?.address || {}) },
     hasDifferentDeliveryAddress: customer?.hasDifferentDeliveryAddress || false,
     deliveryAddress: { ...emptyAddress, ...(customer?.deliveryAddress || {}) },
-    observations: (customer as any)?.observations || '',
+    observations: customer?.observations || '',
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.name || !formData.document) return
 
-    if (customer) {
-      updateCustomer(customer.id, { ...formData, phone: formData.phoneCell })
-      toast({ title: 'Cliente Atualizado', description: 'Dados salvos com sucesso.' })
-    } else {
-      const nextMatricula = (customers?.length || 0) + 1
-      const generatedMatricula = String(nextMatricula).padStart(4, '0')
-
-      addCustomer({
-        id: Math.random().toString(),
-        ...formData,
-        matricula: generatedMatricula,
-        phone: formData.phoneCell,
+    try {
+      setLoading(true)
+      if (customer) {
+        await customerService.updateCustomer(customer.id, {
+          ...formData,
+          phone: formData.phoneCell,
+        })
+        toast({ title: 'Cliente Atualizado', description: 'Dados salvos com sucesso.' })
+      } else {
+        const nextMatricula = await customerService.getNextMatricula()
+        await customerService.createCustomer({
+          ...formData,
+          matricula: nextMatricula,
+          phone: formData.phoneCell,
+        })
+        toast({ title: 'Cliente Cadastrado', description: `${formData.name} adicionado.` })
+      }
+      setOpen(false)
+      if (onSuccess) onSuccess()
+      if (!customer) {
+        setFormData({
+          matricula: '',
+          name: '',
+          document: '',
+          phoneRes: '',
+          phoneCell: '',
+          phoneCom: '',
+          email: '',
+          address: { ...emptyAddress },
+          hasDifferentDeliveryAddress: false,
+          deliveryAddress: { ...emptyAddress },
+          observations: '',
+        })
+      }
+    } catch (error) {
+      toast({
+        title: 'Erro',
+        description: 'Ocorreu um erro ao salvar o cliente.',
+        variant: 'destructive',
       })
-      toast({ title: 'Cliente Cadastrado', description: `${formData.name} adicionado.` })
-    }
-    setOpen(false)
-    if (!customer) {
-      setFormData({
-        matricula: '',
-        name: '',
-        document: '',
-        phoneRes: '',
-        phoneCell: '',
-        phoneCom: '',
-        email: '',
-        address: { ...emptyAddress },
-        hasDifferentDeliveryAddress: false,
-        deliveryAddress: { ...emptyAddress },
-        observations: '',
-      })
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -111,11 +130,12 @@ export function CustomerFormDialog({ customer }: { customer?: Customer }) {
           <form id="customer-form" onSubmit={handleSubmit} className="space-y-6 pt-4 pb-4">
             <div className="grid gap-4">
               <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                <Label className="text-muted-foreground font-medium">Matricula:</Label>
+                <Label className="text-muted-foreground font-medium">Matrícula:</Label>
                 <Input
                   disabled
                   value={customer ? formData.matricula : ''}
                   className="bg-muted w-full sm:w-32 font-mono h-8"
+                  placeholder={customer ? '' : 'Gerado após salvar'}
                 />
               </div>
 
@@ -130,7 +150,7 @@ export function CustomerFormDialog({ customer }: { customer?: Customer }) {
                 </div>
 
                 <div className="grid gap-2">
-                  <Label>CPF:</Label>
+                  <Label>CPF / CNPJ:</Label>
                   <Input
                     value={formData.document}
                     onChange={(e) => setFormData((f) => ({ ...f, document: e.target.value }))}
@@ -171,7 +191,7 @@ export function CustomerFormDialog({ customer }: { customer?: Customer }) {
                 </div>
 
                 <div className="grid gap-2">
-                  <Label>Cep:</Label>
+                  <Label>CEP:</Label>
                   <Input
                     value={formData.address?.zipCode || ''}
                     onChange={(e) => updateAddress('zipCode', e.target.value)}
@@ -256,7 +276,7 @@ export function CustomerFormDialog({ customer }: { customer?: Customer }) {
                         />
                       </div>
                       <div className="grid gap-2">
-                        <Label>Cep:</Label>
+                        <Label>CEP:</Label>
                         <Input
                           value={formData.deliveryAddress?.zipCode || ''}
                           onChange={(e) => updateAddress('zipCode', e.target.value, true)}
@@ -279,10 +299,11 @@ export function CustomerFormDialog({ customer }: { customer?: Customer }) {
           </form>
         </div>
         <DialogFooter className="pt-4 border-t mt-2">
-          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+          <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading}>
             Cancelar
           </Button>
-          <Button type="submit" form="customer-form">
+          <Button type="submit" form="customer-form" disabled={loading}>
+            {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
             Salvar
           </Button>
         </DialogFooter>
