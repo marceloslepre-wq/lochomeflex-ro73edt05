@@ -12,6 +12,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Search, User, Trash2 } from 'lucide-react'
 import { CustomerFormDialog } from '@/components/customers/CustomerFormDialog'
+import { ShareCustomerLinkDialog } from '@/components/customers/ShareCustomerLinkDialog'
 import { Button } from '@/components/ui/button'
 import {
   AlertDialog,
@@ -50,7 +51,10 @@ export default function Customers() {
           <h1 className="text-3xl font-bold tracking-tight">Clientes</h1>
           <p className="text-muted-foreground mt-1">Gerencie a base de clientes e empresas.</p>
         </div>
-        {can('customers:write') && <CustomerFormDialog />}
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+          <ShareCustomerLinkDialog />
+          {can('customers:write') && <CustomerFormDialog />}
+        </div>
       </div>
 
       <Card>

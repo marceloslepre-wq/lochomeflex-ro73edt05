@@ -16,6 +16,7 @@ import RentalDetail from './pages/RentalDetail'
 import Settings from './pages/Settings'
 import Guide from './pages/Guide'
 import NotFound from './pages/NotFound'
+import PublicCustomerForm from './pages/PublicCustomerForm'
 
 const App = () => (
   <AuthProvider>
@@ -26,6 +27,7 @@ const App = () => (
           <Sonner />
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/public/customer/new" element={<PublicCustomerForm />} />
             <Route element={<ProtectedRoute />}>
               <Route element={<Layout />}>
                 <Route path="/dashboard" element={<Dashboard />} />
