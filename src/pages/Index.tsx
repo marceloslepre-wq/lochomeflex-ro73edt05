@@ -1,64 +1,65 @@
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useState } from 'react'
+import { useNavigate, Navigate } from 'react-router-dom'
+import { useAuth } from '@/hooks/use-auth'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Button } from '@/components/ui/button'
-import { Package } from 'lucide-react'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
-import useMainStore from '@/stores/main'
+import { Loader2, Package } from 'lucide-react'
 
 export default function Index() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const { signIn, user, loading } = useAuth()
   const navigate = useNavigate()
   const { toast } = useToast()
-  const { users, currentUser, setCurrentUser } = useMainStore()
 
-  useEffect(() => {
-    if (currentUser) {
-      navigate('/dashboard')
-    }
-  }, [currentUser, navigate])
+  if (loading) return null
+  if (user) return <Navigate to="/dashboard" replace />
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!email || !password) {
-      toast({ title: 'Erro', description: 'Preencha todos os campos.', variant: 'destructive' })
-      return
-    }
+    if (!email || !password) return
 
-    const user = users.find((u) => u.email.toLowerCase() === email.toLowerCase() && u.active)
+    setIsSubmitting(true)
+    const { error } = await signIn(email, password)
+    setIsSubmitting(false)
 
-    if (user) {
-      setCurrentUser(user)
-      toast({ title: 'Sucesso', description: `Bem-vindo, ${user.name}!` })
-      navigate('/dashboard')
-    } else {
+    if (error) {
       toast({
-        title: 'Acesso Negado',
-        description: 'Credenciais inválidas ou usuário inativo.',
+        title: 'Erro de Autenticação',
+        description: 'Email ou senha inválidos. Tente novamente.',
         variant: 'destructive',
       })
+    } else {
+      navigate('/dashboard')
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 relative overflow-hidden">
-      <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-float" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-secondary/30 rounded-full blur-3xl animate-float delay-1000" />
-
-      <Card className="w-full max-w-md shadow-xl border-border/50 relative z-10 animate-fade-in-up">
+    <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
+      <Card className="w-full max-w-md shadow-lg border-primary/10">
         <CardHeader className="space-y-2 text-center pb-6">
-          <div className="mx-auto w-12 h-12 bg-primary rounded-xl flex items-center justify-center mb-2 shadow-inner">
-            <Package className="w-6 h-6 text-primary-foreground" />
+          <div className="flex justify-center mb-4">
+            <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+              <Package className="w-8 h-8 text-primary" />
+            </div>
           </div>
           <CardTitle className="text-2xl font-bold tracking-tight">Gestão de Locação</CardTitle>
-          <CardDescription>Faça login para gerenciar seu estoque e clientes.</CardDescription>
+          <CardDescription>Faça login para acessar o painel administrativo</CardDescription>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-2">
+        <form onSubmit={handleLogin}>
+          <CardContent className="space-y-4">
+            <div className="space-y-2 text-left">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
@@ -66,35 +67,28 @@ export default function Index() {
                 placeholder="admin@loja.com.br"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                required
               />
             </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Senha</Label>
-              </div>
+            <div className="space-y-2 text-left">
+              <Label htmlFor="password">Senha</Label>
               <Input
                 id="password"
                 type="password"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                required
               />
             </div>
-            <Button type="submit" className="w-full h-11 text-base font-semibold mt-4">
+          </CardContent>
+          <CardFooter className="pt-2">
+            <Button type="submit" className="w-full text-base h-11" disabled={isSubmitting}>
+              {isSubmitting ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : null}
               Entrar no Sistema
             </Button>
-          </form>
-          <div className="mt-6 text-center text-sm text-muted-foreground space-y-1">
-            <p>Acesso demonstração:</p>
-            <p>
-              Admin: <strong>admin@loja.com.br</strong>
-            </p>
-            <p>
-              Operador: <strong>joao@loja.com.br</strong>
-            </p>
-            <p className="text-xs pt-2">Qualquer senha é aceita.</p>
-          </div>
-        </CardContent>
+          </CardFooter>
+        </form>
       </Card>
     </div>
   )

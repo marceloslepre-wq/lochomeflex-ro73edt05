@@ -35,9 +35,9 @@ export function CustomerFormDialog({ customer }: { customer?: Customer }) {
     document: customer?.document || '',
     phone: customer?.phone || '',
     email: customer?.email || '',
-    address: customer?.address || { ...emptyAddress },
+    address: { ...emptyAddress, ...(customer?.address || {}) },
     hasDifferentDeliveryAddress: customer?.hasDifferentDeliveryAddress || false,
-    deliveryAddress: customer?.deliveryAddress || { ...emptyAddress },
+    deliveryAddress: { ...emptyAddress, ...(customer?.deliveryAddress || {}) },
   })
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -133,48 +133,62 @@ export function CustomerFormDialog({ customer }: { customer?: Customer }) {
               </div>
             </div>
 
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium border-b pb-2">Endereço de Cadastro</h3>
-              <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-4 bg-muted/20 p-4 rounded-lg border">
+              <h3 className="text-lg font-semibold border-b pb-2 text-primary">
+                Endereço de Cadastro
+              </h3>
+              <div className="grid grid-cols-2 gap-4 pt-2">
                 <div className="grid gap-2 col-span-2">
-                  <Label>Rua / Avenida</Label>
+                  <Label htmlFor="street">Rua / Avenida</Label>
                   <Input
-                    value={formData.address.street}
+                    id="street"
+                    placeholder="Ex: Av. Paulista"
+                    value={formData.address?.street || ''}
                     onChange={(e) => updateAddress('street', e.target.value)}
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label>Número</Label>
+                  <Label htmlFor="number">Número</Label>
                   <Input
-                    value={formData.address.number}
+                    id="number"
+                    placeholder="Ex: 1000"
+                    value={formData.address?.number || ''}
                     onChange={(e) => updateAddress('number', e.target.value)}
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label>Bairro</Label>
+                  <Label htmlFor="neighborhood">Bairro</Label>
                   <Input
-                    value={formData.address.neighborhood}
+                    id="neighborhood"
+                    placeholder="Ex: Bela Vista"
+                    value={formData.address?.neighborhood || ''}
                     onChange={(e) => updateAddress('neighborhood', e.target.value)}
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label>Cidade</Label>
+                  <Label htmlFor="city">Cidade</Label>
                   <Input
-                    value={formData.address.city}
+                    id="city"
+                    placeholder="Ex: São Paulo"
+                    value={formData.address?.city || ''}
                     onChange={(e) => updateAddress('city', e.target.value)}
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label>Estado</Label>
+                  <Label htmlFor="state">Estado</Label>
                   <Input
-                    value={formData.address.state}
+                    id="state"
+                    placeholder="Ex: SP"
+                    value={formData.address?.state || ''}
                     onChange={(e) => updateAddress('state', e.target.value)}
                   />
                 </div>
                 <div className="grid gap-2 col-span-2">
-                  <Label>CEP</Label>
+                  <Label htmlFor="zipCode">CEP</Label>
                   <Input
-                    value={formData.address.zipCode}
+                    id="zipCode"
+                    placeholder="Ex: 01310-100"
+                    value={formData.address?.zipCode || ''}
                     onChange={(e) => updateAddress('zipCode', e.target.value)}
                   />
                 </div>
@@ -196,46 +210,58 @@ export function CustomerFormDialog({ customer }: { customer?: Customer }) {
               </div>
 
               {formData.hasDifferentDeliveryAddress && (
-                <div className="grid grid-cols-2 gap-4 pt-2">
+                <div className="grid grid-cols-2 gap-4 pt-4 mt-4 border-t border-dashed">
                   <div className="grid gap-2 col-span-2">
-                    <Label>Rua / Avenida (Entrega)</Label>
+                    <Label htmlFor="delivery-street">Rua / Avenida (Entrega)</Label>
                     <Input
-                      value={formData.deliveryAddress.street}
+                      id="delivery-street"
+                      placeholder="Ex: Rua Direita"
+                      value={formData.deliveryAddress?.street || ''}
                       onChange={(e) => updateAddress('street', e.target.value, true)}
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Número (Entrega)</Label>
+                    <Label htmlFor="delivery-number">Número (Entrega)</Label>
                     <Input
-                      value={formData.deliveryAddress.number}
+                      id="delivery-number"
+                      placeholder="Ex: 200"
+                      value={formData.deliveryAddress?.number || ''}
                       onChange={(e) => updateAddress('number', e.target.value, true)}
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Bairro (Entrega)</Label>
+                    <Label htmlFor="delivery-neighborhood">Bairro (Entrega)</Label>
                     <Input
-                      value={formData.deliveryAddress.neighborhood}
+                      id="delivery-neighborhood"
+                      placeholder="Ex: Centro"
+                      value={formData.deliveryAddress?.neighborhood || ''}
                       onChange={(e) => updateAddress('neighborhood', e.target.value, true)}
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Cidade (Entrega)</Label>
+                    <Label htmlFor="delivery-city">Cidade (Entrega)</Label>
                     <Input
-                      value={formData.deliveryAddress.city}
+                      id="delivery-city"
+                      placeholder="Ex: São Paulo"
+                      value={formData.deliveryAddress?.city || ''}
                       onChange={(e) => updateAddress('city', e.target.value, true)}
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Estado (Entrega)</Label>
+                    <Label htmlFor="delivery-state">Estado (Entrega)</Label>
                     <Input
-                      value={formData.deliveryAddress.state}
+                      id="delivery-state"
+                      placeholder="Ex: SP"
+                      value={formData.deliveryAddress?.state || ''}
                       onChange={(e) => updateAddress('state', e.target.value, true)}
                     />
                   </div>
                   <div className="grid gap-2 col-span-2">
-                    <Label>CEP (Entrega)</Label>
+                    <Label htmlFor="delivery-zipCode">CEP (Entrega)</Label>
                     <Input
-                      value={formData.deliveryAddress.zipCode}
+                      id="delivery-zipCode"
+                      placeholder="Ex: 01002-000"
+                      value={formData.deliveryAddress?.zipCode || ''}
                       onChange={(e) => updateAddress('zipCode', e.target.value, true)}
                     />
                   </div>
