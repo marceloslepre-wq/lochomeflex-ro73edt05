@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Textarea } from '@/components/ui/textarea'
 import { Plus, Edit } from 'lucide-react'
 import useMainStore, { Customer, Address } from '@/stores/main'
 import { useToast } from '@/hooks/use-toast'
@@ -26,18 +27,22 @@ const emptyAddress: Address = {
 }
 
 export function CustomerFormDialog({ customer }: { customer?: Customer }) {
-  const { addCustomer, updateCustomer } = useMainStore()
+  const { addCustomer, updateCustomer, customers } = useMainStore()
   const { toast } = useToast()
   const [open, setOpen] = useState(false)
 
   const [formData, setFormData] = useState({
+    matricula: (customer as any)?.matricula || '',
     name: customer?.name || '',
     document: customer?.document || '',
-    phone: customer?.phone || '',
+    phoneRes: (customer as any)?.phoneRes || '',
+    phoneCell: (customer as any)?.phoneCell || customer?.phone || '',
+    phoneCom: (customer as any)?.phoneCom || '',
     email: customer?.email || '',
     address: { ...emptyAddress, ...(customer?.address || {}) },
     hasDifferentDeliveryAddress: customer?.hasDifferentDeliveryAddress || false,
     deliveryAddress: { ...emptyAddress, ...(customer?.deliveryAddress || {}) },
+    observations: (customer as any)?.observations || '',
   })
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -45,25 +50,34 @@ export function CustomerFormDialog({ customer }: { customer?: Customer }) {
     if (!formData.name || !formData.document) return
 
     if (customer) {
-      updateCustomer(customer.id, formData)
+      updateCustomer(customer.id, { ...formData, phone: formData.phoneCell })
       toast({ title: 'Cliente Atualizado', description: 'Dados salvos com sucesso.' })
     } else {
+      const nextMatricula = (customers?.length || 0) + 1
+      const generatedMatricula = String(nextMatricula).padStart(4, '0')
+
       addCustomer({
         id: Math.random().toString(),
         ...formData,
+        matricula: generatedMatricula,
+        phone: formData.phoneCell,
       })
       toast({ title: 'Cliente Cadastrado', description: `${formData.name} adicionado.` })
     }
     setOpen(false)
     if (!customer) {
       setFormData({
+        matricula: '',
         name: '',
         document: '',
-        phone: '',
+        phoneRes: '',
+        phoneCell: '',
+        phoneCom: '',
         email: '',
         address: { ...emptyAddress },
         hasDifferentDeliveryAddress: false,
         deliveryAddress: { ...emptyAddress },
+        observations: '',
       })
     }
   }
@@ -90,106 +104,128 @@ export function CustomerFormDialog({ customer }: { customer?: Customer }) {
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>{customer ? 'Editar Cliente' : 'Cadastrar Novo Cliente'}</DialogTitle>
+          <DialogTitle className="text-xl font-bold">
+            Formulário 12 Cadastro de clientes
+          </DialogTitle>
         </DialogHeader>
         <ScrollArea className="flex-1 pr-4 -mr-4">
           <form id="customer-form" onSubmit={handleSubmit} className="space-y-6 pt-4 pb-4">
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium border-b pb-2">Dados Principais</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2 col-span-2">
-                  <Label>Nome / Razão Social</Label>
+            <div className="grid gap-4">
+              <div className="grid gap-2">
+                <Label className="text-muted-foreground font-medium">
+                  Matricula: (após a inclusão gerar uma matricula por ordem numérica)
+                </Label>
+                <Input
+                  disabled
+                  value={customer ? formData.matricula : 'Gerado após salvar'}
+                  className="bg-muted w-48 font-mono"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label>Nome:</Label>
                   <Input
                     value={formData.name}
                     onChange={(e) => setFormData((f) => ({ ...f, name: e.target.value }))}
                     required
                   />
                 </div>
+
                 <div className="grid gap-2">
-                  <Label>Documento (CPF/CNPJ)</Label>
+                  <Label>CPF:</Label>
                   <Input
                     value={formData.document}
                     onChange={(e) => setFormData((f) => ({ ...f, document: e.target.value }))}
                     required
                   />
                 </div>
-                <div className="grid gap-2">
-                  <Label>Telefone</Label>
-                  <Input
-                    value={formData.phone}
-                    onChange={(e) => setFormData((f) => ({ ...f, phone: e.target.value }))}
-                  />
-                </div>
-                <div className="grid gap-2 col-span-2">
-                  <Label>Email</Label>
-                  <Input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData((f) => ({ ...f, email: e.target.value }))}
-                  />
-                </div>
               </div>
             </div>
 
-            <div className="space-y-4 bg-muted/20 p-4 rounded-lg border">
-              <h3 className="text-lg font-semibold border-b pb-2 text-primary">
-                Endereço de Cadastro
-              </h3>
-              <div className="grid grid-cols-2 gap-4 pt-2">
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold border-b pb-2 text-primary">Endereço</h3>
+              <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2 col-span-2">
-                  <Label htmlFor="street">Rua / Avenida</Label>
-                  <Input
-                    id="street"
-                    placeholder="Ex: Av. Paulista"
-                    value={formData.address?.street || ''}
-                    onChange={(e) => updateAddress('street', e.target.value)}
-                  />
+                  <Label>Endereço:</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Rua/Av"
+                      className="flex-1"
+                      value={formData.address?.street || ''}
+                      onChange={(e) => updateAddress('street', e.target.value)}
+                    />
+                    <Input
+                      placeholder="Nº"
+                      className="w-24"
+                      value={formData.address?.number || ''}
+                      onChange={(e) => updateAddress('number', e.target.value)}
+                    />
+                  </div>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="number">Número</Label>
+                  <Label>Bairro:</Label>
                   <Input
-                    id="number"
-                    placeholder="Ex: 1000"
-                    value={formData.address?.number || ''}
-                    onChange={(e) => updateAddress('number', e.target.value)}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="neighborhood">Bairro</Label>
-                  <Input
-                    id="neighborhood"
-                    placeholder="Ex: Bela Vista"
                     value={formData.address?.neighborhood || ''}
                     onChange={(e) => updateAddress('neighborhood', e.target.value)}
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="city">Cidade</Label>
+                  <Label>Cidade:</Label>
                   <Input
-                    id="city"
-                    placeholder="Ex: São Paulo"
                     value={formData.address?.city || ''}
                     onChange={(e) => updateAddress('city', e.target.value)}
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="state">Estado</Label>
+                  <Label>Estado:</Label>
                   <Input
-                    id="state"
-                    placeholder="Ex: SP"
                     value={formData.address?.state || ''}
                     onChange={(e) => updateAddress('state', e.target.value)}
                   />
                 </div>
-                <div className="grid gap-2 col-span-2">
-                  <Label htmlFor="zipCode">CEP</Label>
+                <div className="grid gap-2">
+                  <Label>Cep:</Label>
                   <Input
-                    id="zipCode"
-                    placeholder="Ex: 01310-100"
                     value={formData.address?.zipCode || ''}
                     onChange={(e) => updateAddress('zipCode', e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold border-b pb-2 text-primary">Contatos</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid gap-2">
+                  <Label>Telefone residencial:</Label>
+                  <Input
+                    value={formData.phoneRes}
+                    onChange={(e) => setFormData((f) => ({ ...f, phoneRes: e.target.value }))}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Telefone Celular:</Label>
+                  <Input
+                    value={formData.phoneCell}
+                    onChange={(e) => setFormData((f) => ({ ...f, phoneCell: e.target.value }))}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Telefone Comercial:</Label>
+                  <Input
+                    value={formData.phoneCom}
+                    onChange={(e) => setFormData((f) => ({ ...f, phoneCom: e.target.value }))}
+                  />
+                </div>
+                <div className="grid gap-2 col-span-1 md:col-span-3">
+                  <Label>E-mail:</Label>
+                  <Input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData((f) => ({ ...f, email: e.target.value }))}
                   />
                 </div>
               </div>
@@ -204,69 +240,72 @@ export function CustomerFormDialog({ customer }: { customer?: Customer }) {
                     setFormData((f) => ({ ...f, hasDifferentDeliveryAddress: !!c }))
                   }
                 />
-                <Label htmlFor="different-delivery" className="text-lg font-medium cursor-pointer">
-                  Endereço de entrega diferente do cadastro
+                <Label
+                  htmlFor="different-delivery"
+                  className="text-lg font-semibold cursor-pointer text-primary"
+                >
+                  Endereço de entrega
                 </Label>
               </div>
 
               {formData.hasDifferentDeliveryAddress && (
-                <div className="grid grid-cols-2 gap-4 pt-4 mt-4 border-t border-dashed">
+                <div className="grid grid-cols-2 gap-4 pt-2">
                   <div className="grid gap-2 col-span-2">
-                    <Label htmlFor="delivery-street">Rua / Avenida (Entrega)</Label>
-                    <Input
-                      id="delivery-street"
-                      placeholder="Ex: Rua Direita"
-                      value={formData.deliveryAddress?.street || ''}
-                      onChange={(e) => updateAddress('street', e.target.value, true)}
-                    />
+                    <Label>Endereço:</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Rua/Av"
+                        className="flex-1"
+                        value={formData.deliveryAddress?.street || ''}
+                        onChange={(e) => updateAddress('street', e.target.value, true)}
+                      />
+                      <Input
+                        placeholder="Nº"
+                        className="w-24"
+                        value={formData.deliveryAddress?.number || ''}
+                        onChange={(e) => updateAddress('number', e.target.value, true)}
+                      />
+                    </div>
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="delivery-number">Número (Entrega)</Label>
+                    <Label>Bairro:</Label>
                     <Input
-                      id="delivery-number"
-                      placeholder="Ex: 200"
-                      value={formData.deliveryAddress?.number || ''}
-                      onChange={(e) => updateAddress('number', e.target.value, true)}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="delivery-neighborhood">Bairro (Entrega)</Label>
-                    <Input
-                      id="delivery-neighborhood"
-                      placeholder="Ex: Centro"
                       value={formData.deliveryAddress?.neighborhood || ''}
                       onChange={(e) => updateAddress('neighborhood', e.target.value, true)}
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="delivery-city">Cidade (Entrega)</Label>
+                    <Label>Cidade:</Label>
                     <Input
-                      id="delivery-city"
-                      placeholder="Ex: São Paulo"
                       value={formData.deliveryAddress?.city || ''}
                       onChange={(e) => updateAddress('city', e.target.value, true)}
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="delivery-state">Estado (Entrega)</Label>
+                    <Label>Estado:</Label>
                     <Input
-                      id="delivery-state"
-                      placeholder="Ex: SP"
                       value={formData.deliveryAddress?.state || ''}
                       onChange={(e) => updateAddress('state', e.target.value, true)}
                     />
                   </div>
-                  <div className="grid gap-2 col-span-2">
-                    <Label htmlFor="delivery-zipCode">CEP (Entrega)</Label>
+                  <div className="grid gap-2">
+                    <Label>Cep:</Label>
                     <Input
-                      id="delivery-zipCode"
-                      placeholder="Ex: 01002-000"
                       value={formData.deliveryAddress?.zipCode || ''}
                       onChange={(e) => updateAddress('zipCode', e.target.value, true)}
                     />
                   </div>
                 </div>
               )}
+            </div>
+
+            <div className="grid gap-2">
+              <Label>Observações:</Label>
+              <Textarea
+                rows={3}
+                value={formData.observations}
+                onChange={(e) => setFormData((f) => ({ ...f, observations: e.target.value }))}
+              />
             </div>
           </form>
         </ScrollArea>
