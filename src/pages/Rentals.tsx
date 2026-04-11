@@ -30,6 +30,7 @@ import {
 import { handleExport } from '@/lib/export'
 import { CreateRentalDialog } from '@/components/rentals/CreateRentalDialog'
 import { ReturnDialog } from '@/components/rentals/ReturnDialog'
+import { RentalsReportDialog } from '@/components/rentals/RentalsReportDialog'
 
 export default function Rentals() {
   const { rentals, customers, globalSearch, settings } = useMainStore()
@@ -115,6 +116,7 @@ export default function Rentals() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          <RentalsReportDialog />
           <CreateRentalDialog />
         </div>
       </div>

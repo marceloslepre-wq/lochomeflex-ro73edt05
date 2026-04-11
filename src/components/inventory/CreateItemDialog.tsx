@@ -24,7 +24,7 @@ import { useToast } from '@/hooks/use-toast'
 import { usePermissions } from '@/hooks/use-permissions'
 
 export function CreateItemDialog() {
-  const { addInventoryItem } = useMainStore()
+  const { addInventoryItem, settings } = useMainStore()
   const { toast } = useToast()
   const { can } = usePermissions()
   const [open, setOpen] = useState(false)
@@ -117,11 +117,21 @@ export function CreateItemDialog() {
             </div>
             <div className="grid gap-2">
               <Label>Categoria</Label>
-              <Input
+              <Select
                 value={formData.category}
-                onChange={(e) => setFormData((f) => ({ ...f, category: e.target.value }))}
-                placeholder="Ferramentas"
-              />
+                onValueChange={(v) => setFormData((f) => ({ ...f, category: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {settings.categories?.map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {cat}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div className="grid gap-2">

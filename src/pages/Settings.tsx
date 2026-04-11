@@ -211,18 +211,21 @@ export default function Settings() {
       </div>
 
       <Tabs defaultValue="geral" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 h-12 items-center mb-6">
-          <TabsTrigger value="geral" className="text-base h-full">
+        <TabsList className="flex w-full h-12 items-center mb-6 overflow-x-auto">
+          <TabsTrigger value="geral" className="text-base h-full flex-1">
             Geral
           </TabsTrigger>
-          <TabsTrigger value="contrato" className="text-base h-full">
+          <TabsTrigger value="contrato" className="text-base h-full flex-1">
             Contratos
           </TabsTrigger>
-          <TabsTrigger value="equipe" className="text-base h-full">
+          <TabsTrigger value="equipe" className="text-base h-full flex-1">
             Equipe
           </TabsTrigger>
-          <TabsTrigger value="aparencia" className="text-base h-full">
+          <TabsTrigger value="aparencia" className="text-base h-full flex-1">
             Aparência
+          </TabsTrigger>
+          <TabsTrigger value="locais" className="text-base h-full flex-1">
+            Logística
           </TabsTrigger>
         </TabsList>
 
@@ -308,6 +311,63 @@ export default function Settings() {
               >
                 Atualizar Dados
               </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Categorias de Produtos</CardTitle>
+              <CardDescription>Gerencie as categorias disponíveis no estoque.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                {settings.categories?.map((cat, idx) => (
+                  <Badge
+                    key={idx}
+                    variant="secondary"
+                    className="text-sm py-1 px-3 flex items-center gap-2"
+                  >
+                    {cat}
+                    <button
+                      onClick={() => {
+                        const newCats = settings.categories?.filter((_, i) => i !== idx)
+                        updateSettings({ categories: newCats })
+                      }}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      &times;
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+              <div className="flex gap-2 max-w-sm">
+                <Input
+                  id="new-category"
+                  placeholder="Nova Categoria"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      const val = e.currentTarget.value.trim()
+                      if (val && !settings.categories?.includes(val)) {
+                        updateSettings({ categories: [...(settings.categories || []), val] })
+                        e.currentTarget.value = ''
+                      }
+                    }
+                  }}
+                />
+                <Button
+                  onClick={() => {
+                    const input = document.getElementById('new-category') as HTMLInputElement
+                    const val = input.value.trim()
+                    if (val && !settings.categories?.includes(val)) {
+                      updateSettings({ categories: [...(settings.categories || []), val] })
+                      input.value = ''
+                    }
+                  }}
+                >
+                  Adicionar
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -549,6 +609,87 @@ export default function Settings() {
                 ))}
               </TableBody>
             </Table>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="locais" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Locais de Retirada e Devolução</CardTitle>
+              <CardDescription>
+                Cadastre os pontos físicos de logística para controle de saída e entrada de
+                equipamentos.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome do Local</TableHead>
+                    <TableHead>Endereço Completo</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {!settings.locations || settings.locations.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center text-muted-foreground py-4">
+                        Nenhum local cadastrado.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    settings.locations.map((loc) => (
+                      <TableRow key={loc.id}>
+                        <TableCell className="font-medium">{loc.name}</TableCell>
+                        <TableCell>{loc.address}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:bg-destructive/10"
+                            onClick={() => {
+                              const newLocs = settings.locations?.filter((l) => l.id !== loc.id)
+                              updateSettings({ locations: newLocs })
+                            }}
+                          >
+                            Remover
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+
+              <div className="grid gap-4 md:grid-cols-2 pt-4 border-t">
+                <div className="space-y-2">
+                  <Label>Nome do Local</Label>
+                  <Input id="new-loc-name" placeholder="Ex: Matriz, Galpão Norte..." />
+                </div>
+                <div className="space-y-2">
+                  <Label>Endereço</Label>
+                  <Input id="new-loc-address" placeholder="Rua, Número, Cidade..." />
+                </div>
+              </div>
+              <Button
+                onClick={() => {
+                  const nameInput = document.getElementById('new-loc-name') as HTMLInputElement
+                  const addressInput = document.getElementById(
+                    'new-loc-address',
+                  ) as HTMLInputElement
+                  const name = nameInput.value.trim()
+                  const address = addressInput.value.trim()
+                  if (name && address) {
+                    const newLoc = { id: Math.random().toString(), name, address }
+                    updateSettings({ locations: [...(settings.locations || []), newLoc] })
+                    nameInput.value = ''
+                    addressInput.value = ''
+                  }
+                }}
+              >
+                Cadastrar Local
+              </Button>
+            </CardContent>
           </Card>
         </TabsContent>
 

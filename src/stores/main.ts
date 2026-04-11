@@ -2,17 +2,53 @@ import React, { createContext, useContext, useState, ReactNode, useEffect } from
 import { MOCK_CUSTOMERS, MOCK_INVENTORY, MOCK_RENTALS, MOCK_USERS, MOCK_SETTINGS } from './mockData'
 import { PermissionKey } from '@/hooks/use-permissions'
 
+export type Asset = {
+  id: string
+  assetNumber: string
+  conditionStatus: 'Disponível' | 'Manutenção' | 'Indisponível' | 'Esgotado'
+  image?: string
+}
+
 export type InventoryItem = Omit<(typeof MOCK_INVENTORY)[0], 'conditionStatus'> & {
   description?: string
   conditionStatus: 'Disponível' | 'Manutenção' | 'Indisponível' | 'Esgotado'
+  assets?: Asset[]
 }
-export type Customer = (typeof MOCK_CUSTOMERS)[0]
+
+export type Address = {
+  street: string
+  number: string
+  neighborhood: string
+  city: string
+  state: string
+  zipCode: string
+}
+
+export type Customer = (typeof MOCK_CUSTOMERS)[0] & {
+  address?: Address
+  hasDifferentDeliveryAddress?: boolean
+  deliveryAddress?: Address
+}
+
 export type Rental = (typeof MOCK_RENTALS)[0] & {
   customContractText?: string
   customContractHtml?: string
+  userId?: string
+  pickupLocationId?: string
 }
+
 export type User = Omit<(typeof MOCK_USERS)[0], 'permissions'> & { permissions: PermissionKey[] }
-export type Settings = typeof MOCK_SETTINGS
+
+export type Location = {
+  id: string
+  name: string
+  address: string
+}
+
+export type Settings = typeof MOCK_SETTINGS & {
+  locations?: Location[]
+  categories?: string[]
+}
 
 interface MainStore {
   currentUser: User | null
@@ -51,7 +87,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [customers, setCustomers] = useState<Customer[]>(MOCK_CUSTOMERS)
   const [rentals, setRentals] = useState<Rental[]>(MOCK_RENTALS)
   const [users, setUsers] = useState<User[]>(MOCK_USERS as User[])
-  const [settings, setSettings] = useState<Settings>(MOCK_SETTINGS)
+  const [settings, setSettings] = useState<Settings>({
+    ...MOCK_SETTINGS,
+    locations: [],
+    categories: ['Ferramentas', 'Equipamentos Pesados', 'Acessórios', 'Geral'],
+  })
 
   useEffect(() => {
     if (currentUser) {
