@@ -225,10 +225,7 @@ export function CustomerFormDialog({ customer }: { customer?: Customer }) {
                         setFormData((f) => ({ ...f, hasDifferentDeliveryAddress: !!c }))
                       }
                     />
-                    <Label
-                      htmlFor="different-delivery"
-                      className="font-semibold cursor-pointer"
-                    >
+                    <Label htmlFor="different-delivery" className="font-semibold cursor-pointer">
                       Endereço de entrega
                     </Label>
                   </div>
@@ -283,6 +280,7 @@ export function CustomerFormDialog({ customer }: { customer?: Customer }) {
                   />
                 </div>
               </div>
+            </div>
           </form>
         </ScrollArea>
         <DialogFooter className="pt-4 border-t mt-2">
