@@ -508,6 +508,46 @@ export const Constants = {
 //     WITH CHECK: true
 
 // --- DATABASE FUNCTIONS ---
+// FUNCTION handle_new_profile()
+//   CREATE OR REPLACE FUNCTION public.handle_new_profile()
+//    RETURNS trigger
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//   AS $function$
+//   BEGIN
+//     -- If this profile has no auth_user_id, it means it was inserted directly (not via auth trigger)
+//     IF NEW.auth_user_id IS NULL THEN
+//       IF NOT EXISTS (SELECT 1 FROM auth.users WHERE email = NEW.email) THEN
+//         NEW.auth_user_id := gen_random_uuid();
+//
+//         INSERT INTO auth.users (
+//           id, instance_id, email, encrypted_password, email_confirmed_at,
+//           created_at, updated_at, raw_app_meta_data, raw_user_meta_data,
+//           is_super_admin, role, aud,
+//           confirmation_token, recovery_token, email_change_token_new,
+//           email_change, email_change_token_current,
+//           phone, phone_change, phone_change_token, reauthentication_token
+//         ) VALUES (
+//           NEW.auth_user_id,
+//           '00000000-0000-0000-0000-000000000000',
+//           NEW.email,
+//           crypt('Mudar@123', gen_salt('bf')),
+//           NOW(), NOW(), NOW(),
+//           '{"provider": "email", "providers": ["email"]}',
+//           json_build_object('name', NEW.name),
+//           false, 'authenticated', 'authenticated',
+//           '', '', '', '', '', NULL, '', '', ''
+//         );
+//
+//       ELSE
+//         -- If email exists, just link it
+//         SELECT id INTO NEW.auth_user_id FROM auth.users WHERE email = NEW.email LIMIT 1;
+//       END IF;
+//     END IF;
+//     RETURN NEW;
+//   END;
+//   $function$
+//
 // FUNCTION handle_new_user()
 //   CREATE OR REPLACE FUNCTION public.handle_new_user()
 //    RETURNS trigger
@@ -522,3 +562,7 @@ export const Constants = {
 //   END;
 //   $function$
 //
+
+// --- TRIGGERS ---
+// Table: profiles
+//   on_profile_created: CREATE TRIGGER on_profile_created BEFORE INSERT ON public.profiles FOR EACH ROW EXECUTE FUNCTION handle_new_profile()
