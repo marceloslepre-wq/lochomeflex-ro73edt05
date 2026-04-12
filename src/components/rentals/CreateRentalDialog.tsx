@@ -56,7 +56,7 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
           total += (item.dailyPrice || 0) * ri.qty * diffDays
         }
       })
-      setTotalStr(total.toFixed(2))
+      setTotalStr(Math.round(total).toFixed(2))
     }
   }, [dates, items, inventory])
 

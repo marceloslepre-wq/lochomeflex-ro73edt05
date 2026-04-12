@@ -44,7 +44,7 @@ export function ReceiptDialog({
     text += `*Equipamentos:*\n`
     rental.items.forEach((ri) => {
       const item = inventory.find((i) => i.id === ri.itemId)
-      text += `- ${ri.qty}x ${item?.name || 'Item'} (R$ ${item?.dailyPrice?.toFixed(2) || '0.00'}/dia)\n`
+      text += `- ${ri.qty}x ${item?.name || 'Item'}\n`
     })
 
     text += `\n*Período:* `
@@ -162,7 +162,6 @@ export function ReceiptDialog({
                     <span>
                       {ri.qty}x {item?.name}
                     </span>
-                    <span>R$ {((item?.dailyPrice || 0) * ri.qty).toFixed(2)}/dia</span>
                   </li>
                 )
               })}

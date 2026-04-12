@@ -67,9 +67,11 @@ export type Database = {
           code: string
           condition_status: string
           created_at: string
+          daily_price: number | null
           description: string | null
           id: string
           image: string | null
+          monthly_price: number | null
           name: string
           rented_qty: number
           total_qty: number
@@ -80,9 +82,11 @@ export type Database = {
           code: string
           condition_status?: string
           created_at?: string
+          daily_price?: number | null
           description?: string | null
           id?: string
           image?: string | null
+          monthly_price?: number | null
           name: string
           rented_qty?: number
           total_qty?: number
@@ -93,9 +97,11 @@ export type Database = {
           code?: string
           condition_status?: string
           created_at?: string
+          daily_price?: number | null
           description?: string | null
           id?: string
           image?: string | null
+          monthly_price?: number | null
           name?: string
           rented_qty?: number
           total_qty?: number
@@ -138,6 +144,7 @@ export type Database = {
       rentals: {
         Row: {
           actual_return_date: string | null
+          contract_number: string | null
           created_at: string
           custom_contract_html: string | null
           custom_contract_text: string | null
@@ -153,6 +160,7 @@ export type Database = {
         }
         Insert: {
           actual_return_date?: string | null
+          contract_number?: string | null
           created_at?: string
           custom_contract_html?: string | null
           custom_contract_text?: string | null
@@ -168,6 +176,7 @@ export type Database = {
         }
         Update: {
           actual_return_date?: string | null
+          contract_number?: string | null
           created_at?: string
           custom_contract_html?: string | null
           custom_contract_text?: string | null
@@ -423,6 +432,8 @@ export const Constants = {
 //   condition_status: text (not null, default: 'Disponível'::text)
 //   image: text (nullable)
 //   created_at: timestamp with time zone (not null, default: now())
+//   monthly_price: numeric (nullable, default: 0)
+//   daily_price: numeric (nullable, default: 0)
 // Table: profiles
 //   id: uuid (not null, default: gen_random_uuid())
 //   auth_user_id: uuid (nullable)
@@ -446,6 +457,7 @@ export const Constants = {
 //   pickup_location_id: text (nullable)
 //   items: jsonb (not null, default: '[]'::jsonb)
 //   created_at: timestamp with time zone (not null, default: now())
+//   contract_number: text (nullable)
 // Table: settings
 //   id: uuid (not null, default: gen_random_uuid())
 //   primary_color: text (nullable, default: '#1e40af'::text)
@@ -562,7 +574,22 @@ export const Constants = {
 //   END;
 //   $function$
 //
+// FUNCTION set_contract_number()
+//   CREATE OR REPLACE FUNCTION public.set_contract_number()
+//    RETURNS trigger
+//    LANGUAGE plpgsql
+//   AS $function$
+//   BEGIN
+//     IF NEW.contract_number IS NULL THEN
+//       NEW.contract_number := 'LC' || LPAD(nextval('public.rental_contract_seq')::text, 3, '0');
+//     END IF;
+//     RETURN NEW;
+//   END;
+//   $function$
+//
 
 // --- TRIGGERS ---
 // Table: profiles
 //   on_profile_created: CREATE TRIGGER on_profile_created BEFORE INSERT ON public.profiles FOR EACH ROW EXECUTE FUNCTION handle_new_profile()
+// Table: rentals
+//   trg_set_contract_number: CREATE TRIGGER trg_set_contract_number BEFORE INSERT ON public.rentals FOR EACH ROW EXECUTE FUNCTION set_contract_number()

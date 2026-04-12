@@ -110,6 +110,7 @@ interface MainStore {
   updateUser: (id: string, data: Partial<User>) => void
   deleteUser: (id: string) => void
   refreshCustomers: () => void
+  deleteRental: (id: string) => Promise<void>
 }
 
 const StoreContext = createContext<MainStore | null>(null)
@@ -345,6 +346,46 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const deleteRental = async (id: string) => {
+    const rental = rentals.find((r) => r.id === id)
+    if (!rental) return
+
+    setRentals((prev) => prev.filter((r) => r.id !== id))
+
+    if (rental.status !== 'Devolvido') {
+      setInventory((prev) =>
+        prev.map((item) => {
+          const rented = rental.items.find((ri) => ri.itemId === item.id)
+          if (rented) {
+            return {
+              ...item,
+              availableQty: item.availableQty + rented.qty,
+              rentedQty: item.rentedQty - rented.qty,
+            }
+          }
+          return item
+        }),
+      )
+    }
+
+    await supabase.from('rentals').delete().eq('id', id)
+
+    if (rental.status !== 'Devolvido') {
+      for (const rentItem of rental.items) {
+        const inv = inventory.find((i) => i.id === rentItem.itemId)
+        if (inv) {
+          await supabase
+            .from('inventory')
+            .update({
+              available_qty: inv.availableQty + rentItem.qty,
+              rented_qty: inv.rentedQty - rentItem.qty,
+            })
+            .eq('id', inv.id)
+        }
+      }
+    }
+  }
+
   const updateRental = async (id: string, updateData: Partial<Rental>) => {
     setRentals((prev) => prev.map((r) => (r.id === id ? { ...r, ...updateData } : r)))
 
@@ -526,6 +567,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         updateUser,
         deleteUser,
         refreshCustomers,
+        deleteRental,
       },
     },
     children,

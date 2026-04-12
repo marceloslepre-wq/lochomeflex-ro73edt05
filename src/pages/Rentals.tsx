@@ -13,7 +13,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Search, Eye, ArrowDownToLine, Download, RefreshCw, Receipt } from 'lucide-react'
+import { Search, Eye, ArrowDownToLine, Download, RefreshCw, Receipt, Trash2 } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -35,9 +35,11 @@ import { RenewDialog } from '@/components/rentals/RenewDialog'
 import { ReceiptDialog } from '@/components/rentals/ReceiptDialog'
 
 export default function Rentals() {
-  const { rentals, customers, globalSearch, settings } = useMainStore()
+  const { rentals, customers, globalSearch, settings, deleteRental } = useMainStore()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('Todos')
+  const [returnDateStart, setReturnDateStart] = useState('')
+  const [returnDateEnd, setReturnDateEnd] = useState('')
 
   const [selectedRental, setSelectedRental] = useState<Rental | null>(null)
   const [returnOpen, setReturnOpen] = useState(false)
@@ -55,7 +57,15 @@ export default function Rentals() {
       r.id.toLowerCase().includes(term.toLowerCase()) ||
       (c && c.name.toLowerCase().includes(term.toLowerCase()))
     const matchesStatus = statusFilter === 'Todos' || r.status === statusFilter
-    return matchesSearch && matchesStatus
+
+    let matchesReturnDate = true
+    if (returnDateStart || returnDateEnd) {
+      const rDate = r.expectedReturnDate.split('T')[0]
+      if (returnDateStart && rDate < returnDateStart) matchesReturnDate = false
+      if (returnDateEnd && rDate > returnDateEnd) matchesReturnDate = false
+    }
+
+    return matchesSearch && matchesStatus && matchesReturnDate
   })
 
   const exportData = () => {
@@ -158,6 +168,24 @@ export default function Rentals() {
               <SelectItem value="Devolvido">Devolvidos</SelectItem>
             </SelectContent>
           </Select>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
+              Previsão de Devolução:
+            </span>
+            <Input
+              type="date"
+              className="w-auto bg-background"
+              value={returnDateStart}
+              onChange={(e) => setReturnDateStart(e.target.value)}
+            />
+            <span className="text-sm text-muted-foreground">até</span>
+            <Input
+              type="date"
+              className="w-auto bg-background"
+              value={returnDateEnd}
+              onChange={(e) => setReturnDateEnd(e.target.value)}
+            />
+          </div>
         </div>
         <CardContent className="p-0">
           <Table>
@@ -265,6 +293,23 @@ export default function Rentals() {
                               </Button>
                             </>
                           )}
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8 border-red-500 text-red-600 hover:bg-red-50"
+                            onClick={() => {
+                              if (
+                                window.confirm(
+                                  'Tem certeza que deseja excluir este contrato? Se estiver ativo, os itens retornarão ao estoque.',
+                                )
+                              ) {
+                                deleteRental(rental.id)
+                              }
+                            }}
+                            title="Excluir"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>

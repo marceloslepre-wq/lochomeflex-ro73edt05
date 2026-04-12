@@ -67,6 +67,7 @@ export function RenewDialog({ rental, open, onOpenChange, onRenewed }: RenewDial
         addedTotal += (item.dailyPrice || 0) * ri.qty * diffDays
       }
     })
+    addedTotal = Math.round(addedTotal)
 
     const newTotal = rental.total + addedTotal
 
