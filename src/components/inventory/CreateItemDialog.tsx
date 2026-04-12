@@ -36,6 +36,8 @@ export function CreateItemDialog() {
     description: '',
     image: '',
     conditionStatus: 'Disponível' as InventoryItem['conditionStatus'],
+    monthlyPrice: '',
+    dailyPrice: '',
   })
 
   if (!can('items:write')) return null
@@ -69,6 +71,8 @@ export function CreateItemDialog() {
       image:
         formData.image ||
         `https://img.usecurling.com/p/200/200?q=${encodeURIComponent(formData.category || 'tool')}`,
+      monthlyPrice: parseFloat(formData.monthlyPrice) || 0,
+      dailyPrice: parseFloat(formData.dailyPrice) || 0,
     })
 
     toast({ title: 'Item Cadastrado', description: `${formData.name} adicionado ao estoque.` })
@@ -81,6 +85,8 @@ export function CreateItemDialog() {
       description: '',
       image: '',
       conditionStatus: 'Disponível',
+      monthlyPrice: '',
+      dailyPrice: '',
     })
   }
 
@@ -132,6 +138,28 @@ export function CreateItemDialog() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-2">
+              <Label>Valor Mensal (R$)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={formData.monthlyPrice}
+                onChange={(e) => setFormData((f) => ({ ...f, monthlyPrice: e.target.value }))}
+                placeholder="0.00"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Valor Diário (R$)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={formData.dailyPrice}
+                onChange={(e) => setFormData((f) => ({ ...f, dailyPrice: e.target.value }))}
+                placeholder="0.00"
+              />
             </div>
           </div>
           <div className="grid gap-2">

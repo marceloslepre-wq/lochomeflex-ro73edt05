@@ -18,11 +18,12 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Plus, Trash2 } from 'lucide-react'
-import useMainStore from '@/stores/main'
+import useMainStore, { Rental } from '@/stores/main'
 import { useToast } from '@/hooks/use-toast'
 import { usePermissions } from '@/hooks/use-permissions'
+import { useEffect } from 'react'
 
-export function CreateRentalDialog() {
+export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental) => void }) {
   const { customers, inventory, addRental } = useMainStore()
   const { toast } = useToast()
   const { can } = usePermissions()
@@ -39,6 +40,25 @@ export function CreateRentalDialog() {
     () => inventory.filter((i) => i.availableQty > 0 && i.conditionStatus === 'Disponível'),
     [inventory],
   )
+
+  useEffect(() => {
+    if (dates.start && dates.end && items.length > 0) {
+      const start = new Date(dates.start)
+      const end = new Date(dates.end)
+      const diffTime = end.getTime() - start.getTime()
+      let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+      if (diffDays <= 0) diffDays = 1 // Minimum 1 day
+
+      let total = 0
+      items.forEach((ri) => {
+        const item = inventory.find((i) => i.id === ri.itemId)
+        if (item) {
+          total += (item.dailyPrice || 0) * ri.qty * diffDays
+        }
+      })
+      setTotalStr(total.toFixed(2))
+    }
+  }, [dates, items, inventory])
 
   if (!can('rentals:manage')) return null
 
@@ -87,7 +107,7 @@ export function CreateRentalDialog() {
 
   const handleRemoveItem = (id: string) => setItems((prev) => prev.filter((p) => p.itemId !== id))
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!customerId || items.length === 0 || !dates.start || !dates.end || !totalStr) {
       toast({
@@ -99,7 +119,7 @@ export function CreateRentalDialog() {
     }
 
     const newId = `LOC-${Math.floor(1000 + Math.random() * 9000)}`
-    addRental({
+    const createdRental = await addRental({
       id: newId,
       customerId,
       items,
@@ -109,7 +129,18 @@ export function CreateRentalDialog() {
       total: parseFloat(totalStr),
     })
 
-    toast({ title: 'Locação Criada', description: `Contrato ${newId} gerado com sucesso.` })
+    if (createdRental) {
+      toast({
+        title: 'Locação Criada',
+        description: `Contrato ${createdRental.contractNumber || newId} gerado com sucesso.`,
+      })
+      if (onCreated) {
+        onCreated(createdRental)
+      }
+    } else {
+      toast({ title: 'Locação Criada localmente', description: `Contrato gerado.` })
+    }
+
     setOpen(false)
     setCustomerId('')
     setItems([])

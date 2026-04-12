@@ -13,7 +13,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Search, Eye, ArrowDownToLine, Download, RefreshCw } from 'lucide-react'
+import { Search, Eye, ArrowDownToLine, Download, RefreshCw, Receipt } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -32,6 +32,7 @@ import { CreateRentalDialog } from '@/components/rentals/CreateRentalDialog'
 import { ReturnDialog } from '@/components/rentals/ReturnDialog'
 import { RentalsReportDialog } from '@/components/rentals/RentalsReportDialog'
 import { RenewDialog } from '@/components/rentals/RenewDialog'
+import { ReceiptDialog } from '@/components/rentals/ReceiptDialog'
 
 export default function Rentals() {
   const { rentals, customers, globalSearch, settings } = useMainStore()
@@ -41,6 +42,11 @@ export default function Rentals() {
   const [selectedRental, setSelectedRental] = useState<Rental | null>(null)
   const [returnOpen, setReturnOpen] = useState(false)
   const [renewOpen, setRenewOpen] = useState(false)
+
+  const [receiptOpen, setReceiptOpen] = useState(false)
+  const [receiptRental, setReceiptRental] = useState<Rental | null>(null)
+  const [receiptType, setReceiptType] = useState<'new' | 'renewal'>('new')
+  const [receiptRenewalInfo, setReceiptRenewalInfo] = useState<any>(null)
 
   const filtered = rentals.filter((r) => {
     const c = customers.find((cust) => cust.id === r.customerId)
@@ -119,7 +125,14 @@ export default function Rentals() {
             </DropdownMenuContent>
           </DropdownMenu>
           <RentalsReportDialog />
-          <CreateRentalDialog />
+          <CreateRentalDialog
+            onCreated={(rental) => {
+              setReceiptRental(rental)
+              setReceiptType('new')
+              setReceiptRenewalInfo(null)
+              setReceiptOpen(true)
+            }}
+          />
         </div>
       </div>
 
@@ -171,7 +184,9 @@ export default function Rentals() {
                   const customer = customers.find((c) => c.id === rental.customerId)
                   return (
                     <TableRow key={rental.id} className="group hover:bg-muted/30">
-                      <TableCell className="font-medium">{rental.id}</TableCell>
+                      <TableCell className="font-medium">
+                        {rental.contractNumber || rental.id.split('-')[0]}
+                      </TableCell>
                       <TableCell>{customer?.name}</TableCell>
                       <TableCell className="text-muted-foreground">
                         {new Date(rental.startDate).toLocaleDateString('pt-BR')}
@@ -207,6 +222,20 @@ export default function Rentals() {
                             <Link to={`/rentals/${rental.id}`}>
                               <Eye className="h-4 w-4 text-primary" />
                             </Link>
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8 border-orange-500 text-orange-600 hover:bg-orange-50"
+                            onClick={() => {
+                              setReceiptRental(rental)
+                              setReceiptType('new')
+                              setReceiptRenewalInfo(null)
+                              setReceiptOpen(true)
+                            }}
+                            title="Recibo"
+                          >
+                            <Receipt className="h-4 w-4" />
                           </Button>
                           {rental.status !== 'Devolvido' && (
                             <>
@@ -248,7 +277,24 @@ export default function Rentals() {
       </Card>
 
       <ReturnDialog rental={selectedRental} open={returnOpen} onOpenChange={setReturnOpen} />
-      <RenewDialog rental={selectedRental} open={renewOpen} onOpenChange={setRenewOpen} />
+      <RenewDialog
+        rental={selectedRental}
+        open={renewOpen}
+        onOpenChange={setRenewOpen}
+        onRenewed={(rental, info) => {
+          setReceiptRental(rental)
+          setReceiptType('renewal')
+          setReceiptRenewalInfo(info)
+          setReceiptOpen(true)
+        }}
+      />
+      <ReceiptDialog
+        rental={receiptRental}
+        open={receiptOpen}
+        onOpenChange={setReceiptOpen}
+        type={receiptType}
+        renewalInfo={receiptRenewalInfo}
+      />
     </div>
   )
 }

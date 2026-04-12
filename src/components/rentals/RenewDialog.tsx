@@ -11,17 +11,21 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import useMainStore, { Rental } from '@/stores/main'
-import { addDays, format, parseISO } from 'date-fns'
+import { addDays, format, parseISO, differenceInDays } from 'date-fns'
 import { useToast } from '@/hooks/use-toast'
 
 interface RenewDialogProps {
   rental: Rental | null
   open: boolean
   onOpenChange: (open: boolean) => void
+  onRenewed?: (
+    rental: Rental,
+    info: { startDate: string; endDate: string; addedTotal: number },
+  ) => void
 }
 
-export function RenewDialog({ rental, open, onOpenChange }: RenewDialogProps) {
-  const { updateRental } = useMainStore()
+export function RenewDialog({ rental, open, onOpenChange, onRenewed }: RenewDialogProps) {
+  const { updateRental, inventory } = useMainStore()
   const { toast } = useToast()
 
   const [startDate, setStartDate] = useState('')
@@ -50,15 +54,43 @@ export function RenewDialog({ rental, open, onOpenChange }: RenewDialogProps) {
     const [year, month, day] = endDate.split('-').map(Number)
     const newExpectedReturn = new Date(year, month - 1, day, 12, 0, 0).toISOString()
 
+    // Calculate added value
+    const start = parseISO(startDate)
+    const end = new Date(year, month - 1, day)
+    let diffDays = differenceInDays(end, start)
+    if (diffDays <= 0) diffDays = 1
+
+    let addedTotal = 0
+    rental.items.forEach((ri) => {
+      const item = inventory.find((i) => i.id === ri.itemId)
+      if (item) {
+        addedTotal += (item.dailyPrice || 0) * ri.qty * diffDays
+      }
+    })
+
+    const newTotal = rental.total + addedTotal
+
     updateRental(rental.id, {
       expectedReturnDate: newExpectedReturn,
       status: 'Ativo',
+      total: newTotal,
     })
 
     toast({
       title: 'Locação renovada com sucesso',
-      description: `O contrato ${rental.id} foi estendido até ${format(new Date(year, month - 1, day), 'dd/MM/yyyy')}.`,
+      description: `O contrato ${rental.contractNumber || rental.id} foi estendido até ${format(new Date(year, month - 1, day), 'dd/MM/yyyy')}.`,
     })
+
+    if (onRenewed) {
+      onRenewed(
+        { ...rental, expectedReturnDate: newExpectedReturn, total: newTotal },
+        {
+          startDate,
+          endDate,
+          addedTotal,
+        },
+      )
+    }
 
     onOpenChange(false)
   }

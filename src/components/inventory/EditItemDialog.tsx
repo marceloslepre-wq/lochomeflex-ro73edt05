@@ -47,6 +47,8 @@ export function EditItemDialog({ item }: { item: InventoryItem }) {
     image: item.image,
     conditionStatus: item.conditionStatus,
     assets: item.assets || [],
+    monthlyPrice: item.monthlyPrice?.toString() || '',
+    dailyPrice: item.dailyPrice?.toString() || '',
   })
 
   if (!can('items:write')) return null
@@ -131,6 +133,8 @@ export function EditItemDialog({ item }: { item: InventoryItem }) {
       image: formData.image || item.image,
       conditionStatus: formData.conditionStatus,
       assets: formData.assets,
+      monthlyPrice: parseFloat(formData.monthlyPrice) || 0,
+      dailyPrice: parseFloat(formData.dailyPrice) || 0,
     })
 
     toast({ title: 'Item Atualizado', description: `${formData.name} modificado com sucesso.` })
@@ -192,6 +196,28 @@ export function EditItemDialog({ item }: { item: InventoryItem }) {
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label>Valor Mensal (R$)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={formData.monthlyPrice}
+                      onChange={(e) => setFormData((f) => ({ ...f, monthlyPrice: e.target.value }))}
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Valor Diário (R$)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={formData.dailyPrice}
+                      onChange={(e) => setFormData((f) => ({ ...f, dailyPrice: e.target.value }))}
+                      placeholder="0.00"
+                    />
                   </div>
                 </div>
                 <div className="grid gap-2">

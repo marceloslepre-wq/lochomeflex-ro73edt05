@@ -23,6 +23,8 @@ export type InventoryItem = {
   conditionStatus: 'Disponível' | 'Manutenção' | 'Indisponível' | 'Esgotado'
   image?: string
   assets?: Asset[]
+  monthlyPrice?: number
+  dailyPrice?: number
 }
 
 export type Address = {
@@ -52,6 +54,7 @@ export type Rental = {
   customContractHtml?: string
   userId?: string
   pickupLocationId?: string
+  contractNumber?: string
 }
 
 export type User = {
@@ -93,7 +96,7 @@ interface MainStore {
   rentals: Rental[]
   users: User[]
   settings: Settings
-  addRental: (rental: Rental) => void
+  addRental: (rental: Rental) => Promise<Rental | null>
   returnRental: (rentalId: string, actualReturnDate: string) => void
   updateRental: (id: string, data: Partial<Rental>) => void
   addInventoryItem: (item: InventoryItem) => void
@@ -166,6 +169,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             rentedQty: row.rented_qty,
             conditionStatus: row.condition_status as any,
             image: row.image,
+            monthlyPrice: Number(row.monthly_price) || 0,
+            dailyPrice: Number(row.daily_price) || 0,
           })),
         )
       }
@@ -230,6 +235,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             userId: row.user_id,
             pickupLocationId: row.pickup_location_id,
             items: row.items || [],
+            contractNumber: row.contract_number,
           })),
         )
       }
@@ -240,7 +246,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     loadData()
   }, [user])
 
-  const addRental = async (rental: Rental) => {
+  const addRental = async (rental: Rental): Promise<Rental | null> => {
     const tempId = rental.id || Math.random().toString()
     setRentals((prev) => [rental, ...prev])
 
@@ -275,10 +281,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       .select()
       .single()
 
+    let newRental = rental
     if (data) {
-      setRentals((prev) =>
-        prev.map((r) => (r.id === tempId || r.id === rental.id ? { ...r, id: data.id } : r)),
-      )
+      newRental = { ...rental, id: data.id, contractNumber: data.contract_number }
+      setRentals((prev) => prev.map((r) => (r.id === tempId || r.id === rental.id ? newRental : r)))
     }
 
     for (const rentItem of rental.items) {
@@ -293,6 +299,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           .eq('id', inv.id)
       }
     }
+
+    return newRental
   }
 
   const returnRental = async (rentalId: string, actualDate: string) => {
@@ -365,6 +373,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         rented_qty: item.rentedQty,
         condition_status: item.conditionStatus,
         image: item.image,
+        monthly_price: item.monthlyPrice,
+        daily_price: item.dailyPrice,
       })
       .select()
       .single()
@@ -389,6 +399,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (data.rentedQty !== undefined) dbUpdate.rented_qty = data.rentedQty
     if (data.conditionStatus) dbUpdate.condition_status = data.conditionStatus
     if (data.image !== undefined) dbUpdate.image = data.image
+    if (data.monthlyPrice !== undefined) dbUpdate.monthly_price = data.monthlyPrice
+    if (data.dailyPrice !== undefined) dbUpdate.daily_price = data.dailyPrice
 
     await supabase.from('inventory').update(dbUpdate).eq('id', id)
   }

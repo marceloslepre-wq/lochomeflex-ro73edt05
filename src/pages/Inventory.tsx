@@ -196,6 +196,7 @@ export default function Inventory() {
               <TableRow className="bg-muted/50">
                 <TableHead className="w-[80px]">Foto</TableHead>
                 <TableHead>Modelo</TableHead>
+                <TableHead>Mensal</TableHead>
                 <TableHead>Categoria</TableHead>
                 <TableHead className="text-right">Total</TableHead>
                 <TableHead className="text-right">Locados</TableHead>
@@ -226,6 +227,9 @@ export default function Inventory() {
                     <TableCell>
                       <p className="font-medium text-base">{item.name}</p>
                       <p className="text-xs text-muted-foreground">Ref: {item.code}</p>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {item.monthlyPrice ? `R$ ${item.monthlyPrice.toFixed(2)}` : '-'}
                     </TableCell>
                     <TableCell>{item.category}</TableCell>
                     <TableCell className="text-right font-medium">{item.totalQty}</TableCell>
