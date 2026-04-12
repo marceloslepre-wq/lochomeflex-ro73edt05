@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react'
-import { MOCK_CUSTOMERS, MOCK_INVENTORY, MOCK_RENTALS, MOCK_USERS, MOCK_SETTINGS } from './mockData'
+import { supabase } from '@/lib/supabase/client'
 import { PermissionKey } from '@/hooks/use-permissions'
+import { useAuth } from '@/hooks/use-auth'
+import { customerService, Customer } from '@/services/customers'
 
 export type Asset = {
   id: string
@@ -9,9 +11,17 @@ export type Asset = {
   image?: string
 }
 
-export type InventoryItem = Omit<(typeof MOCK_INVENTORY)[0], 'conditionStatus'> & {
+export type InventoryItem = {
+  id: string
+  code: string
+  name: string
+  category: string
   description?: string
+  totalQty: number
+  availableQty: number
+  rentedQty: number
   conditionStatus: 'Disponível' | 'Manutenção' | 'Indisponível' | 'Esgotado'
+  image?: string
   assets?: Asset[]
 }
 
@@ -24,20 +34,34 @@ export type Address = {
   zipCode: string
 }
 
-export type Customer = (typeof MOCK_CUSTOMERS)[0] & {
-  address?: Address
-  hasDifferentDeliveryAddress?: boolean
-  deliveryAddress?: Address
+export type RentalItem = {
+  itemId: string
+  qty: number
 }
 
-export type Rental = (typeof MOCK_RENTALS)[0] & {
+export type Rental = {
+  id: string
+  customerId: string
+  items: RentalItem[]
+  startDate: string
+  expectedReturnDate: string
+  actualReturnDate?: string
+  status: 'Ativo' | 'Atrasado' | 'Devolvido' | 'Cancelado'
+  total: number
   customContractText?: string
   customContractHtml?: string
   userId?: string
   pickupLocationId?: string
 }
 
-export type User = Omit<(typeof MOCK_USERS)[0], 'permissions'> & { permissions: PermissionKey[] }
+export type User = {
+  id: string
+  name: string
+  email: string
+  role: string
+  active: boolean
+  permissions: PermissionKey[]
+}
 
 export type Location = {
   id: string
@@ -45,7 +69,16 @@ export type Location = {
   address: string
 }
 
-export type Settings = typeof MOCK_SETTINGS & {
+export type Settings = {
+  primaryColor: string
+  logoUrl: string | null
+  contractFileName: string | null
+  contractTemplateHtml: string | null
+  lateFeeType: 'daily' | 'fixed'
+  lateFeeValue: number
+  companyName: string
+  companyDocument: string
+  companyAddress: string
   locations?: Location[]
   categories?: string[]
 }
@@ -73,36 +106,144 @@ interface MainStore {
   addUser: (user: User) => void
   updateUser: (id: string, data: Partial<User>) => void
   deleteUser: (id: string) => void
+  refreshCustomers: () => void
 }
 
 const StoreContext = createContext<MainStore | null>(null)
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem('currentUser')
-    return saved ? JSON.parse(saved) : null
-  })
+  const { user } = useAuth()
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [globalSearch, setGlobalSearch] = useState('')
-  const [inventory, setInventory] = useState<InventoryItem[]>(MOCK_INVENTORY as InventoryItem[])
-  const [customers, setCustomers] = useState<Customer[]>(MOCK_CUSTOMERS)
-  const [rentals, setRentals] = useState<Rental[]>(MOCK_RENTALS)
-  const [users, setUsers] = useState<User[]>(MOCK_USERS as User[])
+  const [inventory, setInventory] = useState<InventoryItem[]>([])
+  const [customers, setCustomers] = useState<Customer[]>([])
+  const [rentals, setRentals] = useState<Rental[]>([])
+  const [users, setUsers] = useState<User[]>([])
+  const [settingsId, setSettingsId] = useState<string | null>(null)
   const [settings, setSettings] = useState<Settings>({
-    ...MOCK_SETTINGS,
+    primaryColor: '#1e40af',
+    logoUrl: null,
+    contractFileName: null,
+    contractTemplateHtml: null,
+    lateFeeType: 'daily',
+    lateFeeValue: 2,
+    companyName: 'LocaWeb Gestão de Ativos LTDA',
+    companyDocument: '00.000.000/0001-00',
+    companyAddress: 'Av. Central, 1000 - Centro, São Paulo/SP',
     locations: [],
     categories: ['Ferramentas', 'Equipamentos Pesados', 'Acessórios', 'Geral'],
   })
 
-  useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem('currentUser', JSON.stringify(currentUser))
-    } else {
-      localStorage.removeItem('currentUser')
-    }
-  }, [currentUser])
+  const refreshCustomers = () => {
+    customerService.getCustomers().then(setCustomers).catch(console.error)
+  }
 
-  const addRental = (rental: Rental) => {
+  useEffect(() => {
+    if (!user) {
+      setInventory([])
+      setCustomers([])
+      setRentals([])
+      setUsers([])
+      setCurrentUser(null)
+      return
+    }
+
+    const loadData = async () => {
+      const { data: invData } = await supabase
+        .from('inventory')
+        .select('*')
+        .order('created_at', { ascending: false })
+      if (invData) {
+        setInventory(
+          invData.map((row: any) => ({
+            id: row.id,
+            code: row.code,
+            name: row.name,
+            category: row.category,
+            description: row.description,
+            totalQty: row.total_qty,
+            availableQty: row.available_qty,
+            rentedQty: row.rented_qty,
+            conditionStatus: row.condition_status as any,
+            image: row.image,
+          })),
+        )
+      }
+
+      const { data: setData } = await supabase.from('settings').select('*').limit(1).single()
+      if (setData) {
+        setSettingsId(setData.id)
+        setSettings({
+          primaryColor: setData.primary_color || '#1e40af',
+          logoUrl: setData.logo_url,
+          contractFileName: setData.contract_file_name,
+          contractTemplateHtml: setData.contract_template_html,
+          lateFeeType: (setData.late_fee_type as any) || 'daily',
+          lateFeeValue: Number(setData.late_fee_value) || 2,
+          companyName: setData.company_name || '',
+          companyDocument: setData.company_document || '',
+          companyAddress: setData.company_address || '',
+          categories: setData.categories || [
+            'Ferramentas',
+            'Equipamentos Pesados',
+            'Acessórios',
+            'Geral',
+          ],
+          locations: setData.locations || [],
+        })
+      }
+
+      const { data: profData } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false })
+      if (profData) {
+        const mappedUsers = profData.map((row: any) => ({
+          id: row.id,
+          name: row.name,
+          email: row.email,
+          role: row.role,
+          active: row.active,
+          permissions: row.permissions || [],
+        }))
+        setUsers(mappedUsers)
+        const myProfile = mappedUsers.find((u) => u.email === user.email)
+        if (myProfile) setCurrentUser(myProfile)
+      }
+
+      const { data: rentData } = await supabase
+        .from('rentals')
+        .select('*')
+        .order('created_at', { ascending: false })
+      if (rentData) {
+        setRentals(
+          rentData.map((row: any) => ({
+            id: row.id,
+            customerId: row.customer_id,
+            startDate: row.start_date,
+            expectedReturnDate: row.expected_return_date,
+            actualReturnDate: row.actual_return_date,
+            status: row.status as any,
+            total: Number(row.total),
+            customContractText: row.custom_contract_text,
+            customContractHtml: row.custom_contract_html,
+            userId: row.user_id,
+            pickupLocationId: row.pickup_location_id,
+            items: row.items || [],
+          })),
+        )
+      }
+
+      refreshCustomers()
+    }
+
+    loadData()
+  }, [user])
+
+  const addRental = async (rental: Rental) => {
+    const tempId = rental.id || Math.random().toString()
     setRentals((prev) => [rental, ...prev])
+
     setInventory((prev) =>
       prev.map((item) => {
         const rented = rental.items.find((ri) => ri.itemId === item.id)
@@ -116,9 +257,45 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return item
       }),
     )
+
+    const { data } = await supabase
+      .from('rentals')
+      .insert({
+        customer_id: rental.customerId,
+        start_date: rental.startDate,
+        expected_return_date: rental.expectedReturnDate,
+        status: rental.status,
+        total: rental.total,
+        custom_contract_text: rental.customContractText,
+        custom_contract_html: rental.customContractHtml,
+        user_id: rental.userId,
+        pickup_location_id: rental.pickupLocationId,
+        items: rental.items,
+      })
+      .select()
+      .single()
+
+    if (data) {
+      setRentals((prev) =>
+        prev.map((r) => (r.id === tempId || r.id === rental.id ? { ...r, id: data.id } : r)),
+      )
+    }
+
+    for (const rentItem of rental.items) {
+      const inv = inventory.find((i) => i.id === rentItem.itemId)
+      if (inv) {
+        await supabase
+          .from('inventory')
+          .update({
+            available_qty: inv.availableQty - rentItem.qty,
+            rented_qty: inv.rentedQty + rentItem.qty,
+          })
+          .eq('id', inv.id)
+      }
+    }
   }
 
-  const returnRental = (rentalId: string, actualDate: string) => {
+  const returnRental = async (rentalId: string, actualDate: string) => {
     const rental = rentals.find((r) => r.id === rentalId)
     if (!rental) return
 
@@ -140,29 +317,175 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return item
       }),
     )
+
+    await supabase
+      .from('rentals')
+      .update({ status: 'Devolvido', actual_return_date: actualDate })
+      .eq('id', rentalId)
+
+    for (const rentItem of rental.items) {
+      const inv = inventory.find((i) => i.id === rentItem.itemId)
+      if (inv) {
+        await supabase
+          .from('inventory')
+          .update({
+            available_qty: inv.availableQty + rentItem.qty,
+            rented_qty: inv.rentedQty - rentItem.qty,
+          })
+          .eq('id', inv.id)
+      }
+    }
   }
 
-  const updateRental = (id: string, data: Partial<Rental>) => {
-    setRentals((prev) => prev.map((r) => (r.id === id ? { ...r, ...data } : r)))
+  const updateRental = async (id: string, updateData: Partial<Rental>) => {
+    setRentals((prev) => prev.map((r) => (r.id === id ? { ...r, ...updateData } : r)))
+
+    const dbUpdate: any = {}
+    if (updateData.status) dbUpdate.status = updateData.status
+    if (updateData.actualReturnDate) dbUpdate.actual_return_date = updateData.actualReturnDate
+    if (updateData.expectedReturnDate) dbUpdate.expected_return_date = updateData.expectedReturnDate
+    if (updateData.startDate) dbUpdate.start_date = updateData.startDate
+
+    await supabase.from('rentals').update(dbUpdate).eq('id', id)
   }
 
-  const addInventoryItem = (item: InventoryItem) => setInventory((prev) => [item, ...prev])
-  const updateInventoryItem = (id: string, data: Partial<InventoryItem>) =>
+  const addInventoryItem = async (item: InventoryItem) => {
+    const tempId = item.id || Math.random().toString()
+    setInventory((prev) => [{ ...item, id: tempId }, ...prev])
+
+    const { data } = await supabase
+      .from('inventory')
+      .insert({
+        code: item.code,
+        name: item.name,
+        category: item.category,
+        description: item.description,
+        total_qty: item.totalQty,
+        available_qty: item.availableQty,
+        rented_qty: item.rentedQty,
+        condition_status: item.conditionStatus,
+        image: item.image,
+      })
+      .select()
+      .single()
+
+    if (data) {
+      setInventory((prev) =>
+        prev.map((i) => (i.id === tempId || i.id === item.id ? { ...i, id: data.id } : i)),
+      )
+    }
+  }
+
+  const updateInventoryItem = async (id: string, data: Partial<InventoryItem>) => {
     setInventory((prev) => prev.map((i) => (i.id === id ? { ...i, ...data } : i)))
-  const deleteInventoryItem = (id: string) =>
+
+    const dbUpdate: any = {}
+    if (data.code) dbUpdate.code = data.code
+    if (data.name) dbUpdate.name = data.name
+    if (data.category) dbUpdate.category = data.category
+    if (data.description !== undefined) dbUpdate.description = data.description
+    if (data.totalQty !== undefined) dbUpdate.total_qty = data.totalQty
+    if (data.availableQty !== undefined) dbUpdate.available_qty = data.availableQty
+    if (data.rentedQty !== undefined) dbUpdate.rented_qty = data.rentedQty
+    if (data.conditionStatus) dbUpdate.condition_status = data.conditionStatus
+    if (data.image !== undefined) dbUpdate.image = data.image
+
+    await supabase.from('inventory').update(dbUpdate).eq('id', id)
+  }
+
+  const deleteInventoryItem = async (id: string) => {
     setInventory((prev) => prev.filter((i) => i.id !== id))
+    await supabase.from('inventory').delete().eq('id', id)
+  }
 
-  const addCustomer = (c: Customer) => setCustomers((prev) => [c, ...prev])
-  const updateCustomer = (id: string, data: Partial<Customer>) =>
+  const addCustomer = async (c: Customer) => {
+    setCustomers((prev) => [c, ...prev])
+    await customerService.createCustomer(c)
+    refreshCustomers()
+  }
+
+  const updateCustomer = async (id: string, data: Partial<Customer>) => {
     setCustomers((prev) => prev.map((c) => (c.id === id ? { ...c, ...data } : c)))
-  const deleteCustomer = (id: string) => setCustomers((prev) => prev.filter((c) => c.id !== id))
+    await customerService.updateCustomer(id, data)
+    refreshCustomers()
+  }
 
-  const updateSettings = (data: Partial<Settings>) => setSettings((prev) => ({ ...prev, ...data }))
+  const deleteCustomer = async (id: string) => {
+    setCustomers((prev) => prev.filter((c) => c.id !== id))
+    await customerService.deleteCustomer(id)
+    refreshCustomers()
+  }
 
-  const addUser = (user: User) => setUsers((prev) => [...prev, user])
-  const updateUser = (id: string, data: Partial<User>) =>
+  const updateSettings = async (data: Partial<Settings>) => {
+    setSettings((prev) => ({ ...prev, ...data }))
+
+    const updateData: any = {}
+    if ('primaryColor' in data) updateData.primary_color = data.primaryColor
+    if ('logoUrl' in data) updateData.logo_url = data.logoUrl
+    if ('contractFileName' in data) updateData.contract_file_name = data.contractFileName
+    if ('contractTemplateHtml' in data)
+      updateData.contract_template_html = data.contractTemplateHtml
+    if ('lateFeeType' in data) updateData.late_fee_type = data.lateFeeType
+    if ('lateFeeValue' in data) updateData.late_fee_value = data.lateFeeValue
+    if ('companyName' in data) updateData.company_name = data.companyName
+    if ('companyDocument' in data) updateData.company_document = data.companyDocument
+    if ('companyAddress' in data) updateData.company_address = data.companyAddress
+    if ('categories' in data) updateData.categories = data.categories
+    if ('locations' in data) updateData.locations = data.locations
+
+    if (settingsId) {
+      await supabase.from('settings').update(updateData).eq('id', settingsId)
+    } else {
+      const { data: inserted } = await supabase
+        .from('settings')
+        .insert(updateData)
+        .select()
+        .single()
+      if (inserted) setSettingsId(inserted.id)
+    }
+  }
+
+  const addUser = async (newUser: User) => {
+    const tempId = newUser.id || Math.random().toString()
+    setUsers((prev) => [...prev, { ...newUser, id: tempId }])
+
+    const { data } = await supabase
+      .from('profiles')
+      .insert({
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role,
+        active: newUser.active,
+        permissions: newUser.permissions,
+      })
+      .select()
+      .single()
+
+    if (data) {
+      setUsers((prev) =>
+        prev.map((u) => (u.id === tempId || u.id === newUser.id ? { ...u, id: data.id } : u)),
+      )
+    }
+  }
+
+  const updateUser = async (id: string, data: Partial<User>) => {
     setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...data } : u)))
-  const deleteUser = (id: string) => setUsers((prev) => prev.filter((u) => u.id !== id))
+    await supabase
+      .from('profiles')
+      .update({
+        name: data.name,
+        email: data.email,
+        role: data.role,
+        active: data.active,
+        permissions: data.permissions,
+      })
+      .eq('id', id)
+  }
+
+  const deleteUser = async (id: string) => {
+    setUsers((prev) => prev.filter((u) => u.id !== id))
+    await supabase.from('profiles').delete().eq('id', id)
+  }
 
   return React.createElement(
     StoreContext.Provider,
@@ -190,6 +513,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         addUser,
         updateUser,
         deleteUser,
+        refreshCustomers,
       },
     },
     children,

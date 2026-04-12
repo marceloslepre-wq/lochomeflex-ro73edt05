@@ -9,7 +9,57 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      customers: {
+        Row: {
+          address: Json | null
+          created_at: string
+          delivery_address: Json | null
+          document: string
+          email: string | null
+          has_different_delivery_address: boolean | null
+          id: string
+          matricula: string
+          name: string
+          observations: string | null
+          phone_cell: string | null
+          phone_com: string | null
+          phone_res: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: Json | null
+          created_at?: string
+          delivery_address?: Json | null
+          document: string
+          email?: string | null
+          has_different_delivery_address?: boolean | null
+          id?: string
+          matricula: string
+          name: string
+          observations?: string | null
+          phone_cell?: string | null
+          phone_com?: string | null
+          phone_res?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: Json | null
+          created_at?: string
+          delivery_address?: Json | null
+          document?: string
+          email?: string | null
+          has_different_delivery_address?: boolean | null
+          id?: string
+          matricula?: string
+          name?: string
+          observations?: string | null
+          phone_cell?: string | null
+          phone_com?: string | null
+          phone_res?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -153,3 +203,40 @@ export const Constants = {
 // IMPORTANT: The TypeScript types above map UUID, TEXT, VARCHAR all to "string".
 // Use the COLUMN TYPES section below to know the real PostgreSQL type for each column.
 // Always use the correct PostgreSQL type when writing SQL migrations.
+
+// --- COLUMN TYPES (actual PostgreSQL types) ---
+// Use this to know the real database type when writing migrations.
+// "string" in TypeScript types above may be uuid, text, varchar, timestamptz, etc.
+// Table: customers
+//   id: uuid (not null, default: gen_random_uuid())
+//   matricula: text (not null)
+//   name: text (not null)
+//   document: text (not null)
+//   phone_res: text (nullable)
+//   phone_cell: text (nullable)
+//   phone_com: text (nullable)
+//   email: text (nullable)
+//   address: jsonb (nullable)
+//   has_different_delivery_address: boolean (nullable, default: false)
+//   delivery_address: jsonb (nullable)
+//   observations: text (nullable)
+//   created_at: timestamp with time zone (not null, default: now())
+//   updated_at: timestamp with time zone (not null, default: now())
+
+// --- CONSTRAINTS ---
+// Table: customers
+//   PRIMARY KEY customers_pkey: PRIMARY KEY (id)
+
+// --- ROW LEVEL SECURITY POLICIES ---
+// Table: customers
+//   Policy "anon_insert" (INSERT, PERMISSIVE) roles={anon}
+//     WITH CHECK: true
+//   Policy "authenticated_delete" (DELETE, PERMISSIVE) roles={authenticated}
+//     USING: true
+//   Policy "authenticated_insert" (INSERT, PERMISSIVE) roles={authenticated}
+//     WITH CHECK: true
+//   Policy "authenticated_select" (SELECT, PERMISSIVE) roles={authenticated}
+//     USING: true
+//   Policy "authenticated_update" (UPDATE, PERMISSIVE) roles={authenticated}
+//     USING: true
+//     WITH CHECK: true
