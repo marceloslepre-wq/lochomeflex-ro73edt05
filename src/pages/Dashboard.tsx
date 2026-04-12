@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import useMainStore from '@/stores/main'
+import { useAuth } from '@/hooks/use-auth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Package, Clock, AlertTriangle, CheckCircle, ArrowRight } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
@@ -7,6 +8,7 @@ import { Link } from 'react-router-dom'
 
 export default function Dashboard() {
   const { inventory, rentals, customers, globalSearch } = useMainStore()
+  const { profile } = useAuth()
 
   const stats = useMemo(() => {
     const totalItems = inventory.reduce((acc, curr) => acc + curr.totalQty, 0)
@@ -41,7 +43,8 @@ export default function Dashboard() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Visão Geral</h1>
         <p className="text-muted-foreground mt-1">
-          Bem-vindo de volta! Aqui está o resumo operacional de hoje.
+          Bem-vindo de volta{profile?.name ? `, ${profile.name.split(' ')[0]}` : ''}! Aqui está o
+          resumo operacional de hoje.
         </p>
       </div>
 

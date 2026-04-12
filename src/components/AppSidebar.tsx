@@ -18,7 +18,7 @@ export function AppSidebar() {
   const navigate = useNavigate()
   const { settings, setCurrentUser } = useMainStore()
   const { can } = usePermissions()
-  const { signOut } = useAuth()
+  const { signOut, user, profile } = useAuth()
 
   const navItems = [
     { title: 'Painel', url: '/dashboard', icon: LayoutDashboard, show: true },
@@ -84,7 +84,18 @@ export function AppSidebar() {
           ))}
         </SidebarMenu>
       </SidebarContent>
-      <SidebarFooter className="p-4 border-t">
+      <SidebarFooter className="p-4 border-t flex flex-col gap-4">
+        {user && (
+          <div className="flex items-center gap-3 px-2">
+            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold shrink-0">
+              {profile?.name?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase()}
+            </div>
+            <div className="flex flex-col overflow-hidden">
+              <span className="text-sm font-medium truncate">{profile?.name || 'Usuário'}</span>
+              <span className="text-xs text-muted-foreground truncate">{user.email}</span>
+            </div>
+          </div>
+        )}
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
