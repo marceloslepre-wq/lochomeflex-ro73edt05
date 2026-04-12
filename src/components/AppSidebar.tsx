@@ -11,12 +11,14 @@ import {
 } from '@/components/ui/sidebar'
 import useMainStore from '@/stores/main'
 import { usePermissions } from '@/hooks/use-permissions'
+import { useAuth } from '@/hooks/use-auth'
 
 export function AppSidebar() {
   const location = useLocation()
   const navigate = useNavigate()
   const { settings, setCurrentUser } = useMainStore()
   const { can } = usePermissions()
+  const { signOut } = useAuth()
 
   const navItems = [
     { title: 'Painel', url: '/dashboard', icon: LayoutDashboard, show: true },
@@ -32,9 +34,21 @@ export function AppSidebar() {
     },
   ].filter((i) => i.show)
 
-  const handleLogout = () => {
-    setCurrentUser(null)
-    navigate('/')
+  const handleLogout = async () => {
+    try {
+      await signOut()
+    } finally {
+      setCurrentUser(null)
+      // Limpa qualquer dado residual do localStorage para evitar reconexão fantasma
+      if (typeof window !== 'undefined') {
+        Object.keys(window.localStorage).forEach((key) => {
+          if (key.startsWith('sb-')) {
+            window.localStorage.removeItem(key)
+          }
+        })
+      }
+      navigate('/', { replace: true })
+    }
   }
 
   return (

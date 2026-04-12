@@ -60,6 +60,195 @@ export type Database = {
         }
         Relationships: []
       }
+      inventory: {
+        Row: {
+          available_qty: number
+          category: string
+          code: string
+          condition_status: string
+          created_at: string
+          description: string | null
+          id: string
+          image: string | null
+          name: string
+          rented_qty: number
+          total_qty: number
+        }
+        Insert: {
+          available_qty?: number
+          category: string
+          code: string
+          condition_status?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image?: string | null
+          name: string
+          rented_qty?: number
+          total_qty?: number
+        }
+        Update: {
+          available_qty?: number
+          category?: string
+          code?: string
+          condition_status?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image?: string | null
+          name?: string
+          rented_qty?: number
+          total_qty?: number
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          active: boolean
+          auth_user_id: string | null
+          created_at: string
+          email: string
+          id: string
+          name: string
+          permissions: Json | null
+          role: string
+        }
+        Insert: {
+          active?: boolean
+          auth_user_id?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          permissions?: Json | null
+          role?: string
+        }
+        Update: {
+          active?: boolean
+          auth_user_id?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          permissions?: Json | null
+          role?: string
+        }
+        Relationships: []
+      }
+      rentals: {
+        Row: {
+          actual_return_date: string | null
+          created_at: string
+          custom_contract_html: string | null
+          custom_contract_text: string | null
+          customer_id: string | null
+          expected_return_date: string
+          id: string
+          items: Json
+          pickup_location_id: string | null
+          start_date: string
+          status: string
+          total: number
+          user_id: string | null
+        }
+        Insert: {
+          actual_return_date?: string | null
+          created_at?: string
+          custom_contract_html?: string | null
+          custom_contract_text?: string | null
+          customer_id?: string | null
+          expected_return_date: string
+          id?: string
+          items?: Json
+          pickup_location_id?: string | null
+          start_date: string
+          status?: string
+          total?: number
+          user_id?: string | null
+        }
+        Update: {
+          actual_return_date?: string | null
+          created_at?: string
+          custom_contract_html?: string | null
+          custom_contract_text?: string | null
+          customer_id?: string | null
+          expected_return_date?: string
+          id?: string
+          items?: Json
+          pickup_location_id?: string | null
+          start_date?: string
+          status?: string
+          total?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'rentals_customer_id_fkey'
+            columns: ['customer_id']
+            isOneToOne: false
+            referencedRelation: 'customers'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'rentals_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      settings: {
+        Row: {
+          categories: Json | null
+          company_address: string | null
+          company_document: string | null
+          company_name: string | null
+          contract_file_name: string | null
+          contract_template_html: string | null
+          created_at: string
+          id: string
+          late_fee_type: string | null
+          late_fee_value: number | null
+          locations: Json | null
+          logo_url: string | null
+          primary_color: string | null
+          updated_at: string
+        }
+        Insert: {
+          categories?: Json | null
+          company_address?: string | null
+          company_document?: string | null
+          company_name?: string | null
+          contract_file_name?: string | null
+          contract_template_html?: string | null
+          created_at?: string
+          id?: string
+          late_fee_type?: string | null
+          late_fee_value?: number | null
+          locations?: Json | null
+          logo_url?: string | null
+          primary_color?: string | null
+          updated_at?: string
+        }
+        Update: {
+          categories?: Json | null
+          company_address?: string | null
+          company_document?: string | null
+          company_name?: string | null
+          contract_file_name?: string | null
+          contract_template_html?: string | null
+          created_at?: string
+          id?: string
+          late_fee_type?: string | null
+          late_fee_value?: number | null
+          locations?: Json | null
+          logo_url?: string | null
+          primary_color?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -222,10 +411,71 @@ export const Constants = {
 //   observations: text (nullable)
 //   created_at: timestamp with time zone (not null, default: now())
 //   updated_at: timestamp with time zone (not null, default: now())
+// Table: inventory
+//   id: uuid (not null, default: gen_random_uuid())
+//   code: text (not null)
+//   name: text (not null)
+//   category: text (not null)
+//   description: text (nullable)
+//   total_qty: integer (not null, default: 0)
+//   available_qty: integer (not null, default: 0)
+//   rented_qty: integer (not null, default: 0)
+//   condition_status: text (not null, default: 'Disponível'::text)
+//   image: text (nullable)
+//   created_at: timestamp with time zone (not null, default: now())
+// Table: profiles
+//   id: uuid (not null, default: gen_random_uuid())
+//   auth_user_id: uuid (nullable)
+//   name: text (not null)
+//   email: text (not null)
+//   role: text (not null, default: 'Operador'::text)
+//   active: boolean (not null, default: true)
+//   permissions: jsonb (nullable, default: '[]'::jsonb)
+//   created_at: timestamp with time zone (not null, default: now())
+// Table: rentals
+//   id: uuid (not null, default: gen_random_uuid())
+//   customer_id: uuid (nullable)
+//   start_date: date (not null)
+//   expected_return_date: date (not null)
+//   actual_return_date: date (nullable)
+//   status: text (not null, default: 'Ativo'::text)
+//   total: numeric (not null, default: 0)
+//   custom_contract_text: text (nullable)
+//   custom_contract_html: text (nullable)
+//   user_id: uuid (nullable)
+//   pickup_location_id: text (nullable)
+//   items: jsonb (not null, default: '[]'::jsonb)
+//   created_at: timestamp with time zone (not null, default: now())
+// Table: settings
+//   id: uuid (not null, default: gen_random_uuid())
+//   primary_color: text (nullable, default: '#1e40af'::text)
+//   logo_url: text (nullable)
+//   contract_file_name: text (nullable)
+//   contract_template_html: text (nullable)
+//   late_fee_type: text (nullable, default: 'daily'::text)
+//   late_fee_value: numeric (nullable, default: 2)
+//   company_name: text (nullable, default: 'LocaWeb Gestão de Ativos LTDA'::text)
+//   company_document: text (nullable, default: '00.000.000/0001-00'::text)
+//   company_address: text (nullable, default: 'Av. Central, 1000 - Centro, São Paulo/SP'::text)
+//   categories: jsonb (nullable, default: '["Ferramentas", "Equipamentos Pesados", "Acessórios", "Geral"]'::jsonb)
+//   locations: jsonb (nullable, default: '[]'::jsonb)
+//   created_at: timestamp with time zone (not null, default: now())
+//   updated_at: timestamp with time zone (not null, default: now())
 
 // --- CONSTRAINTS ---
 // Table: customers
 //   PRIMARY KEY customers_pkey: PRIMARY KEY (id)
+// Table: inventory
+//   PRIMARY KEY inventory_pkey: PRIMARY KEY (id)
+// Table: profiles
+//   FOREIGN KEY profiles_auth_user_id_fkey: FOREIGN KEY (auth_user_id) REFERENCES auth.users(id) ON DELETE CASCADE
+//   PRIMARY KEY profiles_pkey: PRIMARY KEY (id)
+// Table: rentals
+//   FOREIGN KEY rentals_customer_id_fkey: FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT
+//   PRIMARY KEY rentals_pkey: PRIMARY KEY (id)
+//   FOREIGN KEY rentals_user_id_fkey: FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE SET NULL
+// Table: settings
+//   PRIMARY KEY settings_pkey: PRIMARY KEY (id)
 
 // --- ROW LEVEL SECURITY POLICIES ---
 // Table: customers
@@ -238,5 +488,21 @@ export const Constants = {
 //   Policy "authenticated_select" (SELECT, PERMISSIVE) roles={authenticated}
 //     USING: true
 //   Policy "authenticated_update" (UPDATE, PERMISSIVE) roles={authenticated}
+//     USING: true
+//     WITH CHECK: true
+// Table: inventory
+//   Policy "authenticated_all" (ALL, PERMISSIVE) roles={authenticated}
+//     USING: true
+//     WITH CHECK: true
+// Table: profiles
+//   Policy "authenticated_all" (ALL, PERMISSIVE) roles={authenticated}
+//     USING: true
+//     WITH CHECK: true
+// Table: rentals
+//   Policy "authenticated_all" (ALL, PERMISSIVE) roles={authenticated}
+//     USING: true
+//     WITH CHECK: true
+// Table: settings
+//   Policy "authenticated_all" (ALL, PERMISSIVE) roles={authenticated}
 //     USING: true
 //     WITH CHECK: true
