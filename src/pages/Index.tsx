@@ -23,7 +23,14 @@ export default function Index() {
   const navigate = useNavigate()
   const { toast } = useToast()
 
-  if (loading) return null
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-muted/30">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
   if (user) return <Navigate to="/dashboard" replace />
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -37,7 +44,7 @@ export default function Index() {
     if (error) {
       toast({
         title: 'Erro de Autenticação',
-        description: 'Email ou senha inválidos. Tente novamente.',
+        description: 'Email ou senha inválidos. Tente novamente. (Dica: Senha padrão é Mudar@123)',
         variant: 'destructive',
       })
     } else {

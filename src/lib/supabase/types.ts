@@ -506,3 +506,19 @@ export const Constants = {
 //   Policy "authenticated_all" (ALL, PERMISSIVE) roles={authenticated}
 //     USING: true
 //     WITH CHECK: true
+
+// --- DATABASE FUNCTIONS ---
+// FUNCTION handle_new_user()
+//   CREATE OR REPLACE FUNCTION public.handle_new_user()
+//    RETURNS trigger
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//   AS $function$
+//   BEGIN
+//     INSERT INTO public.profiles (id, auth_user_id, email, name, role)
+//     VALUES (NEW.id, NEW.id, NEW.email, COALESCE(NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1)), 'Operador')
+//     ON CONFLICT (id) DO UPDATE SET auth_user_id = EXCLUDED.auth_user_id;
+//     RETURN NEW;
+//   END;
+//   $function$
+//
