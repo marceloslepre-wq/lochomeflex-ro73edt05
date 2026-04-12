@@ -30,7 +30,7 @@ export function AppSidebar() {
       title: 'Configurações',
       url: '/settings',
       icon: Settings,
-      show: can('users:manage') || can('reports:view'),
+      show: true,
     },
   ].filter((i) => i.show)
 

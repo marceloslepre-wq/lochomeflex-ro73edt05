@@ -169,6 +169,13 @@ export default function Dashboard() {
               <span className="font-medium text-sm">Cadastrar Cliente</span>
               <ArrowRight className="w-4 h-4 text-muted-foreground" />
             </Link>
+            <Link
+              to="/settings"
+              className="flex items-center justify-between p-3 bg-background rounded-md shadow-sm hover:bg-accent transition-colors border"
+            >
+              <span className="font-medium text-sm">Configurações</span>
+              <ArrowRight className="w-4 h-4 text-muted-foreground" />
+            </Link>
           </CardContent>
         </Card>
       </div>
