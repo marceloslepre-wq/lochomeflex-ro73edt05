@@ -46,6 +46,11 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
 
   const todayStr = new Date().toISOString().split('T')[0]
 
+  const finalTotal = useMemo(() => {
+    const rawTotal = items.reduce((acc, curr) => acc + (curr.totalPrice || 0), 0)
+    return Math.round(rawTotal)
+  }, [items])
+
   if (!can('rentals:manage')) return null
 
   const handleAddItem = () => {
@@ -108,11 +113,6 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
   }
 
   const handleRemoveItem = (id: string) => setItems((prev) => prev.filter((p) => p.id !== id))
-
-  const finalTotal = useMemo(() => {
-    const rawTotal = items.reduce((acc, curr) => acc + (curr.totalPrice || 0), 0)
-    return Math.round(rawTotal)
-  }, [items])
 
   const generateContractHtml = (total: number) => {
     let html = settings.contractTemplateHtml || '<p>Contrato Padrão</p>'
