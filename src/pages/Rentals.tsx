@@ -55,7 +55,10 @@ export default function Rentals() {
     const term = search || globalSearch
     const matchesSearch =
       r.id.toLowerCase().includes(term.toLowerCase()) ||
-      (c && c.name.toLowerCase().includes(term.toLowerCase()))
+      r.contractNumber?.toLowerCase().includes(term.toLowerCase()) ||
+      (c &&
+        (c.name.toLowerCase().includes(term.toLowerCase()) ||
+          c.document.toLowerCase().includes(term.toLowerCase())))
     const matchesStatus = statusFilter === 'Todos' || r.status === statusFilter
 
     let matchesReturnDate = true

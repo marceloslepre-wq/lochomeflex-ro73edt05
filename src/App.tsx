@@ -11,6 +11,7 @@ import Dashboard from './pages/Dashboard'
 import Inventory from './pages/Inventory'
 import ItemDetail from './pages/ItemDetail'
 import Customers from './pages/Customers'
+import Assets from './pages/Assets'
 import Rentals from './pages/Rentals'
 import RentalDetail from './pages/RentalDetail'
 import Settings from './pages/Settings'
@@ -33,6 +34,7 @@ const App = () => (
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/inventory" element={<Inventory />} />
                 <Route path="/inventory/:id" element={<ItemDetail />} />
+                <Route path="/assets" element={<Assets />} />
                 <Route path="/customers" element={<Customers />} />
                 <Route path="/rentals" element={<Rentals />} />
                 <Route path="/rentals/:id" element={<RentalDetail />} />

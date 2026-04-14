@@ -1,5 +1,14 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Package, Users, FileText, Settings, BookOpen, LogOut } from 'lucide-react'
+import {
+  LayoutDashboard,
+  Package,
+  Users,
+  FileText,
+  Settings,
+  BookOpen,
+  LogOut,
+  Briefcase,
+} from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -23,6 +32,7 @@ export function AppSidebar() {
   const navItems = [
     { title: 'Painel', url: '/dashboard', icon: LayoutDashboard, show: true },
     { title: 'Estoque', url: '/inventory', icon: Package, show: true },
+    { title: 'Patrimônio', url: '/assets', icon: Briefcase, show: true },
     { title: 'Locações', url: '/rentals', icon: FileText, show: true },
     { title: 'Clientes', url: '/customers', icon: Users, show: true },
     { title: 'Guia de Uso', url: '/guide', icon: BookOpen, show: true },
@@ -39,15 +49,7 @@ export function AppSidebar() {
       await signOut()
     } finally {
       setCurrentUser(null)
-      // Limpa qualquer dado residual do localStorage para evitar reconexão fantasma
-      if (typeof window !== 'undefined') {
-        Object.keys(window.localStorage).forEach((key) => {
-          if (key.startsWith('sb-')) {
-            window.localStorage.removeItem(key)
-          }
-        })
-      }
-      navigate('/', { replace: true })
+      window.location.href = '/'
     }
   }
 

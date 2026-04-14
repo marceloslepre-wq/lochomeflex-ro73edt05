@@ -37,8 +37,13 @@ export type Address = {
 }
 
 export type RentalItem = {
+  id?: string
   itemId: string
   qty: number
+  startDate?: string
+  endDate?: string
+  dailyPrice?: number
+  totalPrice?: number
 }
 
 export type Rental = {
@@ -170,6 +175,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             rentedQty: row.rented_qty,
             conditionStatus: row.condition_status as any,
             image: row.image,
+            assets: row.assets || [],
             monthlyPrice: Number(row.monthly_price) || 0,
             dailyPrice: Number(row.daily_price) || 0,
           })),
@@ -414,6 +420,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         rented_qty: item.rentedQty,
         condition_status: item.conditionStatus,
         image: item.image,
+        assets: item.assets || [],
         monthly_price: item.monthlyPrice,
         daily_price: item.dailyPrice,
       })
@@ -440,6 +447,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (data.rentedQty !== undefined) dbUpdate.rented_qty = data.rentedQty
     if (data.conditionStatus) dbUpdate.condition_status = data.conditionStatus
     if (data.image !== undefined) dbUpdate.image = data.image
+    if (data.assets !== undefined) dbUpdate.assets = data.assets
     if (data.monthlyPrice !== undefined) dbUpdate.monthly_price = data.monthlyPrice
     if (data.dailyPrice !== undefined) dbUpdate.daily_price = data.dailyPrice
 

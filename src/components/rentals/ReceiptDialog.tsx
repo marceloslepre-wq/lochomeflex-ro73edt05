@@ -44,10 +44,10 @@ export function ReceiptDialog({
     text += `*Equipamentos:*\n`
     rental.items.forEach((ri) => {
       const item = inventory.find((i) => i.id === ri.itemId)
-      text += `- ${ri.qty}x ${item?.name || 'Item'}\n`
+      text += `- ${ri.qty}x ${item?.name || 'Item'} ${ri.startDate && ri.endDate ? `(${new Date(ri.startDate).toLocaleDateString('pt-BR')} a ${new Date(ri.endDate).toLocaleDateString('pt-BR')})` : ''}\n`
     })
 
-    text += `\n*Período:* `
+    text += `\n*Período Geral:* `
     if (type === 'renewal' && renewalInfo) {
       text += `${new Date(renewalInfo.startDate).toLocaleDateString('pt-BR')} a ${new Date(renewalInfo.endDate).toLocaleDateString('pt-BR')}\n`
       text += `*Valor Adicional:* R$ ${renewalInfo.addedTotal.toFixed(2)}\n`
@@ -160,7 +160,10 @@ export function ReceiptDialog({
                 return (
                   <li key={idx} className="flex justify-between">
                     <span>
-                      {ri.qty}x {item?.name}
+                      {ri.qty}x {item?.name}{' '}
+                      {ri.startDate && ri.endDate
+                        ? `(De ${new Date(ri.startDate).toLocaleDateString('pt-BR')} até ${new Date(ri.endDate).toLocaleDateString('pt-BR')})`
+                        : ''}
                     </span>
                   </li>
                 )
