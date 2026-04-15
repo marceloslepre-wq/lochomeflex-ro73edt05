@@ -117,13 +117,21 @@ export default function Assets() {
   const handleShareWhatsApp = (item: InventoryItem) => {
     const url = `${window.location.origin}/public/asset/new?itemId=${item.id}`
     const text = `Olá! Acesse o link para cadastrar um novo patrimônio para o modelo *${item.name}*: ${url}`
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
+    const a = document.createElement('a')
+    a.href = `https://wa.me/?text=${encodeURIComponent(text)}`
+    a.target = '_blank'
+    a.rel = 'noopener noreferrer'
+    a.click()
   }
 
   const handleShareEmail = (item: InventoryItem) => {
     const url = `${window.location.origin}/public/asset/new?itemId=${item.id}`
     const text = `Olá,\n\nAcesse o link para cadastrar um novo patrimônio para o modelo ${item.name}:\n${url}`
-    window.open(`mailto:?subject=Cadastro de Patrimônio&body=${encodeURIComponent(text)}`, '_blank')
+    const a = document.createElement('a')
+    a.href = `mailto:?subject=${encodeURIComponent('Cadastro de Patrimônio')}&body=${encodeURIComponent(text)}`
+    a.target = '_blank'
+    a.rel = 'noopener noreferrer'
+    a.click()
   }
 
   const filteredInventory = inventory.filter((item) => {
@@ -175,43 +183,49 @@ export default function Assets() {
                   <TableCell className="text-center">{item.totalQty}</TableCell>
                   <TableCell className="text-center">{item.assets?.length || 0}</TableCell>
                   <TableCell className="text-right">
-                    <Dialog
-                      onOpenChange={(o) => {
-                        if (o) setSelectedItem(item)
-                        else setSelectedItem(null)
-                      }}
-                    >
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm">
-                          <Briefcase className="w-4 h-4 mr-2" /> Gerenciar
-                        </Button>
-                      </DialogTrigger>
-                      {selectedItem?.id === item.id && (
-                        <DialogContent className="max-w-4xl">
-                          <DialogHeader>
-                            <DialogTitle>Patrimônios: {selectedItem.name}</DialogTitle>
-                          </DialogHeader>
-                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 mt-2 gap-4">
-                            <div className="flex items-center gap-2">
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => handleShareWhatsApp(selectedItem)}
-                              >
-                                <MessageCircle className="w-4 h-4 mr-2 text-green-600" /> WhatsApp
-                              </Button>
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => handleShareEmail(selectedItem)}
-                              >
-                                <Mail className="w-4 h-4 mr-2 text-blue-600" /> E-mail
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+                        onClick={() => handleShareWhatsApp(item)}
+                        title="Compartilhar Link via WhatsApp"
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        onClick={() => handleShareEmail(item)}
+                        title="Compartilhar Link via E-mail"
+                      >
+                        <Mail className="w-4 h-4" />
+                      </Button>
+                      <Dialog
+                        onOpenChange={(o) => {
+                          if (o) setSelectedItem(item)
+                          else setSelectedItem(null)
+                        }}
+                      >
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm" className="h-8">
+                            <Briefcase className="w-4 h-4 mr-2" /> Gerenciar
+                          </Button>
+                        </DialogTrigger>
+                        {selectedItem?.id === item.id && (
+                          <DialogContent className="max-w-4xl">
+                            <DialogHeader>
+                              <DialogTitle>Patrimônios: {selectedItem.name}</DialogTitle>
+                            </DialogHeader>
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 mt-2 gap-4">
+                              <div className="flex items-center gap-2">
+                                {/* Links movidos para a tabela principal */}
+                              </div>
+                              <Button size="sm" onClick={addAsset}>
+                                <Plus className="w-4 h-4 mr-2" /> Adicionar Unidade
                               </Button>
                             </div>
-                            <Button size="sm" onClick={addAsset}>
-                              <Plus className="w-4 h-4 mr-2" /> Adicionar Unidade
-                            </Button>
-                          </div>
                           <ScrollArea className="h-[400px] border rounded-md">
                             <Table>
                               <TableHeader>

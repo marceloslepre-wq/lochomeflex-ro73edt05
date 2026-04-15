@@ -114,15 +114,20 @@ export function ReceiptDialog({
 
   const handleWhatsApp = () => {
     const text = generateText()
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
+    const a = document.createElement('a')
+    a.href = `https://wa.me/?text=${encodeURIComponent(text)}`
+    a.target = '_blank'
+    a.rel = 'noopener noreferrer'
+    a.click()
   }
 
   const handleEmail = () => {
     const text = generateText()
-    window.open(
-      `mailto:${customer?.email || ''}?subject=${encodeURIComponent(type === 'renewal' ? 'Recibo de Renovação' : 'Recibo de Pagamento')}&body=${encodeURIComponent(text)}`,
-      '_blank',
-    )
+    const a = document.createElement('a')
+    a.href = `mailto:${customer?.email || ''}?subject=${encodeURIComponent(type === 'renewal' ? 'Recibo de Renovação' : 'Recibo de Pagamento')}&body=${encodeURIComponent(text)}`
+    a.target = '_blank'
+    a.rel = 'noopener noreferrer'
+    a.click()
   }
 
   return (

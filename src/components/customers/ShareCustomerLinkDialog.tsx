@@ -39,7 +39,11 @@ export function ShareCustomerLinkDialog() {
     const text = encodeURIComponent(
       `Olá! Por favor, preencha seu cadastro através deste link: ${link}`,
     )
-    window.open(`https://wa.me/?text=${text}`, '_blank')
+    const a = document.createElement('a')
+    a.href = `https://wa.me/?text=${text}`
+    a.target = '_blank'
+    a.rel = 'noopener noreferrer'
+    a.click()
   }
 
   const handleEmail = () => {
@@ -47,7 +51,11 @@ export function ShareCustomerLinkDialog() {
     const body = encodeURIComponent(
       `Olá!\n\nPor favor, preencha seu cadastro através deste link: ${link}`,
     )
-    window.open(`mailto:?subject=${subject}&body=${body}`, '_blank')
+    const a = document.createElement('a')
+    a.href = `mailto:?subject=${subject}&body=${body}`
+    a.target = '_blank'
+    a.rel = 'noopener noreferrer'
+    a.click()
   }
 
   return (
