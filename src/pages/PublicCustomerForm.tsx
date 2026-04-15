@@ -44,19 +44,96 @@ export default function PublicCustomerForm() {
     observations: '',
   })
 
+  const [docError, setDocError] = useState('')
+
+  const validateDocument = (doc: string) => {
+    const cleanDoc = doc.replace(/\D/g, '')
+    if (cleanDoc.length === 11) {
+      if (/^(\d)\1+$/.test(cleanDoc)) return false
+      let sum = 0,
+        rest
+      for (let i = 1; i <= 9; i++) sum += parseInt(cleanDoc.substring(i - 1, i)) * (11 - i)
+      rest = (sum * 10) % 11
+      if (rest === 10 || rest === 11) rest = 0
+      if (rest !== parseInt(cleanDoc.substring(9, 10))) return false
+      sum = 0
+      for (let i = 1; i <= 10; i++) sum += parseInt(cleanDoc.substring(i - 1, i)) * (12 - i)
+      rest = (sum * 10) % 11
+      if (rest === 10 || rest === 11) rest = 0
+      if (rest !== parseInt(cleanDoc.substring(10, 11))) return false
+      return true
+    } else if (cleanDoc.length === 14) {
+      if (/^(\d)\1+$/.test(cleanDoc)) return false
+      let size = cleanDoc.length - 2
+      let numbers = cleanDoc.substring(0, size)
+      const digits = cleanDoc.substring(size)
+      let sum = 0,
+        pos = size - 7
+      for (let i = size; i >= 1; i--) {
+        sum += parseInt(numbers.charAt(size - i)) * pos--
+        if (pos < 2) pos = 9
+      }
+      let result = sum % 11 < 2 ? 0 : 11 - (sum % 11)
+      if (result !== parseInt(digits.charAt(0))) return false
+      size = size + 1
+      numbers = cleanDoc.substring(0, size)
+      sum = 0
+      pos = size - 7
+      for (let i = size; i >= 1; i--) {
+        sum += parseInt(numbers.charAt(size - i)) * pos--
+        if (pos < 2) pos = 9
+      }
+      result = sum % 11 < 2 ? 0 : 11 - (sum % 11)
+      if (result !== parseInt(digits.charAt(1))) return false
+      return true
+    }
+    return false
+  }
+
+  const handleDocBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const isValid = validateDocument(e.target.value)
+    if (!isValid && e.target.value.length > 0) {
+      setDocError('CPF/CNPJ inválido')
+    } else {
+      setDocError('')
+    }
+  }
+
+  const fetchCep = async (cep: string, isDelivery = false) => {
+    const cleanCep = cep.replace(/\D/g, '')
+    if (cleanCep.length === 8) {
+      try {
+        const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`)
+        const data = await res.json()
+        if (!data.erro) {
+          updateAddress('street', data.logradouro, isDelivery)
+          updateAddress('neighborhood', data.bairro, isDelivery)
+          updateAddress('city', data.localidade, isDelivery)
+          updateAddress('state', data.uf, isDelivery)
+        }
+      } catch (e) {
+        console.error(e)
+      }
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.name || !formData.document) return
+    if (!validateDocument(formData.document)) {
+      toast({ title: 'Erro', description: 'CPF/CNPJ inválido', variant: 'destructive' })
+      return
+    }
 
     try {
       setLoading(true)
       const nextMatricula = await customerService.getNextMatricula()
 
-      await customerService.createCustomer({
-        ...formData,
-        matricula: nextMatricula,
-        phone: formData.phoneCell || formData.phoneRes || formData.phoneCom,
-      })
+      const payload: any = { ...formData, matricula: nextMatricula }
+      delete payload.phone
+      payload.phone_cell = formData.phoneCell || formData.phoneRes || formData.phoneCom
+
+      await customerService.createCustomer(payload)
 
       setSubmitted(true)
     } catch (error) {
@@ -122,9 +199,25 @@ export default function PublicCustomerForm() {
                   <Label>CPF / CNPJ:</Label>
                   <Input
                     value={formData.document}
-                    onChange={(e) => setFormData((f) => ({ ...f, document: e.target.value }))}
+                    onChange={(e) => {
+                      setFormData((f) => ({ ...f, document: e.target.value }))
+                      setDocError('')
+                    }}
+                    onBlur={handleDocBlur}
                     required
                     placeholder="Digite seu CPF ou CNPJ"
+                    className={docError ? 'border-destructive' : ''}
+                  />
+                  {docError && <p className="text-xs text-destructive">{docError}</p>}
+                </div>
+
+                <div className="grid gap-2">
+                  <Label>CEP:</Label>
+                  <Input
+                    value={formData.address?.zipCode || ''}
+                    onChange={(e) => updateAddress('zipCode', e.target.value)}
+                    onBlur={(e) => fetchCep(e.target.value)}
+                    placeholder="Apenas números"
                   />
                 </div>
 
@@ -158,14 +251,6 @@ export default function PublicCustomerForm() {
                   <Input
                     value={formData.address?.state || ''}
                     onChange={(e) => updateAddress('state', e.target.value)}
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label>CEP:</Label>
-                  <Input
-                    value={formData.address?.zipCode || ''}
-                    onChange={(e) => updateAddress('zipCode', e.target.value)}
                   />
                 </div>
 

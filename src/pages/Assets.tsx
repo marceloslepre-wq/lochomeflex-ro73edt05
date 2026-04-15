@@ -120,9 +120,15 @@ export default function Assets() {
     setSelectedItem({ ...selectedItem, assets: newAssets })
   }
 
+  const [assetSearch, setAssetSearch] = useState('')
+
   const filteredInventory = inventory.filter((item) => {
-    if (selectedModel === 'all') return true
-    return item.name === selectedModel
+    const matchesModel = selectedModel === 'all' || item.name === selectedModel
+    if (assetSearch) {
+      const searchLower = assetSearch.toLowerCase()
+      return item.assets?.some((a) => a.assetNumber.toLowerCase().includes(searchLower))
+    }
+    return matchesModel
   })
 
   return (
@@ -134,10 +140,16 @@ export default function Assets() {
             Gerencie as unidades individuais de cada modelo do estoque.
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+        <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto mt-2 sm:mt-0">
           <ShareAssetLinkDialog />
+          <Input
+            placeholder="Busca por Patrimônio (Nº)..."
+            value={assetSearch}
+            onChange={(e) => setAssetSearch(e.target.value)}
+            className="w-full md:w-64"
+          />
           <Select value={selectedModel} onValueChange={setSelectedModel}>
-            <SelectTrigger className="w-full sm:w-72">
+            <SelectTrigger className="w-full md:w-64">
               <SelectValue placeholder="Selecione um modelo..." />
             </SelectTrigger>
             <SelectContent>

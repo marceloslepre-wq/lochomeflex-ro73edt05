@@ -30,7 +30,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     let mounted = true
+    let isFetching = false
+
     const fetchProfile = async (userId: string) => {
+      if (isFetching) return
+      isFetching = true
       try {
         const { data, error } = await supabase
           .from('profiles')
@@ -43,7 +47,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (data) {
           setProfile(data)
         } else {
-          // Fallback if not found by auth_user_id
+          // Fallback se não encontrar por auth_user_id
           const { data: fallbackData } = await supabase
             .from('profiles')
             .select('*')
@@ -54,32 +58,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } catch (err) {
         console.error('Error fetching profile:', err)
       } finally {
+        isFetching = false
         if (mounted) setLoading(false)
       }
     }
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    const initAuth = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
       if (!mounted) return
       setSession(session)
       setUser(session?.user ?? null)
       if (session?.user) {
-        fetchProfile(session.user.id)
+        await fetchProfile(session.user.id)
       } else {
         setProfile(null)
         setLoading(false)
       }
-    })
+    }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    initAuth()
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return
       setSession(session)
       setUser(session?.user ?? null)
-      if (session?.user) {
+
+      if (event === 'SIGNED_OUT') {
+        setProfile(null)
+        setLoading(false)
+      } else if (session?.user) {
         fetchProfile(session.user.id)
       } else {
-        setProfile(null)
         setLoading(false)
       }
     })

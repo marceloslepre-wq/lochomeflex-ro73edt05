@@ -142,9 +142,15 @@ export default function Settings() {
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      const url = URL.createObjectURL(file)
-      updateSettings({ logoUrl: url })
-      toast({ title: 'Logo Atualizado', description: 'A identidade visual da loja foi alterada.' })
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        updateSettings({ logoUrl: reader.result as string })
+        toast({
+          title: 'Logo Atualizado',
+          description: 'A identidade visual da loja foi alterada.',
+        })
+      }
+      reader.readAsDataURL(file)
     }
   }
 
@@ -165,31 +171,53 @@ export default function Settings() {
     setUserDialogOpen(true)
   }
 
-  const handleSaveUser = (e: React.FormEvent) => {
+  const handleSaveUser = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (editingUser) {
-      updateUser(editingUser.id, {
-        name: userForm.name,
-        email: userForm.email,
-        role: userForm.role,
-        permissions: userForm.role === 'Administrador' ? [] : userForm.permissions,
-      })
-      toast({ title: 'Usuário Atualizado', description: 'Dados salvos.' })
-    } else {
-      addUser({
-        id: Math.random().toString(),
-        name: userForm.name,
-        email: userForm.email,
-        role: userForm.role,
-        active: true,
-        permissions: userForm.role === 'Administrador' ? [] : userForm.permissions,
-      })
-      toast({
-        title: 'Usuário Criado',
-        description: `${userForm.name} agora tem acesso ao sistema.`,
-      })
+    try {
+      if (editingUser) {
+        updateUser(editingUser.id, {
+          name: userForm.name,
+          email: userForm.email,
+          role: userForm.role,
+          permissions: userForm.role === 'Administrador' ? [] : userForm.permissions,
+        })
+
+        if (userForm.password) {
+          await supabase.functions.invoke('manage-users', {
+            body: {
+              action: 'update',
+              user: {
+                auth_user_id: editingUser.auth_user_id || editingUser.id,
+                password: userForm.password,
+              },
+            },
+          })
+        }
+        toast({ title: 'Usuário Atualizado', description: 'Dados salvos.' })
+      } else {
+        const res = await supabase.functions.invoke('manage-users', {
+          body: { action: 'create', user: userForm },
+        })
+
+        if (res.error) throw new Error(res.error.message || 'Erro ao criar usuário')
+
+        addUser({
+          id: res.data?.user?.id || Math.random().toString(),
+          name: userForm.name,
+          email: userForm.email,
+          role: userForm.role,
+          active: true,
+          permissions: userForm.role === 'Administrador' ? [] : userForm.permissions,
+        })
+        toast({
+          title: 'Usuário Criado',
+          description: `${userForm.name} agora tem acesso ao sistema.`,
+        })
+      }
+      setUserDialogOpen(false)
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' })
     }
-    setUserDialogOpen(false)
   }
 
   const handlePermToggle = (perm: PermissionKey, checked: boolean) => {
@@ -622,44 +650,100 @@ export default function Settings() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome do Local</TableHead>
-                    <TableHead>Endereço Completo</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {!settings.locations || settings.locations.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={3} className="text-center text-muted-foreground py-4">
-                        Nenhum local cadastrado.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    settings.locations.map((loc) => (
-                      <TableRow key={loc.id}>
-                        <TableCell className="font-medium">{loc.name}</TableCell>
-                        <TableCell>{loc.address}</TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive hover:bg-destructive/10"
-                            onClick={() => {
-                              const newLocs = settings.locations?.filter((l) => l.id !== loc.id)
-                              updateSettings({ locations: newLocs })
-                            }}
-                          >
-                            Remover
-                          </Button>
-                        </TableCell>
+              {(() => {
+                const [editingLocId, setEditingLocId] = useState<string | null>(null)
+                const [editLocName, setEditLocName] = useState('')
+                const [editLocAddress, setEditLocAddress] = useState('')
+
+                return (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome do Local</TableHead>
+                        <TableHead>Endereço Completo</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {!settings.locations || settings.locations.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={3} className="text-center text-muted-foreground py-4">
+                            Nenhum local cadastrado.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        settings.locations.map((loc) =>
+                          editingLocId === loc.id ? (
+                            <TableRow key={loc.id}>
+                              <TableCell>
+                                <Input
+                                  value={editLocName}
+                                  onChange={(e) => setEditLocName(e.target.value)}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  value={editLocAddress}
+                                  onChange={(e) => setEditLocAddress(e.target.value)}
+                                />
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    const newLocs = settings.locations?.map((l) =>
+                                      l.id === loc.id
+                                        ? { ...l, name: editLocName, address: editLocAddress }
+                                        : l,
+                                    )
+                                    updateSettings({ locations: newLocs })
+                                    setEditingLocId(null)
+                                  }}
+                                >
+                                  <Save className="w-4 h-4 text-emerald-600" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            <TableRow key={loc.id}>
+                              <TableCell className="font-medium">{loc.name}</TableCell>
+                              <TableCell>{loc.address}</TableCell>
+                              <TableCell className="text-right flex items-center justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-primary"
+                                  onClick={() => {
+                                    setEditingLocId(loc.id)
+                                    setEditLocName(loc.name)
+                                    setEditLocAddress(loc.address)
+                                  }}
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                                  onClick={() => {
+                                    const newLocs = settings.locations?.filter(
+                                      (l) => l.id !== loc.id,
+                                    )
+                                    updateSettings({ locations: newLocs })
+                                  }}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ),
+                        )
+                      )}
+                    </TableBody>
+                  </Table>
+                )
+              })()}
 
               <div className="grid gap-4 md:grid-cols-2 pt-4 border-t">
                 <div className="space-y-2">
