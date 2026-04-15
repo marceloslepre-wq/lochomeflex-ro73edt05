@@ -3,7 +3,15 @@ import useMainStore from '@/stores/main'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Save, Edit2, Printer } from 'lucide-react'
+import {
+  ArrowLeft,
+  Save,
+  Edit2,
+  Printer,
+  MessageCircle,
+  Mail,
+  Link as LinkIcon,
+} from 'lucide-react'
 import { useState, useMemo } from 'react'
 import { useToast } from '@/hooks/use-toast'
 import { usePermissions } from '@/hooks/use-permissions'
@@ -61,7 +69,7 @@ export default function RentalDetail() {
     text += `2. PREÇO E PRAZO DE LOCAÇÃO:\n`
     text += `2.1 O locador compromete a manter no endereço informado no momento da locação responsável para receber o equipamento locado, esse deverá assinar o recibo de entrega no momento da entrega pela transportadora ou em loja física se for o caso.\n\n`
     text += `2.2 Após o cancelamento da locação ou termino da vigência do contrato a locatária deverá entrar em contato com o locador para agendar a retirada do equipamento e disponibilizá-lo para retirada pela transportadora, a mesma tem um prazo de até 03 (três) dias uteis para efetuar a retirada, caso a transportadora não consiga recolher o equipamento na data agendada, o locatário deverá arcar com as despesas da remarcação assim como pagamento do aluguel em pro-rata, pelo período adicional que ficou de posse do equipamento.\n\n`
-    text += `2.3 No primeiro dia após o termino do prazo do contrato de locação a locatária deverá entrar em sua conta no site do locador e solicitar renovação ou cancelamento com recolhimento do(s) produto(s) ora locado(s), ou se preferir entrar em contato nos Telefones: 27-3026-3300 ou 27-99904-6961 ou Email: aluguel@hospitalhome.com.br, para efetuar a renovação do aluguel e pagamento do mês seguinte dentro da vigência do contrato.\n\n`
+    text += `2.3 No primeiro dia após o termino do prazo do contrato de locação a locatária deverá entrar em sua conta no site do locador e solicitar renovação ou cancelamento com recolhimento do(s) produto(s) ora locado(s), ou se preferir entrar em contato nos Telefones: 27-3026-330 ou 27-99904-6961 ou Email: aluguel@hospitalhome.com.br, para efetuar a renovação do aluguel e pagamento do mês seguinte dentro da vigência do contrato.\n\n`
 
     text += `3. CONDIÇÕES DE ENTREGA, USO E MANUTENÇÃO\n`
     text += `3.1 A devolução do equipamento se dará da forma escolhida no momento da locação se foi por transportadora será por transportadora se foi por retirada em loja será por devolução na mesma loja que foi retirada.\n`
@@ -155,6 +163,27 @@ export default function RentalDetail() {
     })
   }
 
+  const handleWhatsApp = () => {
+    const text = `Acesse o contrato de locação: ${window.location.href}`
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
+  }
+
+  const handleEmail = () => {
+    const text = `Acesse o contrato de locação: ${window.location.href}`
+    window.open(
+      `mailto:${customer?.email || ''}?subject=${encodeURIComponent('Contrato de Locação')}&body=${encodeURIComponent(text)}`,
+      '_blank',
+    )
+  }
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(window.location.href)
+    toast({
+      title: 'Link copiado',
+      description: 'O link do contrato foi copiado para a área de transferência.',
+    })
+  }
+
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 print:hidden">
@@ -167,7 +196,7 @@ export default function RentalDetail() {
             <p className="text-muted-foreground mt-1">Cliente: {customer?.name}</p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <Badge
             variant={
               rental.status === 'Ativo'
@@ -181,21 +210,40 @@ export default function RentalDetail() {
           </Badge>
           {!isEditing ? (
             <>
-              <Button onClick={() => window.print()}>
-                <Printer className="w-4 h-4 mr-2" /> Imprimir Contrato
+              <Button variant="outline" size="sm" onClick={handleCopyLink}>
+                <LinkIcon className="w-4 h-4 mr-2" /> Copiar Link
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200"
+                onClick={handleWhatsApp}
+              >
+                <MessageCircle className="w-4 h-4 mr-2" /> WhatsApp
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200"
+                onClick={handleEmail}
+              >
+                <Mail className="w-4 h-4 mr-2" /> E-mail
+              </Button>
+              <Button size="sm" onClick={() => window.print()}>
+                <Printer className="w-4 h-4 mr-2" /> Imprimir
               </Button>
               {can('rentals:manage') && (
-                <Button variant="secondary" onClick={() => setIsEditing(true)}>
+                <Button variant="secondary" size="sm" onClick={() => setIsEditing(true)}>
                   <Edit2 className="w-4 h-4 mr-2" /> Editar
                 </Button>
               )}
             </>
           ) : (
             <>
-              <Button variant="ghost" onClick={() => setIsEditing(false)}>
+              <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)}>
                 Cancelar
               </Button>
-              <Button onClick={handleSave}>
+              <Button size="sm" onClick={handleSave}>
                 <Save className="w-4 h-4 mr-2" /> Salvar
               </Button>
             </>

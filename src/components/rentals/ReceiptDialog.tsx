@@ -8,7 +8,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { Rental } from '@/stores/main'
 import useMainStore from '@/stores/main'
-import { Printer, MessageCircle, Mail } from 'lucide-react'
+import { Printer, MessageCircle, Mail, Link as LinkIcon } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
 import logoImg from '@/assets/logo_hospital_home_final-f2434.jpg'
 
 interface ReceiptDialogProps {
@@ -31,6 +32,7 @@ export function ReceiptDialog({
   renewalInfo,
 }: ReceiptDialogProps) {
   const { customers, inventory, settings } = useMainStore()
+  const { toast } = useToast()
 
   if (!rental) return null
 
@@ -142,6 +144,14 @@ export function ReceiptDialog({
     a.click()
   }
 
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(window.location.href)
+    toast({
+      title: 'Link copiado',
+      description: 'O link foi copiado para a área de transferência.',
+    })
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
@@ -245,23 +255,26 @@ export function ReceiptDialog({
           </div>
         </div>
 
-        <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-4 print:hidden">
-          <Button variant="outline" className="flex-1" onClick={handlePrint}>
-            <Printer className="w-4 h-4 mr-2" /> Imprimir / PDF
+        <DialogFooter className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4 print:hidden">
+          <Button variant="outline" className="w-full" onClick={handleCopyLink}>
+            <LinkIcon className="w-4 h-4 mr-2" /> Copiar Link
           </Button>
           <Button
             variant="outline"
-            className="flex-1 text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200"
+            className="w-full text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200"
             onClick={handleWhatsApp}
           >
             <MessageCircle className="w-4 h-4 mr-2" /> WhatsApp
           </Button>
           <Button
             variant="outline"
-            className="flex-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200"
+            className="w-full text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200"
             onClick={handleEmail}
           >
             <Mail className="w-4 h-4 mr-2" /> E-mail
+          </Button>
+          <Button variant="outline" className="w-full" onClick={handlePrint}>
+            <Printer className="w-4 h-4 mr-2" /> Imprimir
           </Button>
         </DialogFooter>
       </DialogContent>
