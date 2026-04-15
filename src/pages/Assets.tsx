@@ -10,7 +10,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Plus, Trash2, Upload, Briefcase, Search, Share2, Mail, MessageCircle } from 'lucide-react'
+import { Plus, Trash2, Upload, Briefcase, Search } from 'lucide-react'
+import { ShareAssetLinkDialog } from '@/components/assets/ShareAssetLinkDialog'
 import {
   Select,
   SelectContent,
@@ -114,26 +115,6 @@ export default function Assets() {
     setSelectedItem({ ...selectedItem, assets: newAssets })
   }
 
-  const handleShareWhatsApp = (item: InventoryItem) => {
-    const url = `${window.location.origin}/public/asset/new?itemId=${item.id}`
-    const text = `Olá! Acesse o link para cadastrar um novo patrimônio para o modelo *${item.name}*: ${url}`
-    const a = document.createElement('a')
-    a.href = `https://wa.me/?text=${encodeURIComponent(text)}`
-    a.target = '_blank'
-    a.rel = 'noopener noreferrer'
-    a.click()
-  }
-
-  const handleShareEmail = (item: InventoryItem) => {
-    const url = `${window.location.origin}/public/asset/new?itemId=${item.id}`
-    const text = `Olá,\n\nAcesse o link para cadastrar um novo patrimônio para o modelo ${item.name}:\n${url}`
-    const a = document.createElement('a')
-    a.href = `mailto:?subject=${encodeURIComponent('Cadastro de Patrimônio')}&body=${encodeURIComponent(text)}`
-    a.target = '_blank'
-    a.rel = 'noopener noreferrer'
-    a.click()
-  }
-
   const filteredInventory = inventory.filter((item) => {
     if (!assetSearch) return true
     const term = assetSearch.toLowerCase()
@@ -152,14 +133,17 @@ export default function Assets() {
             Gerencie as unidades individuais de cada modelo do estoque.
           </p>
         </div>
-        <div className="relative w-full sm:w-72">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por patrimônio ou produto..."
-            className="pl-9"
-            value={assetSearch}
-            onChange={(e) => setAssetSearch(e.target.value)}
-          />
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+          <ShareAssetLinkDialog />
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por patrimônio ou produto..."
+              className="pl-9"
+              value={assetSearch}
+              onChange={(e) => setAssetSearch(e.target.value)}
+            />
+          </div>
         </div>
       </div>
 
@@ -184,24 +168,6 @@ export default function Assets() {
                   <TableCell className="text-center">{item.assets?.length || 0}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
-                        onClick={() => handleShareWhatsApp(item)}
-                        title="Compartilhar Link via WhatsApp"
-                      >
-                        <MessageCircle className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                        onClick={() => handleShareEmail(item)}
-                        title="Compartilhar Link via E-mail"
-                      >
-                        <Mail className="w-4 h-4" />
-                      </Button>
                       <Dialog
                         onOpenChange={(o) => {
                           if (o) setSelectedItem(item)
