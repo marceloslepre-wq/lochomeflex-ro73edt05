@@ -169,7 +169,7 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
     const itemsStr = items
       .map((ri) => {
         const inv = inventory.find((i) => i.id === ri.itemId)
-        return `${ri.qty}x ${inv?.name} (Retirada: ${new Date(ri.startDate || todayStr).toLocaleDateString('pt-BR')} | Devolução: ${new Date(ri.endDate || todayStr).toLocaleDateString('pt-BR')}) - Valor: R$ ${ri.totalPrice?.toFixed(2)}`
+        return `${ri.qty}x ${inv?.name} (SKU: ${inv?.code || '-'}) (Retirada: ${new Date(ri.startDate || todayStr).toLocaleDateString('pt-BR')} | Devolução: ${new Date(ri.endDate || todayStr).toLocaleDateString('pt-BR')}) - Valor: R$ ${ri.totalPrice?.toFixed(2)}`
       })
       .join('<br/>')
 
@@ -180,7 +180,8 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
     if (pickupLocationId === 'delivery') locationName = 'Entrega no Endereço do Cliente'
     else if (pickupLocationId) {
       const loc = (settings.locations as any[])?.find((l: any) => l.id === pickupLocationId)
-      if (loc) locationName = loc.name
+      if (loc)
+        locationName = `${loc.name} - ${loc.address || 'Sem endereço'} - CEP: ${loc.zipCode || 'Sem CEP'}`
     }
 
     const template = `
@@ -197,6 +198,7 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
 
   <p><strong>LOCADOR:</strong> Lojas Hospital Home, localizada na rua Manoel Vivacqua, n. 616, Jabuor, Vitória – ES. CNPJ n. 10.893.738/0006-93.</p>
 
+  <p><strong>CONTRATO Nº:</strong> [NUMERO_CONTRATO]</p>
   <p>1. Pelo presente instrumento o locador aluga à locatária o(s) equipamento(s) abaixo discriminado(s), e se obriga a locá-lo(s) nas condições estabelecidas neste contrato:</p>
   <p>[ITENS_LOCADOS]</p>
   <p><strong>Local de Retirada/Entrega:</strong> [LOCAL_RETIRADA]</p>
@@ -256,6 +258,7 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
       '\\[?DATA_ATUAL\\]?|["\']DATA_ATUAL["\']': formatter.format(new Date()),
       '\\[?TELEFONE\\]?|["\']TELEFONE["\']': customer.phone_cell || customer.phone_res || '',
       '\\[?EMAIL\\]?|["\']EMAIL["\']': customer.email || '',
+      '\\[?NUMERO_CONTRATO\\]?|["\']NUMERO_CONTRATO["\']': 'Gerado ao salvar',
     }
 
     for (const [key, value] of Object.entries(replacements)) {

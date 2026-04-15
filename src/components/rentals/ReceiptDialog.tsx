@@ -15,7 +15,7 @@ interface ReceiptDialogProps {
   rental: Rental | null
   open: boolean
   onOpenChange: (open: boolean) => void
-  type?: 'new' | 'renewal'
+  type?: 'new' | 'renewal' | 'return'
   renewalInfo?: {
     startDate: string
     endDate: string
@@ -37,7 +37,11 @@ export function ReceiptDialog({
   const customer = customers.find((c) => c.id === rental.customerId)
 
   const generateText = () => {
-    let text = `*${type === 'renewal' ? 'Recibo de Renovação' : 'Recibo de Pagamento'}*\n\n`
+    let title = 'Recibo de Pagamento'
+    if (type === 'renewal') title = 'Recibo de Renovação'
+    if (type === 'return') title = 'Recibo de Devolução'
+
+    let text = `*${title}*\n\n`
     text += `*Empresa:* ${settings.companyName || 'Hospital Home'}\n`
     text += `*Locatário:* ${customer?.name || 'Cliente'}\n`
     text += `*Contrato ${type === 'renewal' ? 'Original' : ''}:* ${rental.contractNumber || rental.id}\n\n`
@@ -45,19 +49,27 @@ export function ReceiptDialog({
     text += `*Equipamentos:*\n`
     rental.items.forEach((ri) => {
       const item = inventory.find((i) => i.id === ri.itemId)
-      text += `- ${ri.qty}x ${item?.name || 'Item'} ${ri.startDate && ri.endDate ? `(${new Date(ri.startDate).toLocaleDateString('pt-BR')} a ${new Date(ri.endDate).toLocaleDateString('pt-BR')})` : ''}\n`
+      text += `- ${ri.qty}x ${item?.name || 'Item'} (SKU: ${item?.code || '-'}) ${ri.startDate && ri.endDate ? `(${new Date(ri.startDate).toLocaleDateString('pt-BR')} a ${new Date(ri.endDate).toLocaleDateString('pt-BR')})` : ''}\n`
     })
 
     text += `\n*Período Geral:* `
     if (type === 'renewal' && renewalInfo) {
       text += `${new Date(renewalInfo.startDate).toLocaleDateString('pt-BR')} a ${new Date(renewalInfo.endDate).toLocaleDateString('pt-BR')}\n`
       text += `*Valor Adicional:* R$ ${renewalInfo.addedTotal.toFixed(2)}\n`
+    } else if (type === 'return') {
+      text += `${new Date(rental.startDate).toLocaleDateString('pt-BR')} a ${new Date(rental.expectedReturnDate).toLocaleDateString('pt-BR')}\n`
+      text += `*Data da Devolução:* ${rental.actualReturnDate ? new Date(rental.actualReturnDate).toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR')}\n`
+      text += `*Valor Total do Contrato:* R$ ${rental.total.toFixed(2)}\n`
     } else {
       text += `${new Date(rental.startDate).toLocaleDateString('pt-BR')} a ${new Date(rental.expectedReturnDate).toLocaleDateString('pt-BR')}\n`
       text += `*Valor Total:* R$ ${rental.total.toFixed(2)}\n`
     }
 
-    text += `\nNão é fornecido Nota Fiscal para locação de bens móveis, fornecemos recibo conforme o Artigo 1 da Lei 8846 de 1994.`
+    if (type === 'return') {
+      text += `\nDeclaramos para os devidos fins o recebimento dos equipamentos acima descritos, devolvidos pelo locatário nesta data.`
+    } else {
+      text += `\nNão é fornecido Nota Fiscal para locação de bens móveis, fornecemos recibo conforme o Artigo 1 da Lei 8846 de 1994.`
+    }
 
     return text
   }
@@ -135,7 +147,11 @@ export function ReceiptDialog({
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>
-            {type === 'renewal' ? 'Recibo de Renovação' : 'Recibo de Pagamento'}
+            {type === 'renewal'
+              ? 'Recibo de Renovação'
+              : type === 'return'
+                ? 'Recibo de Devolução'
+                : 'Recibo de Pagamento'}
           </DialogTitle>
         </DialogHeader>
 
@@ -147,7 +163,11 @@ export function ReceiptDialog({
             <img src={logoImg} className="h-16 mx-auto mb-2 object-contain" alt="Logo" />
             {settings.companyName || 'Hospital Home'}
             <div className="text-sm font-normal mt-1">
-              {type === 'renewal' ? 'RECIBO DE RENOVAÇÃO' : 'RECIBO DE LOCAÇÃO'}
+              {type === 'renewal'
+                ? 'RECIBO DE RENOVAÇÃO'
+                : type === 'return'
+                  ? 'RECIBO DE DEVOLUÇÃO'
+                  : 'RECIBO DE LOCAÇÃO'}
             </div>
           </div>
 
@@ -173,11 +193,13 @@ export function ReceiptDialog({
               {rental.items.map((ri, idx) => {
                 const item = inventory.find((i) => i.id === ri.itemId)
                 return (
-                  <li key={idx} className="flex justify-between">
+                  <li key={idx} className="flex flex-col">
                     <span>
-                      {ri.qty}x {item?.name}{' '}
+                      {ri.qty}x {item?.name} (SKU: {item?.code || '-'})
+                    </span>
+                    <span className="text-xs text-gray-500">
                       {ri.startDate && ri.endDate
-                        ? `(De ${new Date(ri.startDate).toLocaleDateString('pt-BR')} até ${new Date(ri.endDate).toLocaleDateString('pt-BR')})`
+                        ? `De ${new Date(ri.startDate).toLocaleDateString('pt-BR')} até ${new Date(ri.endDate).toLocaleDateString('pt-BR')}`
                         : ''}
                     </span>
                   </li>
@@ -195,6 +217,16 @@ export function ReceiptDialog({
                   : `${new Date(rental.startDate).toLocaleDateString('pt-BR')} a ${new Date(rental.expectedReturnDate).toLocaleDateString('pt-BR')}`}
               </span>
             </div>
+            {type === 'return' && (
+              <div className="flex justify-between">
+                <span className="font-semibold">Data da Devolução:</span>
+                <span>
+                  {rental.actualReturnDate
+                    ? new Date(rental.actualReturnDate).toLocaleDateString('pt-BR')
+                    : new Date().toLocaleDateString('pt-BR')}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between text-base font-bold pt-2">
               <span>{type === 'renewal' ? 'VALOR ADICIONAL' : 'TOTAL GERAL'}:</span>
               <span>
@@ -207,14 +239,15 @@ export function ReceiptDialog({
           </div>
 
           <div className="text-center text-xs mt-8 pt-4 border-t text-gray-500 font-semibold">
-            Não é fornecido Nota Fiscal para locação de bens móveis, fornecemos recibo conforme o
-            Artigo 1 da Lei 8846 de 1994.
+            {type === 'return'
+              ? 'Declaramos para os devidos fins o recebimento dos equipamentos acima descritos, devolvidos pelo locatário nesta data.'
+              : 'Não é fornecido Nota Fiscal para locação de bens móveis, fornecemos recibo conforme o Artigo 1 da Lei 8846 de 1994.'}
           </div>
         </div>
 
         <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-4 print:hidden">
           <Button variant="outline" className="flex-1" onClick={handlePrint}>
-            <Printer className="w-4 h-4 mr-2" /> Imprimir
+            <Printer className="w-4 h-4 mr-2" /> Imprimir / PDF
           </Button>
           <Button
             variant="outline"

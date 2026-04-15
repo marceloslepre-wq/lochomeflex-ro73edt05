@@ -260,11 +260,11 @@ export default function Rentals() {
                             className="h-8 w-8 border-orange-500 text-orange-600 hover:bg-orange-50"
                             onClick={() => {
                               setReceiptRental(rental)
-                              setReceiptType('new')
+                              setReceiptType(rental.status === 'Devolvido' ? 'return' : 'new')
                               setReceiptRenewalInfo(null)
                               setReceiptOpen(true)
                             }}
-                            title="Recibo"
+                            title={rental.status === 'Devolvido' ? 'Recibo de Devolução' : 'Recibo'}
                           >
                             <Receipt className="h-4 w-4" />
                           </Button>
@@ -324,7 +324,17 @@ export default function Rentals() {
         </CardContent>
       </Card>
 
-      <ReturnDialog rental={selectedRental} open={returnOpen} onOpenChange={setReturnOpen} />
+      <ReturnDialog
+        rental={selectedRental}
+        open={returnOpen}
+        onOpenChange={setReturnOpen}
+        onReturned={(rental) => {
+          setReceiptRental(rental)
+          setReceiptType('return')
+          setReceiptRenewalInfo(null)
+          setReceiptOpen(true)
+        }}
+      />
       <RenewDialog
         rental={selectedRental}
         open={renewOpen}

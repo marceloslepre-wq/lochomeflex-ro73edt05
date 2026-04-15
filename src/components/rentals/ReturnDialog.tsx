@@ -17,10 +17,12 @@ export function ReturnDialog({
   rental,
   open,
   onOpenChange,
+  onReturned,
 }: {
   rental: Rental | null
   open: boolean
   onOpenChange: (v: boolean) => void
+  onReturned?: (rental: Rental) => void
 }) {
   const { returnRental } = useMainStore()
   const { toast } = useToast()
@@ -29,13 +31,16 @@ export function ReturnDialog({
 
   if (!rental) return null
 
-  const handleReturn = () => {
-    returnRental(rental.id, returnDate)
+  const handleReturn = async () => {
+    await returnRental(rental.id, returnDate)
     toast({
       title: 'Devolução Registrada',
       description: `Estoque atualizado e locação finalizada.`,
     })
     onOpenChange(false)
+    if (onReturned) {
+      onReturned({ ...rental, status: 'Devolvido', actualReturnDate: returnDate })
+    }
   }
 
   const expected = new Date(rental.expectedReturnDate)

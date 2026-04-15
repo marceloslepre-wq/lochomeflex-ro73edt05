@@ -44,18 +44,19 @@ export default function RentalDetail() {
     const lessorZip = '29072-045'
     text += `LOCADOR: ${settings.companyName || 'Lojas Hospital Home'}, localizada na ${lessorAddress}. CEP: ${lessorZip}. CNPJ n. ${settings.companyDocument || '10.893.738/0006-93'}.\n\n`
 
+    text += `CONTRATO Nº: ${rental.contractNumber || rental.id}\n\n`
     text += `1. Pelo presente instrumento o locador aluga à locatária o(s) equipamento(s) abaixo discriminado(s), e se obriga a locá-lo(s) nas condições estabelecidas neste contrato:\n\n`
 
     rental.items.forEach((ri) => {
       const item = inventory.find((i) => i.id === ri.itemId)
-      text += `   • ${ri.qty}x - ${item?.name} (Ref: ${item?.code})\n`
+      text += `   • ${ri.qty}x - ${item?.name} (SKU/Ref: ${item?.code || '-'})\n`
     })
 
     const pickupLoc = settings.locations?.find((l: any) => l.id === rental.pickupLocationId)
     const pAddress = pickupLoc?.address || 'Não informado'
     const pZip = pickupLoc?.zipCode || 'Não informado'
 
-    text += `\nLocal de Retirada/Entrega: ${pickupLoc?.name || 'Não informado'} - Endereço: ${pAddress} - CEP: ${pZip}\n\n`
+    text += `\nLocal de Retirada/Entrega: ${rental.pickupLocationId === 'delivery' ? 'Entrega no Endereço do Cliente' : pickupLoc?.name ? `${pickupLoc.name} - Endereço: ${pAddress} - CEP: ${pZip}` : 'Não informado'}\n\n`
 
     text += `2. PREÇO E PRAZO DE LOCAÇÃO:\n`
     text += `2.1 O locador compromete a manter no endereço informado no momento da locação responsável para receber o equipamento locado, esse deverá assinar o recibo de entrega no momento da entrega pela transportadora ou em loja física se for o caso.\n\n`
@@ -96,7 +97,12 @@ export default function RentalDetail() {
 
   const generateContractHtml = () => {
     if (!rental) return null
-    if (rental.customContractHtml) return rental.customContractHtml
+    if (rental.customContractHtml) {
+      return rental.customContractHtml.replace(
+        /Gerado ao salvar/g,
+        rental.contractNumber || rental.id,
+      )
+    }
     if (settings.contractTemplateHtml) {
       let html = settings.contractTemplateHtml
       html = html.replace(/{{rentalId}}/g, rental.id)
@@ -230,7 +236,9 @@ export default function RentalDetail() {
                 <h1 className="text-2xl font-bold uppercase tracking-widest">
                   Contrato de Locação
                 </h1>
-                <p className="text-sm text-gray-500 mt-1">Contrato nº {rental.id}</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  Contrato nº {rental.contractNumber || rental.id}
+                </p>
               </div>
 
               <div className="font-serif text-[15px] leading-loose whitespace-pre-wrap">
