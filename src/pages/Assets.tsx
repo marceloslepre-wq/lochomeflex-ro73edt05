@@ -226,112 +226,113 @@ export default function Assets() {
                                 <Plus className="w-4 h-4 mr-2" /> Adicionar Unidade
                               </Button>
                             </div>
-                          <ScrollArea className="h-[400px] border rounded-md">
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead className="w-16">Foto</TableHead>
-                                  <TableHead>Nº Patrimônio</TableHead>
-                                  <TableHead>Data Aquisição</TableHead>
-                                  <TableHead>Estado</TableHead>
-                                  <TableHead className="text-right">Ação</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {!selectedItem.assets || selectedItem.assets.length === 0 ? (
+                            <ScrollArea className="h-[400px] border rounded-md">
+                              <Table>
+                                <TableHeader>
                                   <TableRow>
-                                    <TableCell
-                                      colSpan={5}
-                                      className="text-center py-8 text-muted-foreground"
-                                    >
-                                      Nenhum patrimônio cadastrado.
-                                    </TableCell>
+                                    <TableHead className="w-16">Foto</TableHead>
+                                    <TableHead>Nº Patrimônio</TableHead>
+                                    <TableHead>Data Aquisição</TableHead>
+                                    <TableHead>Estado</TableHead>
+                                    <TableHead className="text-right">Ação</TableHead>
                                   </TableRow>
-                                ) : (
-                                  selectedItem.assets.map((asset) => (
-                                    <TableRow key={asset.id}>
-                                      <TableCell>
-                                        <div className="relative group w-10 h-10 rounded border overflow-hidden">
-                                          {asset.image ? (
-                                            <img
-                                              src={asset.image}
-                                              alt="Asset"
-                                              className="w-full h-full object-cover"
-                                            />
-                                          ) : (
-                                            <div className="w-full h-full bg-muted flex items-center justify-center text-muted-foreground">
-                                              <Upload className="w-4 h-4" />
-                                            </div>
-                                          )}
-                                          <input
-                                            type="file"
-                                            title="Atualizar Foto"
-                                            className="absolute inset-0 opacity-0 cursor-pointer"
-                                            accept="image/*"
-                                            onChange={(e) => handleAssetImageUpload(e, asset.id)}
-                                          />
-                                        </div>
-                                      </TableCell>
-                                      <TableCell>
-                                        <Input
-                                          value={asset.assetNumber}
-                                          onChange={(e) =>
-                                            updateAssetNumber(asset.id, e.target.value)
-                                          }
-                                          className="h-8"
-                                        />
-                                      </TableCell>
-                                      <TableCell>
-                                        <Input
-                                          type="date"
-                                          value={(asset as any).acquisitionDate || ''}
-                                          onChange={(e) =>
-                                            updateAssetAcquisitionDate(asset.id, e.target.value)
-                                          }
-                                          className="h-8 text-xs"
-                                        />
-                                      </TableCell>
-                                      <TableCell>
-                                        <Select
-                                          value={asset.conditionStatus}
-                                          onValueChange={(v) => updateAssetStatus(asset.id, v)}
-                                        >
-                                          <SelectTrigger className="h-8 w-[130px]">
-                                            <SelectValue />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            <SelectItem value="Disponível">Disponível</SelectItem>
-                                            <SelectItem value="Manutenção">
-                                              Em Manutenção
-                                            </SelectItem>
-                                            <SelectItem value="Indisponível">
-                                              Indisponível
-                                            </SelectItem>
-                                            <SelectItem value="Vendido">Vendido</SelectItem>
-                                            <SelectItem value="Esgotado">Esgotado</SelectItem>
-                                          </SelectContent>
-                                        </Select>
-                                      </TableCell>
-                                      <TableCell className="text-right">
-                                        <Button
-                                          type="button"
-                                          variant="ghost"
-                                          size="icon"
-                                          className="text-destructive h-8 w-8"
-                                          onClick={() => removeAsset(asset.id)}
-                                        >
-                                          <Trash2 className="w-4 h-4" />
-                                        </Button>
+                                </TableHeader>
+                                <TableBody>
+                                  {!selectedItem.assets || selectedItem.assets.length === 0 ? (
+                                    <TableRow>
+                                      <TableCell
+                                        colSpan={5}
+                                        className="text-center py-8 text-muted-foreground"
+                                      >
+                                        Nenhum patrimônio cadastrado.
                                       </TableCell>
                                     </TableRow>
-                                  ))
-                                )}
-                              </TableBody>
-                            </Table>
-                          </ScrollArea>
-                        </DialogContent>
-                      )}
-                    </Dialog>
+                                  ) : (
+                                    selectedItem.assets.map((asset) => (
+                                      <TableRow key={asset.id}>
+                                        <TableCell>
+                                          <div className="relative group w-10 h-10 rounded border overflow-hidden">
+                                            {asset.image ? (
+                                              <img
+                                                src={asset.image}
+                                                alt="Asset"
+                                                className="w-full h-full object-cover"
+                                              />
+                                            ) : (
+                                              <div className="w-full h-full bg-muted flex items-center justify-center text-muted-foreground">
+                                                <Upload className="w-4 h-4" />
+                                              </div>
+                                            )}
+                                            <input
+                                              type="file"
+                                              title="Atualizar Foto"
+                                              className="absolute inset-0 opacity-0 cursor-pointer"
+                                              accept="image/*"
+                                              onChange={(e) => handleAssetImageUpload(e, asset.id)}
+                                            />
+                                          </div>
+                                        </TableCell>
+                                        <TableCell>
+                                          <Input
+                                            value={asset.assetNumber}
+                                            onChange={(e) =>
+                                              updateAssetNumber(asset.id, e.target.value)
+                                            }
+                                            className="h-8"
+                                          />
+                                        </TableCell>
+                                        <TableCell>
+                                          <Input
+                                            type="date"
+                                            value={(asset as any).acquisitionDate || ''}
+                                            onChange={(e) =>
+                                              updateAssetAcquisitionDate(asset.id, e.target.value)
+                                            }
+                                            className="h-8 text-xs"
+                                          />
+                                        </TableCell>
+                                        <TableCell>
+                                          <Select
+                                            value={asset.conditionStatus}
+                                            onValueChange={(v) => updateAssetStatus(asset.id, v)}
+                                          >
+                                            <SelectTrigger className="h-8 w-[130px]">
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="Disponível">Disponível</SelectItem>
+                                              <SelectItem value="Manutenção">
+                                                Em Manutenção
+                                              </SelectItem>
+                                              <SelectItem value="Indisponível">
+                                                Indisponível
+                                              </SelectItem>
+                                              <SelectItem value="Vendido">Vendido</SelectItem>
+                                              <SelectItem value="Esgotado">Esgotado</SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="text-destructive h-8 w-8"
+                                            onClick={() => removeAsset(asset.id)}
+                                          >
+                                            <Trash2 className="w-4 h-4" />
+                                          </Button>
+                                        </TableCell>
+                                      </TableRow>
+                                    ))
+                                  )}
+                                </TableBody>
+                              </Table>
+                            </ScrollArea>
+                          </DialogContent>
+                        )}
+                      </Dialog>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
