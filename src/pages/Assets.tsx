@@ -50,10 +50,11 @@ export default function Assets() {
 
   const addAsset = () => {
     if (!selectedItem) return
-    const newAsset: Asset = {
+    const newAsset: any = {
       id: Math.random().toString(),
       assetNumber: `PAT-${Math.floor(Math.random() * 10000)}`,
       conditionStatus: 'Disponível',
+      acquisitionDate: new Date().toISOString().split('T')[0],
     }
     const newAssets = [...(selectedItem.assets || []), newAsset]
     updateInventoryItem(selectedItem.id, {
@@ -98,6 +99,15 @@ export default function Assets() {
     if (!selectedItem) return
     const newAssets = (selectedItem.assets || []).map((a) =>
       a.id === id ? { ...a, assetNumber: number } : a,
+    )
+    updateInventoryItem(selectedItem.id, { assets: newAssets })
+    setSelectedItem({ ...selectedItem, assets: newAssets })
+  }
+
+  const updateAssetAcquisitionDate = (id: string, date: string) => {
+    if (!selectedItem) return
+    const newAssets = (selectedItem.assets || []).map((a: any) =>
+      a.id === id ? { ...a, acquisitionDate: date } : a,
     )
     updateInventoryItem(selectedItem.id, { assets: newAssets })
     setSelectedItem({ ...selectedItem, assets: newAssets })
@@ -162,6 +172,7 @@ export default function Assets() {
                                 <TableRow>
                                   <TableHead className="w-16">Foto</TableHead>
                                   <TableHead>Nº Patrimônio</TableHead>
+                                  <TableHead>Data de Aquisição</TableHead>
                                   <TableHead>Estado</TableHead>
                                   <TableHead className="text-right">Ação</TableHead>
                                 </TableRow>
@@ -211,6 +222,16 @@ export default function Assets() {
                                         />
                                       </TableCell>
                                       <TableCell>
+                                        <Input
+                                          type="date"
+                                          value={(asset as any).acquisitionDate || ''}
+                                          onChange={(e) =>
+                                            updateAssetAcquisitionDate(asset.id, e.target.value)
+                                          }
+                                          className="h-8 text-xs"
+                                        />
+                                      </TableCell>
+                                      <TableCell>
                                         <Select
                                           value={asset.conditionStatus}
                                           onValueChange={(v) => updateAssetStatus(asset.id, v)}
@@ -226,6 +247,7 @@ export default function Assets() {
                                             <SelectItem value="Indisponível">
                                               Indisponível
                                             </SelectItem>
+                                            <SelectItem value="Vendido">Vendido</SelectItem>
                                             <SelectItem value="Esgotado">Esgotado</SelectItem>
                                           </SelectContent>
                                         </Select>

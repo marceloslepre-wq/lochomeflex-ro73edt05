@@ -62,6 +62,7 @@ export type Database = {
       }
       inventory: {
         Row: {
+          assets: Json | null
           available_qty: number
           category: string
           code: string
@@ -77,6 +78,7 @@ export type Database = {
           total_qty: number
         }
         Insert: {
+          assets?: Json | null
           available_qty?: number
           category: string
           code: string
@@ -92,6 +94,7 @@ export type Database = {
           total_qty?: number
         }
         Update: {
+          assets?: Json | null
           available_qty?: number
           category?: string
           code?: string
@@ -263,7 +266,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      public_add_asset: {
+        Args: { p_asset: Json; p_item_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
@@ -434,6 +440,7 @@ export const Constants = {
 //   created_at: timestamp with time zone (not null, default: now())
 //   monthly_price: numeric (nullable, default: 0)
 //   daily_price: numeric (nullable, default: 0)
+//   assets: jsonb (nullable, default: '[]'::jsonb)
 // Table: profiles
 //   id: uuid (not null, default: gen_random_uuid())
 //   auth_user_id: uuid (nullable)
@@ -503,6 +510,8 @@ export const Constants = {
 //     USING: true
 //     WITH CHECK: true
 // Table: inventory
+//   Policy "anon_select" (SELECT, PERMISSIVE) roles={anon}
+//     USING: true
 //   Policy "authenticated_all" (ALL, PERMISSIVE) roles={authenticated}
 //     USING: true
 //     WITH CHECK: true
@@ -571,6 +580,22 @@ export const Constants = {
 //     VALUES (NEW.id, NEW.id, NEW.email, COALESCE(NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1)), 'Operador')
 //     ON CONFLICT (id) DO UPDATE SET auth_user_id = EXCLUDED.auth_user_id;
 //     RETURN NEW;
+//   END;
+//   $function$
+//
+// FUNCTION public_add_asset(uuid, jsonb)
+//   CREATE OR REPLACE FUNCTION public.public_add_asset(p_item_id uuid, p_asset jsonb)
+//    RETURNS void
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//   AS $function$
+//   BEGIN
+//     UPDATE public.inventory
+//     SET
+//       assets = COALESCE(assets, '[]'::jsonb) || p_asset,
+//       total_qty = total_qty + 1,
+//       available_qty = available_qty + 1
+//     WHERE id = p_item_id;
 //   END;
 //   $function$
 //
