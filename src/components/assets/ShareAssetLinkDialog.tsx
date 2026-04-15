@@ -35,7 +35,7 @@ export function ShareAssetLinkDialog() {
     }
   }
 
-  const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(
+  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(
     `Olá! Por favor, acesse este link para cadastrar novos patrimônios: ${link}`,
   )}`
 

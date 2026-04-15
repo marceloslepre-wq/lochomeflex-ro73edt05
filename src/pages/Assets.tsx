@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import useMainStore, { Asset, InventoryItem } from '@/stores/main'
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -10,7 +10,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Plus, Trash2, Upload, Briefcase, Search } from 'lucide-react'
+import { Plus, Trash2, Upload, Briefcase } from 'lucide-react'
 import { ShareAssetLinkDialog } from '@/components/assets/ShareAssetLinkDialog'
 import {
   Select,
@@ -32,7 +32,12 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 export default function Assets() {
   const { inventory, updateInventoryItem } = useMainStore()
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null)
-  const [assetSearch, setAssetSearch] = useState('')
+  const [selectedModel, setSelectedModel] = useState<string>('all')
+
+  const models = useMemo(() => {
+    const uniqueModels = Array.from(new Set(inventory.map((item) => item.name)))
+    return uniqueModels.sort()
+  }, [inventory])
 
   const handleAssetImageUpload = (e: React.ChangeEvent<HTMLInputElement>, assetId: string) => {
     if (!selectedItem) return
@@ -116,12 +121,8 @@ export default function Assets() {
   }
 
   const filteredInventory = inventory.filter((item) => {
-    if (!assetSearch) return true
-    const term = assetSearch.toLowerCase()
-    if (item.name.toLowerCase().includes(term)) return true
-    if (item.code.toLowerCase().includes(term)) return true
-    if (item.assets?.some((a) => a.assetNumber?.toLowerCase().includes(term))) return true
-    return false
+    if (selectedModel === 'all') return true
+    return item.name === selectedModel
   })
 
   return (
@@ -135,15 +136,19 @@ export default function Assets() {
         </div>
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto mt-2 sm:mt-0">
           <ShareAssetLinkDialog />
-          <div className="relative w-full sm:w-72">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por patrimônio ou produto..."
-              className="pl-9"
-              value={assetSearch}
-              onChange={(e) => setAssetSearch(e.target.value)}
-            />
-          </div>
+          <Select value={selectedModel} onValueChange={setSelectedModel}>
+            <SelectTrigger className="w-full sm:w-72">
+              <SelectValue placeholder="Selecione um modelo..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os modelos</SelectItem>
+              {models.map((model) => (
+                <SelectItem key={model} value={model}>
+                  {model}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
