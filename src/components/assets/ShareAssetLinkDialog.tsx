@@ -35,28 +35,15 @@ export function ShareAssetLinkDialog() {
     }
   }
 
-  const handleWhatsApp = () => {
-    const text = encodeURIComponent(
-      `Olá! Por favor, acesse este link para cadastrar novos patrimônios: ${link}`,
-    )
-    const a = document.createElement('a')
-    a.href = `https://wa.me/?text=${text}`
-    a.target = '_blank'
-    a.rel = 'noopener noreferrer'
-    a.click()
-  }
+  const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(
+    `Olá! Por favor, acesse este link para cadastrar novos patrimônios: ${link}`,
+  )}`
 
-  const handleEmail = () => {
-    const subject = encodeURIComponent('Link para Cadastro de Patrimônios')
-    const body = encodeURIComponent(
-      `Olá!\n\nPor favor, acesse este link para cadastrar novos patrimônios:\n${link}`,
-    )
-    const a = document.createElement('a')
-    a.href = `mailto:?subject=${subject}&body=${body}`
-    a.target = '_blank'
-    a.rel = 'noopener noreferrer'
-    a.click()
-  }
+  const emailUrl = `mailto:?subject=${encodeURIComponent(
+    'Link para Cadastro de Patrimônios',
+  )}&body=${encodeURIComponent(
+    `Olá!\n\nPor favor, acesse este link para cadastrar novos patrimônios:\n${link}`,
+  )}`
 
   return (
     <Dialog>
@@ -82,15 +69,19 @@ export function ShareAssetLinkDialog() {
         </div>
         <div className="flex flex-col gap-2 mt-4">
           <Button
-            onClick={handleWhatsApp}
+            asChild
             className="w-full gap-2 bg-[#25D366] hover:bg-[#20bd5a] text-white border-transparent"
           >
-            <MessageSquare className="w-4 h-4" />
-            Enviar por WhatsApp
+            <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
+              <MessageSquare className="w-4 h-4" />
+              Enviar por WhatsApp
+            </a>
           </Button>
-          <Button onClick={handleEmail} variant="outline" className="w-full gap-2">
-            <Mail className="w-4 h-4" />
-            Enviar por E-mail
+          <Button asChild variant="outline" className="w-full gap-2">
+            <a href={emailUrl} target="_blank" rel="noopener noreferrer">
+              <Mail className="w-4 h-4" />
+              Enviar por E-mail
+            </a>
           </Button>
         </div>
       </DialogContent>

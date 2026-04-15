@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { supabase } from '@/lib/supabase/client'
+import { useState, useMemo } from 'react'
+import useMainStore from '@/stores/main'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Upload, Plus, Search, Building2 } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
 import {
   Select,
   SelectContent,
@@ -12,190 +12,207 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Upload, CheckCircle2 } from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
-import logoImg from '@/assets/logo_hospital_home_final-f2434.jpg'
 
 export default function PublicAssetForm() {
-  const [searchParams] = useSearchParams()
-  const itemId = searchParams.get('itemId')
+  const { inventory, updateInventoryItem } = useMainStore()
   const { toast } = useToast()
-
-  const [loading, setLoading] = useState(false)
-  const [success, setSuccess] = useState(false)
-  const [item, setItem] = useState<any>(null)
-
-  const [formData, setFormData] = useState({
+  const [selectedItemId, setSelectedItemId] = useState<string>('')
+  const [modelSearch, setModelSearch] = useState('')
+  const [assetData, setAssetData] = useState({
     assetNumber: '',
     acquisitionDate: new Date().toISOString().split('T')[0],
     conditionStatus: 'Disponível',
     image: '',
   })
 
-  useEffect(() => {
-    if (itemId) {
-      supabase
-        .from('inventory')
-        .select('name, code')
-        .eq('id', itemId)
-        .single()
-        .then(({ data }) => {
-          if (data) setItem(data)
-        })
-    }
-  }, [itemId])
+  const filteredModels = useMemo(() => {
+    return inventory.filter((item) => {
+      if (!modelSearch) return true
+      const term = modelSearch.toLowerCase()
+      return item.name.toLowerCase().includes(term) || item.code.toLowerCase().includes(term)
+    })
+  }, [inventory, modelSearch])
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
       const reader = new FileReader()
       reader.onloadend = () => {
-        setFormData((f) => ({ ...f, image: reader.result as string }))
+        setAssetData({ ...assetData, image: reader.result as string })
       }
       reader.readAsDataURL(file)
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!itemId) return
-    setLoading(true)
+
+    if (!selectedItemId) {
+      toast({ title: 'Erro', description: 'Selecione um modelo.', variant: 'destructive' })
+      return
+    }
+
+    if (!assetData.assetNumber) {
+      toast({
+        title: 'Erro',
+        description: 'Informe o número do patrimônio.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    const item = inventory.find((i) => i.id === selectedItemId)
+    if (!item) return
 
     const newAsset = {
       id: Math.random().toString(),
-      assetNumber: formData.assetNumber,
-      acquisitionDate: formData.acquisitionDate,
-      conditionStatus: formData.conditionStatus,
-      image: formData.image,
+      ...assetData,
     }
 
-    const { error } = await supabase.rpc('public_add_asset', {
-      p_item_id: itemId,
-      p_asset: newAsset,
+    const newAssets = [...(item.assets || []), newAsset]
+    updateInventoryItem(item.id, {
+      assets: newAssets,
+      totalQty: item.totalQty + 1,
+      availableQty: item.availableQty + 1,
     })
 
-    setLoading(false)
-
-    if (error) {
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível salvar o patrimônio.',
-        variant: 'destructive',
-      })
-      console.error(error)
-    } else {
-      setSuccess(true)
-    }
-  }
-
-  if (success) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
-        <Card className="w-full max-w-md border-0 shadow-lg text-center p-6">
-          <div className="mb-6 flex justify-center">
-            <img src={logoImg} alt="Logo" className="h-16 object-contain" />
-          </div>
-          <CheckCircle2 className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold mb-2">Patrimônio Cadastrado</h2>
-          <p className="text-muted-foreground mb-6">
-            O novo patrimônio foi adicionado com sucesso ao sistema.
-          </p>
-          <Button onClick={() => setSuccess(false)} variant="outline">
-            Cadastrar Outro
-          </Button>
-        </Card>
-      </div>
-    )
+    toast({ title: 'Sucesso', description: 'Patrimônio cadastrado com sucesso.' })
+    setAssetData({
+      assetNumber: '',
+      acquisitionDate: new Date().toISOString().split('T')[0],
+      conditionStatus: 'Disponível',
+      image: '',
+    })
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center py-12 px-4">
-      <div className="mb-8">
-        <img src={logoImg} alt="Logo" className="h-20 object-contain drop-shadow-sm" />
-      </div>
-
-      <Card className="w-full max-w-md border-0 shadow-xl">
-        <CardHeader className="text-center pb-4">
-          <CardTitle className="text-2xl">Cadastro de Patrimônio</CardTitle>
-          {item ? (
-            <CardDescription className="text-base mt-2">
-              Adicionando unidade para:
-              <br />
-              <strong className="text-foreground">{item.name}</strong> (Ref: {item.code})
-            </CardDescription>
-          ) : (
-            <CardDescription>Carregando informações do produto...</CardDescription>
-          )}
+    <div className="min-h-screen bg-muted/30 p-4 md:p-8 flex items-center justify-center">
+      <Card className="w-full max-w-2xl shadow-lg">
+        <CardHeader className="text-center space-y-2 pb-6 border-b">
+          <div className="flex justify-center mb-2">
+            <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+              <Building2 className="w-6 h-6 text-primary" />
+            </div>
+          </div>
+          <CardTitle className="text-2xl font-bold">Cadastro de Patrimônio</CardTitle>
+          <CardDescription>
+            Preencha os dados abaixo para registrar um novo ativo no sistema.
+          </CardDescription>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-2">
-              <Label>Número do Patrimônio</Label>
-              <Input
-                required
-                value={formData.assetNumber}
-                onChange={(e) => setFormData((f) => ({ ...f, assetNumber: e.target.value }))}
-                placeholder="Ex: PAT-00123"
-              />
-            </div>
+        <CardContent className="pt-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-4 bg-muted/50 p-4 rounded-lg border">
+              <h3 className="font-semibold text-sm text-muted-foreground flex items-center gap-2">
+                1. Seleção do Modelo
+              </h3>
 
-            <div className="space-y-2">
-              <Label>Data de Aquisição</Label>
-              <Input
-                type="date"
-                required
-                value={formData.acquisitionDate}
-                onChange={(e) => setFormData((f) => ({ ...f, acquisitionDate: e.target.value }))}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Estado / Condição</Label>
-              <Select
-                value={formData.conditionStatus}
-                onValueChange={(v) => setFormData((f) => ({ ...f, conditionStatus: v }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Disponível">Disponível</SelectItem>
-                  <SelectItem value="Manutenção">Em Manutenção</SelectItem>
-                  <SelectItem value="Indisponível">Indisponível</SelectItem>
-                  <SelectItem value="Esgotado">Esgotado</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Foto da Unidade</Label>
-              <div className="border-2 border-dashed rounded-lg p-6 text-center hover:bg-muted/50 transition-colors relative">
-                {formData.image ? (
-                  <div className="flex flex-col items-center gap-2">
-                    <img
-                      src={formData.image}
-                      alt="Preview"
-                      className="h-32 object-contain rounded"
-                    />
-                    <span className="text-xs text-muted-foreground">Clique para alterar</span>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                    <Upload className="w-8 h-8" />
-                    <span className="text-sm">Clique ou arraste uma foto</span>
-                  </div>
-                )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  onChange={handleImageUpload}
-                />
+              <div className="space-y-3">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Filtrar modelos por nome ou código..."
+                    value={modelSearch}
+                    onChange={(e) => setModelSearch(e.target.value)}
+                    className="pl-9 bg-background"
+                  />
+                </div>
+                <Select value={selectedItemId} onValueChange={setSelectedItemId}>
+                  <SelectTrigger className="bg-background">
+                    <SelectValue placeholder="Selecione um modelo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredModels.length === 0 ? (
+                      <div className="p-2 text-sm text-muted-foreground text-center">
+                        Nenhum modelo encontrado
+                      </div>
+                    ) : (
+                      filteredModels.map((item) => (
+                        <SelectItem key={item.id} value={item.id}>
+                          {item.name} ({item.code}) - {item.category}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
-            <Button type="submit" className="w-full" disabled={loading || !itemId}>
-              {loading ? 'Salvando...' : 'Salvar Patrimônio'}
+            <div className="space-y-4 bg-muted/50 p-4 rounded-lg border">
+              <h3 className="font-semibold text-sm text-muted-foreground flex items-center gap-2">
+                2. Dados do Patrimônio
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Nº do Patrimônio *</label>
+                  <Input
+                    required
+                    value={assetData.assetNumber}
+                    onChange={(e) => setAssetData({ ...assetData, assetNumber: e.target.value })}
+                    placeholder="Ex: PAT-001"
+                    className="bg-background"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Data de Aquisição</label>
+                  <Input
+                    type="date"
+                    value={assetData.acquisitionDate}
+                    onChange={(e) =>
+                      setAssetData({ ...assetData, acquisitionDate: e.target.value })
+                    }
+                    className="bg-background"
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-sm font-medium">Estado de Conservação</label>
+                  <Select
+                    value={assetData.conditionStatus}
+                    onValueChange={(v) => setAssetData({ ...assetData, conditionStatus: v })}
+                  >
+                    <SelectTrigger className="bg-background">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Disponível">Disponível</SelectItem>
+                      <SelectItem value="Manutenção">Em Manutenção</SelectItem>
+                      <SelectItem value="Indisponível">Indisponível</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Foto do Patrimônio</label>
+                <div className="flex items-center gap-4">
+                  <div className="relative w-24 h-24 rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center overflow-hidden bg-background">
+                    {assetData.image ? (
+                      <img
+                        src={assetData.image}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <Upload className="w-8 h-8 text-muted-foreground/50" />
+                    )}
+                    <input
+                      type="file"
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                    />
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    <p>Clique ou arraste uma foto</p>
+                    <p className="text-xs">JPG, PNG até 5MB</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Button type="submit" className="w-full h-12 text-lg">
+              <Plus className="w-5 h-5 mr-2" />
+              Cadastrar Patrimônio
             </Button>
           </form>
         </CardContent>
