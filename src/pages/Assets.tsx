@@ -10,7 +10,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Plus, Trash2, Upload, Briefcase } from 'lucide-react'
+import { Plus, Trash2, Upload, Briefcase, Search, Share2, Mail, MessageCircle } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -31,6 +31,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 export default function Assets() {
   const { inventory, updateInventoryItem } = useMainStore()
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null)
+  const [assetSearch, setAssetSearch] = useState('')
 
   const handleAssetImageUpload = (e: React.ChangeEvent<HTMLInputElement>, assetId: string) => {
     if (!selectedItem) return
@@ -113,13 +114,45 @@ export default function Assets() {
     setSelectedItem({ ...selectedItem, assets: newAssets })
   }
 
+  const handleShareWhatsApp = (item: InventoryItem) => {
+    const url = `${window.location.origin}/public/asset/new?itemId=${item.id}`
+    const text = `Olá! Acesse o link para cadastrar um novo patrimônio para o modelo *${item.name}*: ${url}`
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
+  }
+
+  const handleShareEmail = (item: InventoryItem) => {
+    const url = `${window.location.origin}/public/asset/new?itemId=${item.id}`
+    const text = `Olá,\n\nAcesse o link para cadastrar um novo patrimônio para o modelo ${item.name}:\n${url}`
+    window.open(`mailto:?subject=Cadastro de Patrimônio&body=${encodeURIComponent(text)}`, '_blank')
+  }
+
+  const filteredInventory = inventory.filter((item) => {
+    if (!assetSearch) return true
+    const term = assetSearch.toLowerCase()
+    if (item.name.toLowerCase().includes(term)) return true
+    if (item.code.toLowerCase().includes(term)) return true
+    if (item.assets?.some((a) => a.assetNumber?.toLowerCase().includes(term))) return true
+    return false
+  })
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Gestão de Patrimônio</h1>
-        <p className="text-muted-foreground mt-1">
-          Gerencie as unidades individuais de cada modelo do estoque.
-        </p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Gestão de Patrimônio</h1>
+          <p className="text-muted-foreground mt-1">
+            Gerencie as unidades individuais de cada modelo do estoque.
+          </p>
+        </div>
+        <div className="relative w-full sm:w-72">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por patrimônio ou produto..."
+            className="pl-9"
+            value={assetSearch}
+            onChange={(e) => setAssetSearch(e.target.value)}
+          />
+        </div>
       </div>
 
       <Card>
@@ -135,7 +168,7 @@ export default function Assets() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {inventory.map((item) => (
+              {filteredInventory.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell className="font-medium">{item.name}</TableCell>
                   <TableCell>{item.category}</TableCell>
@@ -154,14 +187,27 @@ export default function Assets() {
                         </Button>
                       </DialogTrigger>
                       {selectedItem?.id === item.id && (
-                        <DialogContent className="max-w-3xl">
+                        <DialogContent className="max-w-4xl">
                           <DialogHeader>
                             <DialogTitle>Patrimônios: {selectedItem.name}</DialogTitle>
                           </DialogHeader>
-                          <div className="flex justify-between items-center mb-4 mt-2">
-                            <p className="text-sm text-muted-foreground">
-                              Adicione e controle cada unidade fisicamente.
-                            </p>
+                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 mt-2 gap-4">
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => handleShareWhatsApp(selectedItem)}
+                              >
+                                <MessageCircle className="w-4 h-4 mr-2 text-green-600" /> WhatsApp
+                              </Button>
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => handleShareEmail(selectedItem)}
+                              >
+                                <Mail className="w-4 h-4 mr-2 text-blue-600" /> E-mail
+                              </Button>
+                            </div>
                             <Button size="sm" onClick={addAsset}>
                               <Plus className="w-4 h-4 mr-2" /> Adicionar Unidade
                             </Button>
@@ -172,7 +218,7 @@ export default function Assets() {
                                 <TableRow>
                                   <TableHead className="w-16">Foto</TableHead>
                                   <TableHead>Nº Patrimônio</TableHead>
-                                  <TableHead>Data de Aquisição</TableHead>
+                                  <TableHead>Data Aquisição</TableHead>
                                   <TableHead>Estado</TableHead>
                                   <TableHead className="text-right">Ação</TableHead>
                                 </TableRow>
@@ -181,7 +227,7 @@ export default function Assets() {
                                 {!selectedItem.assets || selectedItem.assets.length === 0 ? (
                                   <TableRow>
                                     <TableCell
-                                      colSpan={4}
+                                      colSpan={5}
                                       className="text-center py-8 text-muted-foreground"
                                     >
                                       Nenhum patrimônio cadastrado.
@@ -236,7 +282,7 @@ export default function Assets() {
                                           value={asset.conditionStatus}
                                           onValueChange={(v) => updateAssetStatus(asset.id, v)}
                                         >
-                                          <SelectTrigger className="h-8">
+                                          <SelectTrigger className="h-8 w-[130px]">
                                             <SelectValue />
                                           </SelectTrigger>
                                           <SelectContent>
@@ -275,10 +321,10 @@ export default function Assets() {
                   </TableCell>
                 </TableRow>
               ))}
-              {inventory.length === 0 && (
+              {filteredInventory.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                    Nenhum modelo cadastrado no estoque.
+                    Nenhum item encontrado.
                   </TableCell>
                 </TableRow>
               )}

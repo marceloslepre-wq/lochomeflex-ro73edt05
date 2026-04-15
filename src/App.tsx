@@ -18,6 +18,7 @@ import Settings from './pages/Settings'
 import Guide from './pages/Guide'
 import NotFound from './pages/NotFound'
 import PublicCustomerForm from './pages/PublicCustomerForm'
+import PublicAssetForm from './pages/PublicAssetForm'
 
 const App = () => (
   <AuthProvider>
@@ -29,6 +30,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/public/customer/new" element={<PublicCustomerForm />} />
+            <Route path="/public/asset/new" element={<PublicAssetForm />} />
             <Route element={<ProtectedRoute />}>
               <Route element={<Layout />}>
                 <Route path="/dashboard" element={<Dashboard />} />

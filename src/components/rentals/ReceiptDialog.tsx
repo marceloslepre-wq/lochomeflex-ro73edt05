@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Rental } from '@/stores/main'
 import useMainStore from '@/stores/main'
 import { Printer, MessageCircle, Mail } from 'lucide-react'
+import logoImg from '@/assets/logo_hospital_home_final-f2434.jpg'
 
 interface ReceiptDialogProps {
   rental: Rental | null
@@ -37,7 +38,7 @@ export function ReceiptDialog({
 
   const generateText = () => {
     let text = `*${type === 'renewal' ? 'Recibo de Renovação' : 'Recibo de Pagamento'}*\n\n`
-    text += `*Empresa:* ${settings.companyName}\n`
+    text += `*Empresa:* ${settings.companyName || 'Hospital Home'}\n`
     text += `*Locatário:* ${customer?.name || 'Cliente'}\n`
     text += `*Contrato ${type === 'renewal' ? 'Original' : ''}:* ${rental.contractNumber || rental.id}\n\n`
 
@@ -55,6 +56,8 @@ export function ReceiptDialog({
       text += `${new Date(rental.startDate).toLocaleDateString('pt-BR')} a ${new Date(rental.expectedReturnDate).toLocaleDateString('pt-BR')}\n`
       text += `*Valor Total:* R$ ${rental.total.toFixed(2)}\n`
     }
+
+    text += `\nNão é fornecido Nota Fiscal para locação de bens móveis, fornecemos recibo conforme o Artigo 1 da Lei 8846 de 1994.`
 
     return text
   }
@@ -75,7 +78,9 @@ export function ReceiptDialog({
             .border-t { border-top: 1px solid #ccc; }
             .pb-2 { padding-bottom: 0.5rem; }
             .pt-2 { padding-top: 0.5rem; }
+            .pt-4 { padding-top: 1rem; }
             .py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+            .mb-2 { margin-bottom: 0.5rem; }
             .mb-4 { margin-bottom: 1rem; }
             .mt-1 { margin-top: 0.25rem; }
             .mt-8 { margin-top: 2rem; }
@@ -87,6 +92,10 @@ export function ReceiptDialog({
             .text-sm { font-size: 0.875rem; }
             .text-xs { font-size: 0.75rem; }
             .text-base { font-size: 1rem; }
+            .text-gray-500 { color: #6b7280; }
+            .mx-auto { margin-left: auto; margin-right: auto; }
+            .h-16 { height: 4rem; }
+            .object-contain { object-fit: contain; }
             ul { list-style: none; padding: 0; margin: 0; }
           </style>
         `)
@@ -130,7 +139,8 @@ export function ReceiptDialog({
           className="p-6 border rounded-md bg-white text-black font-mono text-sm space-y-4"
         >
           <div className="text-center font-bold text-lg border-b pb-2 mb-4">
-            {settings.companyName}
+            <img src={logoImg} className="h-16 mx-auto mb-2 object-contain" alt="Logo" />
+            {settings.companyName || 'Hospital Home'}
             <div className="text-sm font-normal mt-1">
               {type === 'renewal' ? 'RECIBO DE RENOVAÇÃO' : 'RECIBO DE LOCAÇÃO'}
             </div>
@@ -191,8 +201,9 @@ export function ReceiptDialog({
             </div>
           </div>
 
-          <div className="text-center text-xs mt-8 pt-4 border-t text-gray-500">
-            Este recibo não tem valor fiscal.
+          <div className="text-center text-xs mt-8 pt-4 border-t text-gray-500 font-semibold">
+            Não é fornecido Nota Fiscal para locação de bens móveis, fornecemos recibo conforme o
+            Artigo 1 da Lei 8846 de 1994.
           </div>
         </div>
 
