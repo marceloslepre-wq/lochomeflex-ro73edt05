@@ -12,6 +12,7 @@ export type Database = {
       customers: {
         Row: {
           address: Json | null
+          attachment: string | null
           created_at: string
           delivery_address: Json | null
           document: string
@@ -28,6 +29,7 @@ export type Database = {
         }
         Insert: {
           address?: Json | null
+          attachment?: string | null
           created_at?: string
           delivery_address?: Json | null
           document: string
@@ -44,6 +46,7 @@ export type Database = {
         }
         Update: {
           address?: Json | null
+          attachment?: string | null
           created_at?: string
           delivery_address?: Json | null
           document?: string
@@ -426,6 +429,7 @@ export const Constants = {
 //   observations: text (nullable)
 //   created_at: timestamp with time zone (not null, default: now())
 //   updated_at: timestamp with time zone (not null, default: now())
+//   attachment: text (nullable)
 // Table: inventory
 //   id: uuid (not null, default: gen_random_uuid())
 //   code: text (not null)

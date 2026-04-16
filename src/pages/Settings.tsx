@@ -70,6 +70,10 @@ export default function Settings() {
     permissions: [] as PermissionKey[],
   })
 
+  const [editingLocId, setEditingLocId] = useState<string | null>(null)
+  const [editLocName, setEditLocName] = useState('')
+  const [editLocAddress, setEditLocAddress] = useState('')
+
   const handleContractUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
@@ -85,7 +89,7 @@ export default function Settings() {
   <h2 style="font-size: 16px; font-weight: bold; margin-top: 25px; border-bottom: 1px solid #ccc; padding-bottom: 5px; color: #000;">1. AS PARTES</h2>
   <p style="text-align: justify; margin-top: 10px; font-size: 15px;">
     <strong>LOCADORA:</strong> {{companyName}}, inscrita no CNPJ sob o nº {{companyDocument}}, com sede em {{companyAddress}}.<br/><br/>
-    <strong>LOCATÁRIO:</strong> {{customerName}}, inscrito no CPF/CNPJ sob o nº {{customerDocument}}, telefone {{customerPhone}}, e-mail {{customerEmail}}.
+    <strong>LOCATÁRIO:</strong> {{customerName}}, inscrito no CPF/CNPJ sob o nº {{customerDocument}}, telefone {{customerPhone}}.
   </p>
 
   <h2 style="font-size: 16px; font-weight: bold; margin-top: 25px; border-bottom: 1px solid #ccc; padding-bottom: 5px; color: #000;">2. OBJETO DO CONTRATO</h2>
@@ -660,100 +664,90 @@ export default function Settings() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {(() => {
-                const [editingLocId, setEditingLocId] = useState<string | null>(null)
-                const [editLocName, setEditLocName] = useState('')
-                const [editLocAddress, setEditLocAddress] = useState('')
-
-                return (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Nome do Local</TableHead>
-                        <TableHead>Endereço Completo</TableHead>
-                        <TableHead className="text-right">Ações</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {!settings.locations || settings.locations.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={3} className="text-center text-muted-foreground py-4">
-                            Nenhum local cadastrado.
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome do Local</TableHead>
+                    <TableHead>Endereço Completo</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {!settings.locations || settings.locations.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center text-muted-foreground py-4">
+                        Nenhum local cadastrado.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    settings.locations.map((loc) =>
+                      editingLocId === loc.id ? (
+                        <TableRow key={loc.id}>
+                          <TableCell>
+                            <Input
+                              value={editLocName}
+                              onChange={(e) => setEditLocName(e.target.value)}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              value={editLocAddress}
+                              onChange={(e) => setEditLocAddress(e.target.value)}
+                            />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                const newLocs = settings.locations?.map((l) =>
+                                  l.id === loc.id
+                                    ? { ...l, name: editLocName, address: editLocAddress }
+                                    : l,
+                                )
+                                updateSettings({ locations: newLocs })
+                                setEditingLocId(null)
+                              }}
+                            >
+                              <Save className="w-4 h-4 text-emerald-600" />
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ) : (
-                        settings.locations.map((loc) =>
-                          editingLocId === loc.id ? (
-                            <TableRow key={loc.id}>
-                              <TableCell>
-                                <Input
-                                  value={editLocName}
-                                  onChange={(e) => setEditLocName(e.target.value)}
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Input
-                                  value={editLocAddress}
-                                  onChange={(e) => setEditLocAddress(e.target.value)}
-                                />
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    const newLocs = settings.locations?.map((l) =>
-                                      l.id === loc.id
-                                        ? { ...l, name: editLocName, address: editLocAddress }
-                                        : l,
-                                    )
-                                    updateSettings({ locations: newLocs })
-                                    setEditingLocId(null)
-                                  }}
-                                >
-                                  <Save className="w-4 h-4 text-emerald-600" />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ) : (
-                            <TableRow key={loc.id}>
-                              <TableCell className="font-medium">{loc.name}</TableCell>
-                              <TableCell>{loc.address}</TableCell>
-                              <TableCell className="text-right flex items-center justify-end gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-primary"
-                                  onClick={() => {
-                                    setEditingLocId(loc.id)
-                                    setEditLocName(loc.name)
-                                    setEditLocAddress(loc.address)
-                                  }}
-                                >
-                                  <Edit className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                                  onClick={() => {
-                                    const newLocs = settings.locations?.filter(
-                                      (l) => l.id !== loc.id,
-                                    )
-                                    updateSettings({ locations: newLocs })
-                                  }}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ),
-                        )
-                      )}
-                    </TableBody>
-                  </Table>
-                )
-              })()}
+                        <TableRow key={loc.id}>
+                          <TableCell className="font-medium">{loc.name}</TableCell>
+                          <TableCell>{loc.address}</TableCell>
+                          <TableCell className="text-right flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-primary"
+                              onClick={() => {
+                                setEditingLocId(loc.id)
+                                setEditLocName(loc.name)
+                                setEditLocAddress(loc.address)
+                              }}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                              onClick={() => {
+                                const newLocs = settings.locations?.filter((l) => l.id !== loc.id)
+                                updateSettings({ locations: newLocs })
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ),
+                    )
+                  )}
+                </TableBody>
+              </Table>
 
               <div className="grid gap-4 md:grid-cols-2 pt-4 border-t">
                 <div className="space-y-2">

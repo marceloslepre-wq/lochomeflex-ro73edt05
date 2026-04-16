@@ -3,15 +3,7 @@ import useMainStore from '@/stores/main'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import {
-  ArrowLeft,
-  Save,
-  Edit2,
-  Printer,
-  MessageCircle,
-  Mail,
-  Link as LinkIcon,
-} from 'lucide-react'
+import { ArrowLeft, Save, Edit2, Printer, Link as LinkIcon } from 'lucide-react'
 import { useState, useMemo } from 'react'
 import { useToast } from '@/hooks/use-toast'
 import { usePermissions } from '@/hooks/use-permissions'
@@ -32,8 +24,7 @@ export default function RentalDetail() {
   const defaultContractText = useMemo(() => {
     if (!rental || !customer) return ''
 
-    let text = `CONTRATO Nº: ${rental.contractNumber || rental.id}\n\n`
-    text += `TERMOS E CONDIÇÕES DE LOCAÇÃO,\nGUARDA E USO DE EQUIPAMENTO HOSPITALAR\n\n`
+    let text = `TERMOS E CONDIÇÕES DE LOCAÇÃO, GUARDA E USO DE EQUIPAMENTO HOSPITALAR\n\n`
     text += `Constitui objeto do presente termo de condições de locação, uso e guarda de equipamento hospitalar de propriedade de HOSPITAL HOME COMERCIO ATACADISTA DE PRODUTOS HOSPITALARES EM GERAL.\n\n`
 
     const cAddr = (customer.address as any) || {}
@@ -64,7 +55,10 @@ export default function RentalDetail() {
     const pickupLoc = settings.locations?.find((l: any) => l.id === rental.pickupLocationId)
     let pAddress = pickupLoc?.address || ''
 
-    pAddress = pAddress.replace(/ - CEP: Sem CEP/gi, '').replace(/CEP: Sem CEP/gi, '')
+    pAddress = pAddress
+      .replace(/ - CEP: Sem CEP/gi, '')
+      .replace(/CEP: Sem CEP/gi, '')
+      .trim()
 
     const pickupText =
       rental.pickupLocationId === 'delivery'
@@ -122,7 +116,7 @@ export default function RentalDetail() {
     }
     if (settings.contractTemplateHtml) {
       let html = settings.contractTemplateHtml
-      html = html.replace(/{{rentalId}}/g, rental.id)
+      html = html.replace(/{{rentalId}}/g, rental.contractNumber || rental.id)
       html = html.replace(/{{companyName}}/g, settings.companyName)
       html = html.replace(/{{companyDocument}}/g, settings.companyDocument)
       html = html.replace(/{{companyAddress}}/g, settings.companyAddress)
@@ -167,7 +161,7 @@ export default function RentalDetail() {
         <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px;">
           ${settings.logoUrl ? `<img src="${settings.logoUrl}" style="max-height: 80px; margin-bottom: 10px;" />` : ''}
           <h1 style="font-size: 24px; margin: 0; text-transform: uppercase;">Recibo de Devolução</h1>
-          <p style="margin: 5px 0 0;">Contrato n. ${rental?.contractNumber || rental?.id}</p>
+          <p style="margin: 5px 0 0;">Contrato Nº: ${rental?.contractNumber || rental?.id}</p>
         </div>
 
         <div style="margin-bottom: 20px;">
@@ -221,7 +215,7 @@ export default function RentalDetail() {
         <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px;">
           ${settings.logoUrl ? `<img src="${settings.logoUrl}" style="max-height: 80px; margin-bottom: 10px;" />` : ''}
           <h1 style="font-size: 24px; margin: 0; text-transform: uppercase;">Recibo de Entrega / Locação</h1>
-          <p style="margin: 5px 0 0;">Contrato n. ${rental?.contractNumber || rental?.id}</p>
+          <p style="margin: 5px 0 0;">Contrato Nº: ${rental?.contractNumber || rental?.id}</p>
         </div>
 
         <div style="margin-bottom: 20px;">
@@ -276,19 +270,6 @@ export default function RentalDetail() {
       title: 'Contrato Atualizado',
       description: 'O texto do contrato foi salvo para esta locação.',
     })
-  }
-
-  const handleWhatsApp = () => {
-    const text = `Acesse o contrato de locação: ${window.location.href}`
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
-  }
-
-  const handleEmail = () => {
-    const text = `Acesse o contrato de locação: ${window.location.href}`
-    window.open(
-      `mailto:${customer?.email || ''}?subject=${encodeURIComponent('Contrato de Locação')}&body=${encodeURIComponent(text)}`,
-      '_blank',
-    )
   }
 
   const handleCopyLink = () => {
@@ -409,10 +390,14 @@ export default function RentalDetail() {
                     alt="Logo Hospital Home"
                   />
                 )}
+                <h1 className="text-xl font-bold uppercase mt-4">
+                  Contrato Nº: {rental.contractNumber || rental.id}
+                </h1>
               </div>
 
               <div className="font-serif text-[15px] leading-loose whitespace-pre-wrap">
                 {(rental.customContractText || defaultContractText)
+                  .replace(/CONTRATO Nº:.*?\n\n/g, '')
                   .replace(/ - CEP: Sem CEP/gi, '')
                   .replace(/CEP: Sem CEP/gi, '')}
               </div>

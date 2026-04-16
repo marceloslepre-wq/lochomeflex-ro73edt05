@@ -1,14 +1,16 @@
-import { useState, useMemo } from 'react'
-import useMainStore from '@/stores/main'
+import { useState, useEffect, useMemo } from 'react'
+import { supabase } from '@/lib/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Upload, Plus, Search, Building2 } from 'lucide-react'
+import { Upload, Plus, Search, Building2, Loader2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
 export default function PublicAssetForm() {
-  const { inventory, updateInventoryItem } = useMainStore()
   const { toast } = useToast()
+  const [inventory, setInventory] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
   const [selectedItemId, setSelectedItemId] = useState<string>('')
   const [modelSearch, setModelSearch] = useState('')
   const [assetData, setAssetData] = useState({
@@ -17,6 +19,31 @@ export default function PublicAssetForm() {
     conditionStatus: 'Disponível',
     image: '',
   })
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  useEffect(() => {
+    async function loadModels() {
+      try {
+        const { data, error } = await supabase
+          .from('inventory')
+          .select('id, name, code, category, assets')
+          .order('name')
+
+        if (error) throw error
+        setInventory(data || [])
+      } catch (err: any) {
+        console.error('Error loading inventory:', err)
+        toast({
+          title: 'Erro ao carregar modelos',
+          description: err.message,
+          variant: 'destructive',
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadModels()
+  }, [toast])
 
   const filteredModels = useMemo(() => {
     return inventory.filter((item) => {
@@ -37,7 +64,7 @@ export default function PublicAssetForm() {
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!selectedItemId) {
@@ -54,28 +81,34 @@ export default function PublicAssetForm() {
       return
     }
 
-    const item = inventory.find((i) => i.id === selectedItemId)
-    if (!item) return
+    setIsSubmitting(true)
+    try {
+      const newAsset = {
+        id: Math.random().toString(),
+        ...assetData,
+      }
 
-    const newAsset = {
-      id: Math.random().toString(),
-      ...assetData,
+      const { error } = await supabase.rpc('public_add_asset', {
+        p_item_id: selectedItemId,
+        p_asset: newAsset,
+      })
+
+      if (error) throw error
+
+      toast({ title: 'Sucesso', description: 'Patrimônio cadastrado com sucesso.' })
+      setAssetData({
+        assetNumber: '',
+        acquisitionDate: new Date().toISOString().split('T')[0],
+        conditionStatus: 'Disponível',
+        image: '',
+      })
+      setSelectedItemId('')
+    } catch (err: any) {
+      console.error(err)
+      toast({ title: 'Erro ao salvar', description: err.message, variant: 'destructive' })
+    } finally {
+      setIsSubmitting(false)
     }
-
-    const newAssets = [...(item.assets || []), newAsset]
-    updateInventoryItem(item.id, {
-      assets: newAssets,
-      totalQty: item.totalQty + 1,
-      availableQty: item.availableQty + 1,
-    })
-
-    toast({ title: 'Sucesso', description: 'Patrimônio cadastrado com sucesso.' })
-    setAssetData({
-      assetNumber: '',
-      acquisitionDate: new Date().toISOString().split('T')[0],
-      conditionStatus: 'Disponível',
-      image: '',
-    })
   }
 
   return (
@@ -109,25 +142,36 @@ export default function PublicAssetForm() {
                     className="pl-9 bg-background"
                   />
                 </div>
-                <select
-                  value={selectedItemId}
-                  onChange={(e) => setSelectedItemId(e.target.value)}
-                  className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  required
-                >
-                  <option value="" disabled>
-                    Selecione um modelo
-                  </option>
-                  {filteredModels.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name} ({item.code}) - {item.category}
-                    </option>
-                  ))}
-                </select>
-                {filteredModels.length === 0 && (
-                  <div className="p-2 text-sm text-muted-foreground text-center">
-                    Nenhum modelo encontrado
+                {loading ? (
+                  <div className="flex items-center justify-center p-4">
+                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                    <span className="ml-2 text-sm text-muted-foreground">
+                      Carregando modelos...
+                    </span>
                   </div>
+                ) : (
+                  <>
+                    <select
+                      value={selectedItemId}
+                      onChange={(e) => setSelectedItemId(e.target.value)}
+                      className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      required
+                    >
+                      <option value="" disabled>
+                        Selecione um modelo
+                      </option>
+                      {filteredModels.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name} ({item.code}) - {item.category}
+                        </option>
+                      ))}
+                    </select>
+                    {filteredModels.length === 0 && (
+                      <div className="p-2 text-sm text-muted-foreground text-center">
+                        Nenhum modelo encontrado
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -192,6 +236,7 @@ export default function PublicAssetForm() {
                       type="file"
                       className="absolute inset-0 opacity-0 cursor-pointer"
                       accept="image/*"
+                      capture="environment"
                       onChange={handleImageUpload}
                     />
                   </div>
@@ -203,9 +248,17 @@ export default function PublicAssetForm() {
               </div>
             </div>
 
-            <Button type="submit" className="w-full h-12 text-lg">
-              <Plus className="w-5 h-5 mr-2" />
-              Cadastrar Patrimônio
+            <Button
+              type="submit"
+              className="w-full h-12 text-lg"
+              disabled={isSubmitting || loading}
+            >
+              {isSubmitting ? (
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              ) : (
+                <Plus className="w-5 h-5 mr-2" />
+              )}
+              {isSubmitting ? 'Cadastrando...' : 'Cadastrar Patrimônio'}
             </Button>
           </form>
         </CardContent>
