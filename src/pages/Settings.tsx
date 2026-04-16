@@ -43,7 +43,7 @@ import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useToast } from '@/hooks/use-toast'
 import { CheckCircle, FileText, Plus, Trash2, Upload, Edit } from 'lucide-react'
-import { PermissionKey } from '@/hooks/use-permissions'
+import { PermissionKey, usePermissions } from '@/hooks/use-permissions'
 
 const PERMISSIONS_LIST: { id: PermissionKey; label: string }[] = [
   { id: 'items:write', label: 'Cadastrar/Editar Itens' },
@@ -58,6 +58,7 @@ const PERMISSIONS_LIST: { id: PermissionKey; label: string }[] = [
 export default function Settings() {
   const { settings, users, updateSettings, addUser, updateUser, deleteUser } = useMainStore()
   const { toast } = useToast()
+  const { can } = usePermissions()
 
   const [userDialogOpen, setUserDialogOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
@@ -112,6 +113,11 @@ export default function Settings() {
   <h2 style="font-size: 16px; font-weight: bold; margin-top: 25px; border-bottom: 1px solid #ccc; padding-bottom: 5px; color: #000;">4. CONDIÇÕES GERAIS</h2>
   <p style="text-align: justify; margin-top: 10px; font-size: 15px;">
     O LOCATÁRIO declara ter vistoriado e recebido os equipamentos acima descritos em perfeitas condições de uso e funcionamento. Em caso de atraso na devolução, o LOCATÁRIO concorda com a aplicação de multa correspondente a {{lateFeeInfo}}. Eventuais danos, mau uso ou extravios ensejarão a cobrança integral para reposição ou reparo do bem.
+  </p>
+  
+  <h2 style="font-size: 16px; font-weight: bold; margin-top: 25px; border-bottom: 1px solid #ccc; padding-bottom: 5px; color: #000;">5. CONTATOS PARA RENOVAÇÃO/DEVOLUÇÃO</h2>
+  <p style="text-align: justify; margin-top: 10px; font-size: 15px;">
+    Em caso de renovação ou solicitação de devolução, o LOCATÁRIO deverá entrar em contato nos números: 27-3026-330 / 99904-6961 ou pelo e-mail: aluguel@hospitalhome.com.br.
   </p>
 
   <div style="margin-top: 60px; display: flex; justify-content: space-between; text-align: center; font-size: 15px;">
@@ -246,7 +252,11 @@ export default function Settings() {
           <TabsTrigger value="contrato" className="text-base h-full flex-1">
             Contratos
           </TabsTrigger>
-          <TabsTrigger value="equipe" className="text-base h-full flex-1">
+          <TabsTrigger
+            value="equipe"
+            className="text-base h-full flex-1"
+            disabled={!can('users:manage')}
+          >
             Equipe
           </TabsTrigger>
           <TabsTrigger value="aparencia" className="text-base h-full flex-1">

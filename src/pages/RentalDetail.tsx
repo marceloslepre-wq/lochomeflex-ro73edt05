@@ -32,7 +32,7 @@ export default function RentalDetail() {
   const defaultContractText = useMemo(() => {
     if (!rental || !customer) return ''
 
-    let text = `CONTRATO N. ${rental.contractNumber || rental.id}\n\n`
+    let text = `CONTRATO Nº: ${rental.contractNumber || rental.id}\n\n`
     text += `TERMOS E CONDIÇÕES DE LOCAÇÃO,\nGUARDA E USO DE EQUIPAMENTO HOSPITALAR\n\n`
     text += `Constitui objeto do presente termo de condições de locação, uso e guarda de equipamento hospitalar de propriedade de HOSPITAL HOME COMERCIO ATACADISTA DE PRODUTOS HOSPITALARES EM GERAL.\n\n`
 
@@ -46,7 +46,7 @@ export default function RentalDetail() {
 
     text += `LOCATÁRIA: ${customer.name}\n`
     text += `Endereço: ${cAddressStr}    Bairro: ${cNeighborhood}    Cidade: ${cCity}    CEP: ${cZip}\n`
-    text += `RG: ${customer.rg || 'Não informado'}    CPF: ${customer.document}\n`
+    text += `RG: ${(customer as any).rg || 'Não informado'}    CPF/CNPJ: ${customer.document}\n`
     text += `Telefones: ${[customer.phone_cell, customer.phone_res, customer.phone_com].filter(Boolean).join(' / ')}\n\n`
 
     const lessorAddress =
@@ -58,17 +58,19 @@ export default function RentalDetail() {
 
     rental.items.forEach((ri) => {
       const item = inventory.find((i) => i.id === ri.itemId)
-      text += `   • ${ri.qty}x - ${item?.name} (SKU/Ref: ${item?.code || '-'})\n`
+      text += `   • ${ri.qty}x - ${item?.name} (SKU: ${item?.code || '-'}) (Retirada: ${new Date(rental.startDate).toLocaleDateString('pt-BR')} | Devolução: ${new Date(rental.expectedReturnDate).toLocaleDateString('pt-BR')})\n`
     })
 
     const pickupLoc = settings.locations?.find((l: any) => l.id === rental.pickupLocationId)
-    const pAddress = pickupLoc?.address || ''
+    let pAddress = pickupLoc?.address || ''
+
+    pAddress = pAddress.replace(/ - CEP: Sem CEP/gi, '').replace(/CEP: Sem CEP/gi, '')
 
     const pickupText =
       rental.pickupLocationId === 'delivery'
         ? 'Entrega no Endereço do Cliente'
         : pickupLoc?.name
-          ? `${pickupLoc.name}${pAddress ? ` - Endereço: ${pAddress}` : ''}`
+          ? `${pickupLoc.name}${pAddress ? `, Endereço: ${pAddress}` : ''}`
           : 'Não informado'
 
     text += `\nLocal de Retirada/Entrega: ${pickupText}\n\n`
@@ -76,7 +78,7 @@ export default function RentalDetail() {
     text += `2. PREÇO E PRAZO DE LOCAÇÃO:\n`
     text += `2.1 O locador compromete a manter no endereço informado no momento da locação responsável para receber o equipamento locado, esse deverá assinar o recibo de entrega no momento da entrega pela transportadora ou em loja física se for o caso.\n\n`
     text += `2.2 Após o cancelamento da locação ou termino da vigência do contrato a locatária deverá entrar em contato com o locador para agendar a retirada do equipamento e disponibilizá-lo para retirada pela transportadora, a mesma tem um prazo de até 03 (três) dias uteis para efetuar a retirada, caso a transportadora não consiga recolher o equipamento na data agendada, o locatário deverá arcar com as despesas da remarcação assim como pagamento do aluguel em pro-rata, pelo período adicional que ficou de posse do equipamento.\n\n`
-    text += `2.3 No primeiro dia após o termino do prazo do contrato de locação a locatária deverá entrar em contato nos Telefones: 27-3026-330 para solicitar renovação ou cancelamento com recolhimento do(s) produto(s) ora locado(s), efetuando a renovação do aluguel e pagamento do mês seguinte dentro da vigência do contrato.\n\n`
+    text += `2.3 No primeiro dia após o termino do prazo do contrato de locação a locatária deverá entrar em sua conta no site do locador e solicitar renovação ou cancelamento com recolhimento do(s) produto(s) ora locado(s), ou se preferir entrar em contato nos números: 27-3026-330 / 99904-6961 ou pelo e-mail: aluguel@hospitalhome.com.br, para efetuar a renovação do aluguel e pagamento do mês seguinte dentro da vigência do contrato.\n\n`
 
     text += `3. CONDIÇÕES DE ENTREGA, USO E MANUTENÇÃO\n`
     text += `3.1 A devolução do equipamento se dará da forma escolhida no momento da locação se foi por transportadora será por transportadora se foi por retirada em loja será por devolução na mesma loja que foi retirada.\n`
@@ -410,7 +412,9 @@ export default function RentalDetail() {
               </div>
 
               <div className="font-serif text-[15px] leading-loose whitespace-pre-wrap">
-                {rental.customContractText || defaultContractText}
+                {(rental.customContractText || defaultContractText)
+                  .replace(/ - CEP: Sem CEP/gi, '')
+                  .replace(/CEP: Sem CEP/gi, '')}
               </div>
             </>
           ) : docType === 'return' ? (

@@ -500,6 +500,8 @@ export const Constants = {
 // Table: customers
 //   Policy "anon_insert" (INSERT, PERMISSIVE) roles={anon}
 //     WITH CHECK: true
+//   Policy "anon_select" (SELECT, PERMISSIVE) roles={anon}
+//     USING: true
 //   Policy "authenticated_delete" (DELETE, PERMISSIVE) roles={authenticated}
 //     USING: true
 //   Policy "authenticated_insert" (INSERT, PERMISSIVE) roles={authenticated}

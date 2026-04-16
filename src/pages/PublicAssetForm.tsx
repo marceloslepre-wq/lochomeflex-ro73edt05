@@ -5,13 +5,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Upload, Plus, Search, Building2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 
 export default function PublicAssetForm() {
   const { inventory, updateInventoryItem } = useMainStore()
@@ -116,24 +109,26 @@ export default function PublicAssetForm() {
                     className="pl-9 bg-background"
                   />
                 </div>
-                <Select value={selectedItemId} onValueChange={setSelectedItemId}>
-                  <SelectTrigger className="bg-background">
-                    <SelectValue placeholder="Selecione um modelo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredModels.length === 0 ? (
-                      <div className="p-2 text-sm text-muted-foreground text-center">
-                        Nenhum modelo encontrado
-                      </div>
-                    ) : (
-                      filteredModels.map((item) => (
-                        <SelectItem key={item.id} value={item.id}>
-                          {item.name} ({item.code}) - {item.category}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+                <select
+                  value={selectedItemId}
+                  onChange={(e) => setSelectedItemId(e.target.value)}
+                  className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  required
+                >
+                  <option value="" disabled>
+                    Selecione um modelo
+                  </option>
+                  {filteredModels.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name} ({item.code}) - {item.category}
+                    </option>
+                  ))}
+                </select>
+                {filteredModels.length === 0 && (
+                  <div className="p-2 text-sm text-muted-foreground text-center">
+                    Nenhum modelo encontrado
+                  </div>
+                )}
               </div>
             </div>
 
@@ -166,19 +161,17 @@ export default function PublicAssetForm() {
                 </div>
                 <div className="space-y-2 md:col-span-2">
                   <label className="text-sm font-medium">Estado de Conservação</label>
-                  <Select
+                  <select
                     value={assetData.conditionStatus}
-                    onValueChange={(v) => setAssetData({ ...assetData, conditionStatus: v })}
+                    onChange={(e) =>
+                      setAssetData({ ...assetData, conditionStatus: e.target.value })
+                    }
+                    className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                   >
-                    <SelectTrigger className="bg-background">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Disponível">Disponível</SelectItem>
-                      <SelectItem value="Manutenção">Em Manutenção</SelectItem>
-                      <SelectItem value="Indisponível">Indisponível</SelectItem>
-                    </SelectContent>
-                  </Select>
+                    <option value="Disponível">Disponível</option>
+                    <option value="Manutenção">Em Manutenção</option>
+                    <option value="Indisponível">Indisponível</option>
+                  </select>
                 </div>
               </div>
 

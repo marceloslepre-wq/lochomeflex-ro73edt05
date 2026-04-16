@@ -42,9 +42,21 @@ export default function PublicCustomerForm() {
     hasDifferentDeliveryAddress: false,
     deliveryAddress: { ...emptyAddress },
     observations: '',
+    attachment: '',
   })
 
   const [docError, setDocError] = useState('')
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setFormData((f) => ({ ...f, attachment: reader.result as string }))
+      }
+      reader.readAsDataURL(file)
+    }
+  }
 
   const validateDocument = (doc: string) => {
     const cleanDoc = doc.replace(/\D/g, '')
@@ -342,6 +354,47 @@ export default function PublicCustomerForm() {
                       </div>
                     </div>
                   )}
+                </div>
+
+                <div className="grid gap-2 pt-4 border-t">
+                  <Label>Documento de Identificação / Comprovante (Opcional):</Label>
+                  <div className="flex flex-col gap-2">
+                    {formData.attachment ? (
+                      <div className="relative w-24 h-24 rounded border overflow-hidden">
+                        {formData.attachment.startsWith('data:image') ? (
+                          <img
+                            src={formData.attachment}
+                            alt="Anexo"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex items-center justify-center w-full h-full bg-muted text-xs text-center p-1 break-words">
+                            Arquivo Anexado
+                          </div>
+                        )}
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-0 right-0 h-6 w-6 rounded-none opacity-80 hover:opacity-100"
+                          onClick={() => setFormData((f) => ({ ...f, attachment: '' }))}
+                        >
+                          <span className="sr-only">Remover</span>
+                          &times;
+                        </Button>
+                      </div>
+                    ) : (
+                      <Input
+                        type="file"
+                        accept="image/*,.pdf,.doc,.docx"
+                        onChange={handleFileUpload}
+                        className="w-full cursor-pointer bg-background"
+                      />
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Tire uma foto do seu documento ou anexe um arquivo.
+                    </p>
+                  </div>
                 </div>
 
                 <div className="grid gap-2 pt-4 border-t">

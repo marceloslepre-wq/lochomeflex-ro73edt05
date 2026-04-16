@@ -49,9 +49,21 @@ export function CustomerFormDialog({
     hasDifferentDeliveryAddress: customer?.hasDifferentDeliveryAddress || false,
     deliveryAddress: { ...emptyAddress, ...(customer?.deliveryAddress || {}) },
     observations: customer?.observations || '',
+    attachment: (customer as any)?.attachment || '',
   })
 
   const [docError, setDocError] = useState('')
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setFormData((f) => ({ ...f, attachment: reader.result as string }))
+      }
+      reader.readAsDataURL(file)
+    }
+  }
 
   const validateDocument = (doc: string) => {
     const cleanDoc = doc.replace(/\D/g, '')
@@ -367,6 +379,44 @@ export function CustomerFormDialog({
                       </div>
                     </div>
                   )}
+                </div>
+
+                <div className="grid gap-2">
+                  <Label>Documento / Foto (Opcional):</Label>
+                  <div className="flex items-center gap-4">
+                    {formData.attachment ? (
+                      <div className="relative w-20 h-20 rounded border overflow-hidden">
+                        {formData.attachment.startsWith('data:image') ? (
+                          <img
+                            src={formData.attachment}
+                            alt="Anexo"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex items-center justify-center w-full h-full bg-muted text-xs text-center p-1 break-words">
+                            Arquivo
+                          </div>
+                        )}
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-0 right-0 h-6 w-6 rounded-none opacity-80 hover:opacity-100"
+                          onClick={() => setFormData((f) => ({ ...f, attachment: '' }))}
+                        >
+                          <span className="sr-only">Remover</span>
+                          &times;
+                        </Button>
+                      </div>
+                    ) : (
+                      <Input
+                        type="file"
+                        accept="image/*,.pdf,.doc,.docx"
+                        onChange={handleFileUpload}
+                        className="w-full cursor-pointer"
+                      />
+                    )}
+                  </div>
                 </div>
 
                 <div className="grid gap-2">
