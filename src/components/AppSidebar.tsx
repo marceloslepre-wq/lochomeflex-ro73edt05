@@ -21,6 +21,7 @@ import {
 import useMainStore from '@/stores/main'
 import { usePermissions } from '@/hooks/use-permissions'
 import { useAuth } from '@/hooks/use-auth'
+import logoImg from '@/assets/logo_hospital_home_final-f2434.jpg'
 
 export function AppSidebar() {
   const location = useLocation()
@@ -57,14 +58,11 @@ export function AppSidebar() {
     <Sidebar className="border-r border-border bg-sidebar print:hidden">
       <SidebarHeader className="p-4 flex items-center justify-center border-b h-16">
         <div className="flex items-center gap-2 font-bold text-xl text-primary">
-          {settings.logoUrl ? (
-            <img src={settings.logoUrl} alt="Logo" className="max-h-8 w-auto object-contain" />
-          ) : (
-            <>
-              <Package className="w-6 h-6" />
-              <span>LocaWeb</span>
-            </>
-          )}
+          <img
+            src={settings.logoUrl || logoImg}
+            alt="Logo"
+            className="max-h-8 w-auto object-contain"
+          />
         </div>
       </SidebarHeader>
       <SidebarContent className="px-2 py-4">

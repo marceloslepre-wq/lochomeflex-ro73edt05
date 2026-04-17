@@ -170,7 +170,11 @@ export function ReceiptDialog({
           className="p-6 border rounded-md bg-white text-black font-mono text-sm space-y-4"
         >
           <div className="text-center font-bold text-lg border-b pb-2 mb-4">
-            <img src={logoImg} className="h-16 mx-auto mb-2 object-contain" alt="Logo" />
+            <img
+              src={settings.logoUrl || logoImg}
+              className="h-16 mx-auto mb-2 object-contain"
+              alt="Logo"
+            />
             {settings.companyName || 'Hospital Home'}
             <div className="text-sm font-normal mt-1">
               {type === 'renewal'

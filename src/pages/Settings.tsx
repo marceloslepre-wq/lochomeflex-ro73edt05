@@ -44,6 +44,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { useToast } from '@/hooks/use-toast'
 import { CheckCircle, FileText, Plus, Trash2, Upload, Edit, Save } from 'lucide-react'
 import { PermissionKey, usePermissions } from '@/hooks/use-permissions'
+import logoImg from '@/assets/logo_hospital_home_final-f2434.jpg'
 
 const PERMISSIONS_LIST: { id: PermissionKey; label: string }[] = [
   { id: 'items:write', label: 'Cadastrar/Editar Itens' },
@@ -119,7 +120,7 @@ export default function Settings() {
     <p style="margin: 0 0 8px 0;"><strong>Locatário(a):</strong> {{customerName}}</p>
     <p style="margin: 0 0 8px 0;"><strong>Endereço:</strong> {{customerStreet}}, <strong>Bairro:</strong> {{customerNeighborhood}}, <strong>Cidade:</strong> {{customerCity}}, <strong>Estado:</strong> {{customerState}}, <strong>CEP:</strong> {{customerZipCode}}</p>
     <p style="margin: 0 0 8px 0;"><strong>CPF:</strong> {{customerDocument}}</p>
-    <p style="margin: 0 0 8px 0;"><strong>Telefones:</strong> {{customerPhone}}</p>
+    <p style="margin: 0 0 8px 0;"><strong>Telefones:</strong> {{customerPhoneCell}}</p>
     <p style="margin: 0;"><strong>Email:</strong> {{customerEmail}}</p>
   </div>
 
@@ -480,12 +481,10 @@ export default function Settings() {
                 Cadastre operadores e gerencie permissões.
               </p>
             </div>
+            <Button onClick={() => handleOpenUserForm()}>
+              <Plus className="w-4 h-4 mr-2" /> Novo Usuário
+            </Button>
             <Dialog open={userDialogOpen} onOpenChange={setUserDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={() => handleOpenUserForm()}>
-                  <Plus className="w-4 h-4 mr-2" /> Novo Usuário
-                </Button>
-              </DialogTrigger>
               <DialogContent className="max-w-md">
                 <DialogHeader>
                   <DialogTitle>
@@ -663,12 +662,10 @@ export default function Settings() {
                 equipamentos.
               </p>
             </div>
+            <Button onClick={() => handleOpenLocForm()}>
+              <Plus className="w-4 h-4 mr-2" /> Novo Local
+            </Button>
             <Dialog open={locDialogOpen} onOpenChange={setLocDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={() => handleOpenLocForm()}>
-                  <Plus className="w-4 h-4 mr-2" /> Novo Local
-                </Button>
-              </DialogTrigger>
               <DialogContent className="max-w-md">
                 <DialogHeader>
                   <DialogTitle>
@@ -819,13 +816,13 @@ export default function Settings() {
                     Adicione a marca que aparecerá no menu principal e contratos.
                   </p>
                   <div className="flex items-center gap-4">
-                    {settings.logoUrl ? (
-                      <div className="w-24 h-24 border rounded bg-muted flex items-center justify-center p-2 relative group">
-                        <img
-                          src={settings.logoUrl}
-                          alt="Logo"
-                          className="max-w-full max-h-full object-contain"
-                        />
+                    <div className="w-24 h-24 border rounded bg-muted flex items-center justify-center p-2 relative group">
+                      <img
+                        src={settings.logoUrl || logoImg}
+                        alt="Logo"
+                        className="max-w-full max-h-full object-contain"
+                      />
+                      {settings.logoUrl && (
                         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded">
                           <Button
                             variant="ghost"
@@ -836,13 +833,8 @@ export default function Settings() {
                             Remover
                           </Button>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="w-24 h-24 border-2 border-dashed rounded flex flex-col items-center justify-center text-muted-foreground">
-                        <Upload className="w-6 h-6 mb-1" />
-                        <span className="text-[10px]">Sem Logo</span>
-                      </div>
-                    )}
+                      )}
+                    </div>
                     <div>
                       <Label htmlFor="logo-upload" className="cursor-pointer">
                         <div className="bg-secondary text-secondary-foreground hover:bg-secondary/80 px-4 py-2 rounded-md text-sm font-medium inline-flex items-center">
