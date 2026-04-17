@@ -70,9 +70,40 @@ export default function Settings() {
     permissions: [] as PermissionKey[],
   })
 
+  const [locDialogOpen, setLocDialogOpen] = useState(false)
   const [editingLocId, setEditingLocId] = useState<string | null>(null)
   const [editLocName, setEditLocName] = useState('')
   const [editLocAddress, setEditLocAddress] = useState('')
+
+  const handleOpenLocForm = (loc?: any) => {
+    if (loc) {
+      setEditingLocId(loc.id)
+      setEditLocName(loc.name)
+      setEditLocAddress(loc.address)
+    } else {
+      setEditingLocId(null)
+      setEditLocName('')
+      setEditLocAddress('')
+    }
+    setLocDialogOpen(true)
+  }
+
+  const handleSaveLoc = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editLocName || !editLocAddress) return
+
+    if (editingLocId) {
+      const newLocs = settings.locations?.map((l) =>
+        l.id === editingLocId ? { ...l, name: editLocName, address: editLocAddress } : l,
+      )
+      updateSettings({ locations: newLocs })
+    } else {
+      const newLoc = { id: Math.random().toString(), name: editLocName, address: editLocAddress }
+      updateSettings({ locations: [...(settings.locations || []), newLoc] })
+    }
+    setLocDialogOpen(false)
+    toast({ title: 'Local salvo com sucesso!' })
+  }
 
   const handleContractUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -283,9 +314,6 @@ export default function Settings() {
           <TabsTrigger value="geral" className="text-base h-full flex-1">
             Geral
           </TabsTrigger>
-          <TabsTrigger value="contrato" className="text-base h-full flex-1">
-            Contratos
-          </TabsTrigger>
           <TabsTrigger
             value="equipe"
             className="text-base h-full flex-1"
@@ -440,64 +468,6 @@ export default function Settings() {
                   Adicionar
                 </Button>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="contrato" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Template de Contrato Personalizado</CardTitle>
-              <CardDescription>
-                Faça upload de um arquivo para ser referenciado nos novos contratos gerados. O
-                sistema irá renderizá-lo em alta fidelidade.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex flex-col sm:flex-row items-center gap-4">
-                <div className="flex-1 border-2 border-dashed rounded-lg p-8 text-center bg-muted/20 hover:bg-muted/50 transition-colors">
-                  <FileText className="w-10 h-10 mx-auto text-muted-foreground mb-4" />
-                  <Label
-                    htmlFor="contract-upload"
-                    className="cursor-pointer text-primary hover:underline font-medium text-lg"
-                  >
-                    Clique para selecionar um arquivo (.docx)
-                  </Label>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Nós processaremos seu modelo para gerar PDFs fiéis à sua marca.
-                  </p>
-                  <Input
-                    id="contract-upload"
-                    type="file"
-                    accept=".pdf,.docx"
-                    className="hidden"
-                    onChange={handleContractUpload}
-                  />
-                </div>
-              </div>
-
-              {settings.contractFileName && (
-                <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-md flex items-center gap-3">
-                  <CheckCircle className="w-5 h-5 flex-shrink-0" />
-                  <div>
-                    <p className="font-semibold">Template Ativo</p>
-                    <p className="text-sm">
-                      O arquivo <strong>{settings.contractFileName}</strong> está ativo e
-                      configurado com alta fidelidade.
-                    </p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="ml-auto"
-                    onClick={() =>
-                      updateSettings({ contractFileName: null, contractTemplateHtml: null })
-                    }
-                  >
-                    Remover
-                  </Button>
-                </div>
-              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -685,129 +655,129 @@ export default function Settings() {
         </TabsContent>
 
         <TabsContent value="locais" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Locais de Retirada e Devolução</CardTitle>
-              <CardDescription>
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-xl font-semibold">Locais de Retirada e Devolução</h3>
+              <p className="text-sm text-muted-foreground">
                 Cadastre os pontos físicos de logística para controle de saída e entrada de
                 equipamentos.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Table>
-                <TableHeader>
+              </p>
+            </div>
+            <Dialog open={locDialogOpen} onOpenChange={setLocDialogOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={() => handleOpenLocForm()}>
+                  <Plus className="w-4 h-4 mr-2" /> Novo Local
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingLocId ? 'Editar Local' : 'Cadastrar Novo Local'}
+                  </DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleSaveLoc} className="space-y-4 pt-4">
+                  <div className="space-y-2">
+                    <Label>Nome do Local</Label>
+                    <Input
+                      required
+                      value={editLocName}
+                      onChange={(e) => setEditLocName(e.target.value)}
+                      placeholder="Ex: Matriz, Galpão Norte..."
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Endereço Completo</Label>
+                    <Input
+                      required
+                      value={editLocAddress}
+                      onChange={(e) => setEditLocAddress(e.target.value)}
+                      placeholder="Rua, Número, Cidade..."
+                    />
+                  </div>
+                  <DialogFooter className="pt-4">
+                    <Button type="button" variant="outline" onClick={() => setLocDialogOpen(false)}>
+                      Cancelar
+                    </Button>
+                    <Button type="submit">Salvar</Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          <Card>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome do Local</TableHead>
+                  <TableHead>Endereço Completo</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {!settings.locations || settings.locations.length === 0 ? (
                   <TableRow>
-                    <TableHead>Nome do Local</TableHead>
-                    <TableHead>Endereço Completo</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+                    <TableCell colSpan={3} className="text-center text-muted-foreground py-4">
+                      Nenhum local cadastrado.
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {!settings.locations || settings.locations.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={3} className="text-center text-muted-foreground py-4">
-                        Nenhum local cadastrado.
+                ) : (
+                  settings.locations.map((loc) => (
+                    <TableRow key={loc.id} className="group">
+                      <TableCell className="font-medium">{loc.name}</TableCell>
+                      <TableCell>{loc.address}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-primary"
+                            onClick={() => handleOpenLocForm(loc)}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Excluir Local</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tem certeza que deseja excluir este registro? Esta ação não pode
+                                  ser desfeita.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => {
+                                    const newLocs = settings.locations?.filter(
+                                      (l) => l.id !== loc.id,
+                                    )
+                                    updateSettings({ locations: newLocs })
+                                    toast({ title: 'Local Excluído' })
+                                  }}
+                                  className="bg-destructive text-white"
+                                >
+                                  Excluir
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                       </TableCell>
                     </TableRow>
-                  ) : (
-                    settings.locations.map((loc) =>
-                      editingLocId === loc.id ? (
-                        <TableRow key={loc.id}>
-                          <TableCell>
-                            <Input
-                              value={editLocName}
-                              onChange={(e) => setEditLocName(e.target.value)}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              value={editLocAddress}
-                              onChange={(e) => setEditLocAddress(e.target.value)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                const newLocs = settings.locations?.map((l) =>
-                                  l.id === loc.id
-                                    ? { ...l, name: editLocName, address: editLocAddress }
-                                    : l,
-                                )
-                                updateSettings({ locations: newLocs })
-                                setEditingLocId(null)
-                              }}
-                            >
-                              <Save className="w-4 h-4 text-emerald-600" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        <TableRow key={loc.id}>
-                          <TableCell className="font-medium">{loc.name}</TableCell>
-                          <TableCell>{loc.address}</TableCell>
-                          <TableCell className="text-right flex items-center justify-end gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-primary"
-                              onClick={() => {
-                                setEditingLocId(loc.id)
-                                setEditLocName(loc.name)
-                                setEditLocAddress(loc.address)
-                              }}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                              onClick={() => {
-                                const newLocs = settings.locations?.filter((l) => l.id !== loc.id)
-                                updateSettings({ locations: newLocs })
-                              }}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ),
-                    )
-                  )}
-                </TableBody>
-              </Table>
-
-              <div className="grid gap-4 md:grid-cols-2 pt-4 border-t">
-                <div className="space-y-2">
-                  <Label>Nome do Local</Label>
-                  <Input id="new-loc-name" placeholder="Ex: Matriz, Galpão Norte..." />
-                </div>
-                <div className="space-y-2">
-                  <Label>Endereço</Label>
-                  <Input id="new-loc-address" placeholder="Rua, Número, Cidade..." />
-                </div>
-              </div>
-              <Button
-                onClick={() => {
-                  const nameInput = document.getElementById('new-loc-name') as HTMLInputElement
-                  const addressInput = document.getElementById(
-                    'new-loc-address',
-                  ) as HTMLInputElement
-                  const name = nameInput.value.trim()
-                  const address = addressInput.value.trim()
-                  if (name && address) {
-                    const newLoc = { id: Math.random().toString(), name, address }
-                    updateSettings({ locations: [...(settings.locations || []), newLoc] })
-                    nameInput.value = ''
-                    addressInput.value = ''
-                  }
-                }}
-              >
-                Cadastrar Local
-              </Button>
-            </CardContent>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </Card>
         </TabsContent>
 

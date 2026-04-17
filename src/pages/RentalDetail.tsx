@@ -125,99 +125,183 @@ export default function RentalDetail() {
 
   const generateContractHtml = () => {
     if (!rental) return null
-    if (rental.customContractHtml) {
-      return rental.customContractHtml.replace(
-        /Gerado ao salvar/g,
-        rental.contractNumber || rental.id,
-      )
+
+    const cAddr = (customer?.address as any) || {}
+    const cStreet = cAddr.street
+      ? `${cAddr.street}, ${cAddr.number || 'S/N'}${cAddr.complement ? ' - ' + cAddr.complement : ''}`
+      : 'Não informado'
+    const cNeighborhood = cAddr.neighborhood || 'Não informado'
+    const cCity = cAddr.city || 'Não informado'
+    const cState = cAddr.state || 'Não informado'
+    const cZip = cAddr.zipCode || 'Não informado'
+    const cEmail = customer?.email || 'Não informado'
+    const cPhone =
+      [customer?.phone_cell, customer?.phone_res, customer?.phone_com]
+        .filter(Boolean)
+        .join(' / ') || 'Não informado'
+
+    let dAddrStr = 'Não possui endereço de entrega diferente'
+    if (customer?.hasDifferentDeliveryAddress && customer?.deliveryAddress) {
+      const dAddr = customer.deliveryAddress as any
+      dAddrStr = `${dAddr.street || ''}, ${dAddr.number || 'S/N'}${dAddr.complement ? ' - ' + dAddr.complement : ''}, Bairro: ${dAddr.neighborhood || ''}, Cidade: ${dAddr.city || ''}, Estado: ${dAddr.state || ''}, CEP: ${dAddr.zipCode || ''}`
     }
-    if (settings.contractTemplateHtml) {
-      let html = settings.contractTemplateHtml
 
-      const cAddr = (customer?.address as any) || {}
-      const cStreet = cAddr.street
-        ? `${cAddr.street}, ${cAddr.number || 'S/N'}${cAddr.complement ? ' - ' + cAddr.complement : ''}`
-        : 'Não informado'
-      const cNeighborhood = cAddr.neighborhood || 'Não informado'
-      const cCity = cAddr.city || 'Não informado'
-      const cState = cAddr.state || 'Não informado'
-      const cZip = cAddr.zipCode || 'Não informado'
-      const cEmail = customer?.email || 'Não informado'
-      const cPhone =
-        [customer?.phone_cell, customer?.phone_res, customer?.phone_com]
-          .filter(Boolean)
-          .join(' / ') || 'Não informado'
+    const pickupLoc = settings.locations?.find((l: any) => l.id === rental.pickupLocationId)
+    let pickupText =
+      rental.pickupLocationId === 'delivery'
+        ? 'Entrega no Endereço do Cliente'
+        : pickupLoc?.name
+          ? `${pickupLoc.name} - ${pickupLoc.address || ''}`
+          : 'Não informado'
+    pickupText = pickupText
+      .replace(/ - CEP: Sem CEP/gi, '')
+      .replace(/CEP: Sem CEP/gi, '')
+      .trim()
 
-      let dAddrStr = 'Não possui endereço de entrega diferente'
-      if (customer?.hasDifferentDeliveryAddress && customer?.deliveryAddress) {
-        const dAddr = customer.deliveryAddress as any
-        dAddrStr = `${dAddr.street || ''}, ${dAddr.number || 'S/N'}${dAddr.complement ? ' - ' + dAddr.complement : ''}, Bairro: ${dAddr.neighborhood || ''}, Cidade: ${dAddr.city || ''}, Estado: ${dAddr.state || ''}, CEP: ${dAddr.zipCode || ''}`
-      }
+    const months = [
+      'janeiro',
+      'fevereiro',
+      'março',
+      'abril',
+      'maio',
+      'junho',
+      'julho',
+      'agosto',
+      'setembro',
+      'outubro',
+      'novembro',
+      'dezembro',
+    ]
+    const date = new Date()
+    const currentDateFull = `${date.getDate().toString().padStart(2, '0')} de ${months[date.getMonth()]} de ${date.getFullYear()}`
 
-      const pickupLoc = settings.locations?.find((l: any) => l.id === rental.pickupLocationId)
-      let pickupText =
-        rental.pickupLocationId === 'delivery'
-          ? 'Entrega no Endereço do Cliente'
-          : pickupLoc?.name
-            ? `${pickupLoc.name} - ${pickupLoc.address || ''}`
-            : 'Não informado'
-      pickupText = pickupText
-        .replace(/ - CEP: Sem CEP/gi, '')
-        .replace(/CEP: Sem CEP/gi, '')
-        .trim()
-
-      const months = [
-        'janeiro',
-        'fevereiro',
-        'março',
-        'abril',
-        'maio',
-        'junho',
-        'julho',
-        'agosto',
-        'setembro',
-        'outubro',
-        'novembro',
-        'dezembro',
-      ]
-      const date = new Date(rental.startDate)
-      const currentDateFull = `${date.getDate().toString().padStart(2, '0')} de ${months[date.getMonth()]} de ${date.getFullYear()}`
-
-      html = html.replace(/{{rentalId}}/g, rental.contractNumber || rental.id)
-      html = html.replace(/{{customerName}}/g, customer?.name || '')
-      html = html.replace(/{{customerStreet}}/g, cStreet)
-      html = html.replace(/{{customerNeighborhood}}/g, cNeighborhood)
-      html = html.replace(/{{customerCity}}/g, cCity)
-      html = html.replace(/{{customerState}}/g, cState)
-      html = html.replace(/{{customerZipCode}}/g, cZip)
-      html = html.replace(/{{customerDocument}}/g, customer?.document || '')
-      html = html.replace(/{{customerPhone}}/g, cPhone)
-      html = html.replace(/{{customerEmail}}/g, cEmail)
-      html = html.replace(/{{deliveryAddress}}/g, dAddrStr)
-      html = html.replace(/{{pickupLocation}}/g, pickupText)
-      html = html.replace(/{{currentDateFull}}/g, currentDateFull)
-
-      const itemsHtml = rental.items
-        .map((ri) => {
-          const item = inventory.find((i) => i.id === ri.itemId)
-          const start = new Date(ri.startDate || rental.startDate).toLocaleDateString('pt-BR')
-          const end = new Date(ri.endDate || rental.expectedReturnDate).toLocaleDateString('pt-BR')
-          const total = (ri.totalPrice || 0).toFixed(2)
-
-          return `<tr>
-          <td style="border: 1px solid #000; padding: 8px; text-align: center;">${ri.qty}</td>
-          <td style="border: 1px solid #000; padding: 8px;">${item?.name || 'Item Removido'}</td>
-          <td style="border: 1px solid #000; padding: 8px;">${item?.code || '-'}</td>
-          <td style="border: 1px solid #000; padding: 8px; text-align: center;">${start}</td>
-          <td style="border: 1px solid #000; padding: 8px; text-align: center;">${end}</td>
-          <td style="border: 1px solid #000; padding: 8px; text-align: right;">${total}</td>
-        </tr>`
-        })
-        .join('')
-      html = html.replace(/{{itemsList}}/g, itemsHtml)
-      return html
+    const formatCurrency = (val: number) => {
+      return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val)
     }
-    return null
+
+    const formatDate = (dateStr: string) => {
+      if (!dateStr) return ''
+      return new Date(dateStr).toLocaleDateString('pt-BR')
+    }
+
+    const itemsHtml = rental.items
+      .map((ri) => {
+        const item = inventory.find((i) => i.id === ri.itemId)
+        const start = formatDate(ri.startDate || rental.startDate)
+        const end = formatDate(ri.endDate || rental.expectedReturnDate)
+        const total = formatCurrency(ri.totalPrice || 0)
+
+        return `<tr>
+        <td style="border: 1px solid #000; padding: 8px; text-align: center;">${ri.qty}</td>
+        <td style="border: 1px solid #000; padding: 8px;">${item?.name || 'Item Removido'}</td>
+        <td style="border: 1px solid #000; padding: 8px;">${item?.code || '-'}</td>
+        <td style="border: 1px solid #000; padding: 8px; text-align: center;">${start}</td>
+        <td style="border: 1px solid #000; padding: 8px; text-align: center;">${end}</td>
+        <td style="border: 1px solid #000; padding: 8px; text-align: right;">${total}</td>
+      </tr>`
+      })
+      .join('')
+
+    return `
+<div style="font-family: Arial, sans-serif; font-size: 12pt; line-height: 1.5; color: #000; padding: 2.5cm; max-width: 21cm; margin: 0 auto; box-sizing: border-box; background: white;">
+
+<div style="text-align: center; margin-bottom: 20px;">
+  ${
+    settings.logoUrl
+      ? `<img src="${settings.logoUrl}" style="max-height: 80px; margin-bottom: 15px;" />`
+      : ''
+  }
+</div>
+
+<p style="text-align: justify; margin-top: 0;">
+  Constitui objeto do presente termo de condições de locação, uso e guarda de equipamento hospitalar de propriedade de HOSPITAL HOME COM. ATAC. DE PROD. HOSPITALARES EM GERAL LTDA.
+</p>
+
+<p style="text-align: justify; margin-top: 15px;">
+  <strong>Locatário (a):</strong> ${customer?.name || ''}<br/>
+  <strong>Endereço:</strong> ${cStreet} <strong>Bairro:</strong> ${cNeighborhood} <strong>Cidade:</strong> ${cCity}, <strong>Estado:</strong> ${cState}, <strong>Cep:</strong> ${cZip}<br/>
+  <strong>CPF:</strong> ${customer?.document || ''}<br/>
+  <strong>Telefones:</strong> ${cPhone}, <strong>Email:</strong> ${cEmail}
+</p>
+
+<p style="text-align: justify; margin-top: 15px;">
+  <strong>Endereço de Entrega:</strong> ${dAddrStr}
+</p>
+
+<p style="text-align: justify; margin-top: 15px;">
+  <strong>Local de Retirada/Entrega:</strong> ${pickupText}
+</p>
+
+<p style="text-align: justify; margin-top: 15px;">
+  <strong>Locador:</strong> HOSPITAL HOME COM. ATAC. DE PROD. HOSPITALARES EM GERAL LTDA, R MANOEL VIVACQUA, 616, JABOUR, VITÓRIA– ES. CNPJ: 10.893.738/0006-93.
+</p>
+
+<p style="text-align: justify; margin-top: 15px;">
+  <strong>1 -</strong> Pelo presente instrumento o locador aluga à locatária o(s) equipamento(s) abaixo discriminado(s), e se obriga a locá-lo(s) nas condições estabelecidas neste contrato: <strong>“${rental.contractNumber || rental.id}”</strong>
+</p>
+
+<p style="margin-top: 15px; font-weight: bold; font-size: 14pt;">2 - PREÇO E PRAZO DE LOCAÇÃO:</p>
+<table style="width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 10px; font-size: 12pt;">
+  <thead>
+    <tr>
+      <th style="border: 1px solid #000; padding: 8px; text-align: center;">Qtd</th>
+      <th style="border: 1px solid #000; padding: 8px; text-align: left;">Descrição</th>
+      <th style="border: 1px solid #000; padding: 8px; text-align: left;">Código</th>
+      <th style="border: 1px solid #000; padding: 8px; text-align: center;">Retirada</th>
+      <th style="border: 1px solid #000; padding: 8px; text-align: center;">Devolução</th>
+      <th style="border: 1px solid #000; padding: 8px; text-align: right;">Valor</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${itemsHtml}
+  </tbody>
+</table>
+
+<p style="text-align: justify; margin-top: 15px;">
+  2.1 - O locador compromete a manter no endereço informado no momento da locação responsável para receber o equipamento locado, esse deverá assinar o recibo de entrega no momento da entrega pela transportadora ou em loja física se for o caso.<br/><br/>
+  2.2 - No primeiro dia após o termino do prazo do contrato de locação a locatária deverá entrar em sua conta no site do locador e solicitar renovação ou cancelamento com recolhimento do(s) produto(s) ora locado(s), ou se preferir entrar em contato no Telefone: (0xx27)3026-3300 ou email: aluguel@hospitalhome.com.br, para efetuar a renovação do aluguel e pagamento do mês seguinte dentro da vigência do contrato.<br/><br/>
+  2.3 - Após o término do prazo do contrato a locatária deverá entrar em contato com o locador para agendar a retirada do equipamento (se for o caso) ou marcar dia de devolução no mesmo local da retirada, a locatária tem um prazo de até 03 (três) dias corridos para fazer a devolução sem que haja cobrança de pró-rata da locação.<br/><br/>
+  2.4 - Se a devolução for por transportadora a locatária tem que disponibilizar o equipamento para a coleta pela transportadora no dia e hora combinado sob pena de ser cobrado pela remarcação da mesma.
+</p>
+
+<p style="margin-top: 15px; font-weight: bold; font-size: 14pt;">3 - CONDIÇÕES DE ENTREGA, USO E MANUTENÇÃO,</p>
+<p style="text-align: justify; margin-top: 10px;">
+  3.1 - A devolução do equipamento se dará da forma escolhida no momento da locação se foi por transportadora será por transportadora se foi por retirada em loja será por devolução na mesma loja que foi retirada.<br/><br/>
+  3.2 - A manutenção do(s) equipamento(s), objeto(s) do presente contrato é de total responsabilidade do locador; a Locatária cabe manter o(s) equipamento(s) em perfeitas condições de uso e avisar imediatamente à LOCADOR sobre eventuais problemas que impeçam o seu adequado funcionamento; para que esta tome as providências cabíveis, a danificação do equipamento pela Locatária, implicará a compra do produto e seu pagamento ao Locador.<br/><br/>
+  3.3 - Em caso do equipamento locado for “cama hospitalar”, sendo o endereço de entrega PRÉDIO, a entrega de cama hospitalar é realizada até a portaria principal do prédio, sendo de total responsabilidade do locatário e transporte até seu apartamento.<br/><br/>
+  3.4 - A transportadora não realiza a montagem do equipamento, este é feito pelo Locatário.<br/><br/>
+  3.5 - O locatário assinará uma nota promissória no valor de venda do equipamento ora locado a título de em caso de perda ou dano ao equipamento causando sua inoperabilidade para futuras locação o locador seja restituído desse valor.
+</p>
+
+<p style="margin-top: 15px; font-weight: bold; font-size: 14pt;">4 - DISPOSIÇÕES GERAIS:</p>
+<p style="text-align: justify; margin-top: 10px;">
+  4.1 - O locatário se compromete a, no tempo e na forma acordada entre as partes, realizar a entrega do bem locado em perfeito estado de conservação aos prepostos da contratada, sob pena de ser responsabilizado por perdas e danos.<br/><br/>
+  4.2 - Em caso de mora na devolução do equipamento sem prévio acordo de renovação contratual e, em caso de inadimplemento do valor correspondente ao aluguel, fica o locatário ciente de que incidirá multa diária de R$ 100,00 (cem reais) até o limite do valor do equipamento, sem prejuízo da obrigação de arcar com os alugueis proporcionais ao tempo em que permanecer na posse do mesmo, sobre os quais incidirão juros de 1% (um por cento ao mês), correção monetária e multa de 2% (dois por cento) do valor devido.<br/><br/>
+  4.3 - Em caso de inadimplemento de quaisquer obrigações acima, fica o locatário ciente de que o locador poderá negativa-lo junto aos órgãos de proteção ao crédito e levar o título a protesto, sem prejuízo do direito de ação, ficando a cargo do locatário o pagamento de custas judiciais e honorários advocatícios em 20% (vinte por cento).<br/><br/>
+  4.4 - Não é fornecido Nota Fiscal para locação de bens móveis, fornecemos recibo conforme o Artigo 1 da Lei 8846 de 1994.<br/><br/>
+  4.5 - Na devolução antes do prazo previsto, não haverá ressarcimento de valores.<br/><br/>
+  4.6 - Após 07 de inadimplência em caso de relocação, o contrato será reincidido automaticamente, devendo ao locatário fazer a devolução do equipamento ora locado imediatamente, caso não ocorra poderá o locador tomar as providencias prevista na cláusula 4.3 do presente contrato.<br/><br/>
+  4.7 - Os equipamentos locados são de relocações continua, então podem conter sinais de uso como arranhões, manchas, desgastes de peças.<br/><br/>
+  4.8 - Todos os equipamentos assim que retornam da locação passam por manutenção preventiva e higienização, antes de serem relocados.<br/><br/>
+  4.9 - Pode haver diferença na cor e nos modelos locados, mas todas as características informadas compõem todos os produtos locados.<br/><br/>
+  4.10 - Não garantimos marcar e modelos específicos, pois trabalhamos com várias marcas e modelos, as fotos dos produtos são ilustrativas de produto novo.
+</p>
+
+<p style="text-align: justify; margin-top: 15px;">
+  <strong>5 -</strong> As partes elegem o foro de Vitória/ES para resolução de eventuais disputas relacionadas a este termo.
+</p>
+
+<div style="margin-top: 80px; text-align: center;">
+  <div style="width: 300px; margin: 0 auto; border-top: 1px solid #000; padding-top: 5px;">
+    Assinatura do Locatário (a)
+  </div>
+</div>
+
+<p style="text-align: right; margin-top: 40px;">
+  Vitória - ES, ${currentDateFull}
+</p>
+</div>
+`
   }
 
   const finalHtml = useMemo(generateContractHtml, [rental, settings, customer, inventory])
@@ -436,7 +520,7 @@ export default function RentalDetail() {
         </div>
       ) : (
         <div
-          className="print-contract-container w-full max-w-[210mm] mx-auto bg-white sm:shadow-lg sm:border rounded-sm text-black relative"
+          className="print-contract-container w-full max-w-[210mm] mx-auto bg-white sm:shadow-lg sm:border rounded-sm text-black relative print:shadow-none print:border-none"
           style={{ padding: finalHtml && docType === 'contract' ? '0' : '48px' }}
         >
           {docType === 'contract' && finalHtml ? (
