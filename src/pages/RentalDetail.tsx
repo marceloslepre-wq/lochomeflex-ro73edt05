@@ -24,55 +24,52 @@ export default function RentalDetail() {
   const defaultContractText = useMemo(() => {
     if (!rental || !customer) return ''
 
-    let text = `TERMOS E CONDIÇÕES DE LOCAÇÃO, GUARDA E USO DE EQUIPAMENTO HOSPITALAR\n\n`
+    let text = `TERMOS E CONDIÇÕES DE LOCAÇÃO, GUARDA E USO DE EQUIPAMENTO HOSPITALAR\n`
+    text += `CONTRATO Nº: ${rental.contractNumber || rental.id}\n\n`
     text += `Constitui objeto do presente termo de condições de locação, uso e guarda de equipamento hospitalar de propriedade de HOSPITAL HOME COMERCIO ATACADISTA DE PRODUTOS HOSPITALARES EM GERAL.\n\n`
 
     const cAddr = (customer.address as any) || {}
     const cAddressStr = cAddr.street
-      ? `${cAddr.street}, ${cAddr.number || 'S/N'}${cAddr.complement ? ' - ' + cAddr.complement : ''}`
+      ? `${cAddr.street}, ${cAddr.number || 'S/N'}${cAddr.complement ? ' - ' + cAddr.complement : ''} - ${cAddr.neighborhood || ''} - ${cAddr.city || ''}/${cAddr.state || ''} - CEP: ${cAddr.zipCode || ''}`
       : 'Não informado'
-    const cNeighborhood = cAddr.neighborhood || 'Não informado'
-    const cCity = cAddr.city ? `${cAddr.city}/${cAddr.state || ''}` : 'Não informado'
-    const cZip = cAddr.zipCode || 'Não informado'
 
     text += `LOCATÁRIA: ${customer.name}\n`
-    text += `Endereço: ${cAddressStr}    Bairro: ${cNeighborhood}    Cidade: ${cCity}    CEP: ${cZip}\n`
+    text += `Endereço: ${cAddressStr}\n`
     text += `RG: ${(customer as any).rg || 'Não informado'}    CPF/CNPJ: ${customer.document}\n`
     text += `Telefones: ${[customer.phone_cell, customer.phone_res, customer.phone_com].filter(Boolean).join(' / ')}\n\n`
 
     const lessorAddress =
-      settings.companyAddress || 'rua Manoel Vivacqua, n. 616, Jabuor, Vitória – ES'
-    const lessorZip = '29072-045'
-    text += `LOCADOR: ${settings.companyName || 'Lojas Hospital Home'}, localizada na ${lessorAddress}. CEP: ${lessorZip}. CNPJ n. ${settings.companyDocument || '10.893.738/0006-93'}.\n\n`
+      settings.companyAddress || 'rua Manoel Vivacqua, n. 616, Jabuor, Vitória – ES. CEP: 29072-045'
+    text += `LOCADOR: ${settings.companyName || 'Lojas Hospital Home'}, localizada na ${lessorAddress}. CNPJ n. ${settings.companyDocument || '10.893.738/0006-93'}.\n\n`
 
     text += `1. Pelo presente instrumento o locador aluga à locatária o(s) equipamento(s) abaixo discriminado(s), e se obriga a locá-lo(s) nas condições estabelecidas neste contrato:\n\n`
 
     rental.items.forEach((ri) => {
       const item = inventory.find((i) => i.id === ri.itemId)
-      text += `   • ${ri.qty}x - ${item?.name} (SKU: ${item?.code || '-'}) (Retirada: ${new Date(rental.startDate).toLocaleDateString('pt-BR')} | Devolução: ${new Date(rental.expectedReturnDate).toLocaleDateString('pt-BR')})\n`
+      text += `   • ${ri.qty}x - ${item?.name} (SKU: ${item?.code || '-'}) (Retirada: ${new Date(ri.startDate || rental.startDate).toLocaleDateString('pt-BR')} | Devolução: ${new Date(ri.endDate || rental.expectedReturnDate).toLocaleDateString('pt-BR')} | Valor: R$ ${(ri.totalPrice || 0).toFixed(2)})\n`
     })
 
     const pickupLoc = settings.locations?.find((l: any) => l.id === rental.pickupLocationId)
     let pAddress = pickupLoc?.address || ''
 
-    pAddress = pAddress
-      .replace(/ - CEP: Sem CEP/gi, '')
-      .replace(/CEP: Sem CEP/gi, '')
-      .trim()
-
-    const pickupText =
+    let pickupText =
       rental.pickupLocationId === 'delivery'
         ? 'Entrega no Endereço do Cliente'
         : pickupLoc?.name
-          ? `${pickupLoc.name}${pAddress ? `, Endereço: ${pAddress}` : ''}`
+          ? `${pickupLoc.name}${pAddress ? ` - ${pAddress}` : ''}`
           : 'Não informado'
+
+    pickupText = pickupText
+      .replace(/ - CEP: Sem CEP/gi, '')
+      .replace(/CEP: Sem CEP/gi, '')
+      .trim()
 
     text += `\nLocal de Retirada/Entrega: ${pickupText}\n\n`
 
     text += `2. PREÇO E PRAZO DE LOCAÇÃO:\n`
     text += `2.1 O locador compromete a manter no endereço informado no momento da locação responsável para receber o equipamento locado, esse deverá assinar o recibo de entrega no momento da entrega pela transportadora ou em loja física se for o caso.\n\n`
     text += `2.2 Após o cancelamento da locação ou termino da vigência do contrato a locatária deverá entrar em contato com o locador para agendar a retirada do equipamento e disponibilizá-lo para retirada pela transportadora, a mesma tem um prazo de até 03 (três) dias uteis para efetuar a retirada, caso a transportadora não consiga recolher o equipamento na data agendada, o locatário deverá arcar com as despesas da remarcação assim como pagamento do aluguel em pro-rata, pelo período adicional que ficou de posse do equipamento.\n\n`
-    text += `2.3 No primeiro dia após o termino do prazo do contrato de locação a locatária deverá entrar em sua conta no site do locador e solicitar renovação ou cancelamento com recolhimento do(s) produto(s) ora locado(s), ou se preferir entrar em contato nos números: 27-3026-330 / 99904-6961 ou pelo e-mail: aluguel@hospitalhome.com.br, para efetuar a renovação do aluguel e pagamento do mês seguinte dentro da vigência do contrato.\n\n`
+    text += `2.3 No primeiro dia após o termino do prazo do contrato de locação a locatária deverá entrar em sua conta no site do locador e solicitar renovação ou cancelamento com recolhimento do(s) produto(s) ora locado(s), ou se preferir entrar em contato nos Telefones: 27-99881-1783 / 99904-6961 ou email: aluguel@hospitalhome.com.br, para efetuar a renovação do aluguel e pagamento do mês seguinte dentro da vigência do contrato.\n\n`
 
     text += `3. CONDIÇÕES DE ENTREGA, USO E MANUTENÇÃO\n`
     text += `3.1 A devolução do equipamento se dará da forma escolhida no momento da locação se foi por transportadora será por transportadora se foi por retirada em loja será por devolução na mesma loja que foi retirada.\n`
@@ -116,34 +113,62 @@ export default function RentalDetail() {
     }
     if (settings.contractTemplateHtml) {
       let html = settings.contractTemplateHtml
+
+      const cAddr = (customer?.address as any) || {}
+      const addressStr = cAddr.street
+        ? `${cAddr.street}, ${cAddr.number || 'S/N'}${cAddr.complement ? ' - ' + cAddr.complement : ''} - ${cAddr.neighborhood || ''} - ${cAddr.city || ''}/${cAddr.state || ''} - CEP: ${cAddr.zipCode || ''}`
+        : 'Não informado'
+      const phoneStr =
+        [customer?.phone_cell, customer?.phone_res, customer?.phone_com]
+          .filter(Boolean)
+          .join(' / ') || 'Não informado'
+
+      const pickupLoc = settings.locations?.find((l: any) => l.id === rental.pickupLocationId)
+      let pickupText =
+        rental.pickupLocationId === 'delivery'
+          ? 'Entrega no Endereço do Cliente'
+          : pickupLoc?.name
+            ? `${pickupLoc.name} - ${pickupLoc.address || ''}`
+            : 'Não informado'
+      pickupText = pickupText
+        .replace(/ - CEP: Sem CEP/gi, '')
+        .replace(/CEP: Sem CEP/gi, '')
+        .trim()
+
       html = html.replace(/{{rentalId}}/g, rental.contractNumber || rental.id)
-      html = html.replace(/{{companyName}}/g, settings.companyName)
-      html = html.replace(/{{companyDocument}}/g, settings.companyDocument)
-      html = html.replace(/{{companyAddress}}/g, settings.companyAddress)
+      html = html.replace(/{{companyName}}/g, settings.companyName || 'Lojas Hospital Home')
+      html = html.replace(/{{companyDocument}}/g, settings.companyDocument || '10.893.738/0006-93')
+      html = html.replace(
+        /{{companyAddress}}/g,
+        settings.companyAddress ||
+          'rua Manoel Vivacqua, n. 616, Jabuor, Vitória – ES. CEP: 29072-045',
+      )
+
       html = html.replace(/{{customerName}}/g, customer?.name || '')
       html = html.replace(/{{customerDocument}}/g, customer?.document || '')
-      html = html.replace(/{{customerPhone}}/g, customer?.phone || '')
-      html = html.replace(/{{customerEmail}}/g, customer?.email || '')
-      html = html.replace(/{{startDate}}/g, new Date(rental.startDate).toLocaleDateString('pt-BR'))
+      html = html.replace(/{{customerAddress}}/g, addressStr)
+      html = html.replace(/{{customerRg}}/g, (customer as any)?.rg || 'Não informado')
+      html = html.replace(/{{customerPhone}}/g, phoneStr)
+      html = html.replace(/{{pickupLocation}}/g, pickupText)
       html = html.replace(
-        /{{expectedReturnDate}}/g,
-        new Date(rental.expectedReturnDate).toLocaleDateString('pt-BR'),
-      )
-      html = html.replace(/{{totalValue}}/g, rental.total.toFixed(2))
-      html = html.replace(
-        /{{lateFeeInfo}}/g,
-        settings.lateFeeType === 'daily'
-          ? settings.lateFeeValue + '% ao dia'
-          : 'R$ ' + settings.lateFeeValue + ' ao dia',
+        /{{currentDate}}/g,
+        new Date(rental.startDate).toLocaleDateString('pt-BR'),
       )
 
       const itemsHtml = rental.items
         .map((ri) => {
           const item = inventory.find((i) => i.id === ri.itemId)
+          const start = new Date(ri.startDate || rental.startDate).toLocaleDateString('pt-BR')
+          const end = new Date(ri.endDate || rental.expectedReturnDate).toLocaleDateString('pt-BR')
+          const total = (ri.totalPrice || 0).toFixed(2)
+
           return `<tr>
           <td style="border: 1px solid #000; padding: 8px; text-align: center;">${ri.qty}</td>
           <td style="border: 1px solid #000; padding: 8px;">${item?.name || 'Item Removido'}</td>
           <td style="border: 1px solid #000; padding: 8px;">${item?.code || '-'}</td>
+          <td style="border: 1px solid #000; padding: 8px; text-align: center;">${start}</td>
+          <td style="border: 1px solid #000; padding: 8px; text-align: center;">${end}</td>
+          <td style="border: 1px solid #000; padding: 8px; text-align: right;">${total}</td>
         </tr>`
         })
         .join('')
@@ -376,7 +401,7 @@ export default function RentalDetail() {
             <div dangerouslySetInnerHTML={{ __html: finalHtml }} />
           ) : docType === 'contract' ? (
             <>
-              <div className="text-center border-b pb-6 mb-6">
+              <div className="text-center mb-6">
                 {settings.logoUrl ? (
                   <img
                     src={settings.logoUrl}
@@ -390,14 +415,10 @@ export default function RentalDetail() {
                     alt="Logo Hospital Home"
                   />
                 )}
-                <h1 className="text-xl font-bold uppercase mt-4">
-                  Contrato Nº: {rental.contractNumber || rental.id}
-                </h1>
               </div>
 
               <div className="font-serif text-[15px] leading-loose whitespace-pre-wrap">
                 {(rental.customContractText || defaultContractText)
-                  .replace(/CONTRATO Nº:.*?\n\n/g, '')
                   .replace(/ - CEP: Sem CEP/gi, '')
                   .replace(/CEP: Sem CEP/gi, '')}
               </div>
