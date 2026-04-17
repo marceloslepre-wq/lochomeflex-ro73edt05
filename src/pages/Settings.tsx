@@ -79,32 +79,32 @@ export default function Settings() {
     if (file) {
       const mockHighFidelityHtml = `
 <div style="font-family: Arial, sans-serif; color: #000; line-height: 1.6; max-width: 800px; margin: 0 auto; background: white; padding: 40px; box-sizing: border-box; font-size: 14px;">
-  <div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px;">
-    <h1 style="text-transform: uppercase; font-size: 18px; font-weight: bold; margin: 0; color: #000;">
-      TERMOS E CONDIÇÕES DE LOCAÇÃO, GUARDA E USO DE EQUIPAMENTO HOSPITALAR
-    </h1>
-    <p style="margin: 5px 0 0; font-size: 16px; font-weight: bold;">CONTRATO Nº: {{rentalId}}</p>
-  </div>
   
   <p style="text-align: justify; margin-top: 10px;">
-    Constitui objeto do presente termo de condições de locação, uso e guarda de equipamento hospitalar de propriedade de HOSPITAL HOME COMERCIO ATACADISTA DE PRODUTOS HOSPITALARES EM GERAL.
+    Constitui objeto do presente termo de condições de locação, uso e guarda de equipamento hospitalar de propriedade de HOSPITAL HOME COM. ATAC. DE PROD. HOSPITALARES EM GERAL LTDA.
   </p>
 
   <div style="margin-top: 15px; border: 1px solid #ccc; padding: 15px; border-radius: 5px;">
-    <p style="margin: 0 0 8px 0;"><strong>LOCATÁRIA:</strong> {{customerName}}</p>
-    <p style="margin: 0 0 8px 0;"><strong>Endereço:</strong> {{customerAddress}}</p>
-    <p style="margin: 0 0 8px 0;"><strong>RG:</strong> {{customerRg}} &nbsp;&nbsp;&nbsp; <strong>CPF/CNPJ:</strong> {{customerDocument}}</p>
-    <p style="margin: 0;"><strong>Telefones:</strong> {{customerPhone}}</p>
+    <p style="margin: 0 0 8px 0;"><strong>Locatário(a):</strong> {{customerName}}</p>
+    <p style="margin: 0 0 8px 0;"><strong>Endereço:</strong> {{customerStreet}}, <strong>Bairro:</strong> {{customerNeighborhood}}, <strong>Cidade:</strong> {{customerCity}}, <strong>Estado:</strong> {{customerState}}, <strong>CEP:</strong> {{customerZipCode}}</p>
+    <p style="margin: 0 0 8px 0;"><strong>CPF:</strong> {{customerDocument}}</p>
+    <p style="margin: 0 0 8px 0;"><strong>Telefones:</strong> {{customerPhone}}</p>
+    <p style="margin: 0;"><strong>Email:</strong> {{customerEmail}}</p>
   </div>
 
+  <p style="margin-top: 15px;"><strong>Endereço de Entrega:</strong> {{deliveryAddress}}</p>
+
+  <p style="margin-top: 15px;"><strong>Local de Retirada/Entrega:</strong> {{pickupLocation}}</p>
+
   <p style="text-align: justify; margin-top: 15px;">
-    <strong>LOCADOR:</strong> {{companyName}}, localizada na {{companyAddress}}. CNPJ n. {{companyDocument}}.
+    <strong>Locador:</strong> HOSPITAL HOME COM. ATAC. DE PROD. HOSPITALARES EM GERAL LTDA, R MANOEL VIVACQUA, 616, JABOUR, VITÓRIA– ES. CNPJ: 10.893.738/0006-93.
   </p>
 
   <p style="text-align: justify; margin-top: 15px;">
-    <strong>1.</strong> Pelo presente instrumento o locador aluga à locatária o(s) equipamento(s) abaixo discriminado(s), e se obriga a locá-lo(s) nas condições estabelecidas neste contrato:
+    <strong>1 -</strong> Pelo presente instrumento o locador aluga à locatária o(s) equipamento(s) abaixo discriminado(s), e se obriga a locá-lo(s) nas condições estabelecidas neste contrato: <strong>“{{rentalId}}”</strong>
   </p>
 
+  <p style="margin-top: 20px;"><strong>2 - PREÇO E PRAZO DE LOCAÇÃO:</strong></p>
   <table style="width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 14px;">
     <thead>
       <tr style="background-color: #f5f5f5;">
@@ -121,60 +121,51 @@ export default function Settings() {
     </tbody>
   </table>
 
-  <p style="margin: 15px 0;">
-    <strong>Local de Retirada/Entrega:</strong> {{pickupLocation}}
+  <p style="text-align: justify; margin-top: 5px;">
+    <strong>2.1 -</strong> O locador compromete a manter no endereço informado no momento da locação responsável para receber o equipamento locado, esse deverá assinar o recibo de entrega no momento da entrega pela transportadora ou em loja física se for o caso.<br/><br/>
+    <strong>2.2 -</strong> No primeiro dia após o termino do prazo do contrato de locação a locatária deverá entrar em sua conta no site do locador e solicitar renovação ou cancelamento com recolhimento do(s) produto(s) ora locado(s), ou se preferir entrar em contato no Telefone: (0xx27)3026-3300 ou email: aluguel@hospitalhome.com.br, para efetuar a renovação do aluguel e pagamento do mês seguinte dentro da vigência do contrato.<br/><br/>
+    <strong>2.3 -</strong> Após o término do prazo do contrato a locatária deverá entrar em contato com o locador para agendar a retirada do equipamento (se for o caso) ou marcar dia de devolução no mesmo local da retirada, a locatária tem um prazo de até 03 (três) dias corridos para fazer a devolução sem que haja cobrança de pró-rata da locação.<br/><br/>
+    <strong>2.4 -</strong> Se a devolução for por transportadora a locatária tem que disponibilizar o equipamento para a coleta pela transportadora no dia e hora combinado sob pena de ser cobrado pela remarcação da mesma.
   </p>
 
-  <p style="margin-top: 20px;"><strong>2. PREÇO E PRAZO DE LOCAÇÃO:</strong></p>
+  <p style="margin-top: 20px;"><strong>3 - CONDIÇÕES DE ENTREGA, USO E MANUTENÇÃO:</strong></p>
   <p style="text-align: justify; margin-top: 5px;">
-    <strong>2.1</strong> O locador compromete a manter no endereço informado no momento da locação responsável para receber o equipamento locado, esse deverá assinar o recibo de entrega no momento da entrega pela transportadora ou em loja física se for o caso.<br/><br/>
-    <strong>2.2</strong> Após o cancelamento da locação ou termino da vigência do contrato a locatária deverá entrar em contato com o locador para agendar a retirada do equipamento e disponibilizá-lo para retirada pela transportadora, a mesma tem um prazo de até 03 (três) dias uteis para efetuar a retirada, caso a transportadora não consiga recolher o equipamento na data agendada, o locatário deverá arcar com as despesas da remarcação assim como pagamento do aluguel em pro-rata, pelo período adicional que ficou de posse do equipamento.<br/><br/>
-    <strong>2.3</strong> No primeiro dia após o termino do prazo do contrato de locação a locatária deverá entrar em sua conta no site do locador e solicitar renovação ou cancelamento com recolhimento do(s) produto(s) ora locado(s), ou se preferir entrar em contato nos Telefones: 27-99881-1783 / 99904-6961 ou email: aluguel@hospitalhome.com.br, para efetuar a renovação do aluguel e pagamento do mês seguinte dentro da vigência do contrato.
+    <strong>3.1 -</strong> A devolução do equipamento se dará da forma escolhida no momento da locação se foi por transportadora será por transportadora se foi por retirada em loja será por devolução na mesma loja que foi retirada.<br/><br/>
+    <strong>3.2 -</strong> A manutenção do(s) equipamento(s), objeto(s) do presente contrato é de total responsabilidade do locador; a Locatária cabe manter o(s) equipamento(s) em perfeitas condições de uso e avisar imediatamente à LOCADOR sobre eventuais problemas que impeçam o seu adequado funcionamento; para que esta tome as providências cabíveis, a danificação do equipamento pela Locatária, implicará a compra do produto e seu pagamento ao Locador.<br/><br/>
+    <strong>3.3 -</strong> Em caso do equipamento locado for “cama hospitalar”, sendo o endereço de entrega PRÉDIO, a entrega de cama hospitalar é realizada até a portaria principal do prédio, sendo de total responsabilidade do locatário e transporte até seu apartamento.<br/><br/>
+    <strong>3.4 -</strong> A transportadora não realiza a montagem do equipamento, este é feito pelo Locatário.<br/><br/>
+    <strong>3.5 -</strong> O locatário assinará uma nota promissória no valor de venda do equipamento ora locado a título de em caso de perda ou dano ao equipamento causando sua inoperabilidade para futuras locação o locador seja restituído desse valor.
   </p>
 
-  <p style="margin-top: 20px;"><strong>3. CONDIÇÕES DE ENTREGA, USO E MANUTENÇÃO:</strong></p>
+  <p style="margin-top: 20px;"><strong>4 - DISPOSIÇÕES GERAIS:</strong></p>
   <p style="text-align: justify; margin-top: 5px;">
-    <strong>3.1</strong> A devolução do equipamento se dará da forma escolhida no momento da locação se foi por transportadora será por transportadora se foi por retirada em loja será por devolução na mesma loja que foi retirada.<br/><br/>
-    <strong>3.2</strong> A manutenção do(s) equipamento(s), objeto(s) do presente contrato é de total responsabilidade do locador; a Locatária cabe manter o(s) equipamento(s) em perfeitas condições de uso e avisar imediatamente à LOCADOR sobre eventuais problemas que impeçam o seu adequado funcionamento; para que esta tome as providências cabíveis, a danificação do equipamento pela Locatária, implicará a compra do produto e seu pagamento ao Locador.<br/><br/>
-    <strong>3.3</strong> Em caso do equipamento locado for “cama hospitalar”, sendo o endereço de entrega PRÉDIO, a entrega de cama hospitalar é realizada até a portaria principal do prédio, sendo de total responsabilidade do locatário e transporte até seu apartamento.<br/><br/>
-    <strong>3.4</strong> A transportadora não realiza a montagem do equipamento, este é feito pelo Locatário.<br/><br/>
-    <strong>3.5</strong> O locatário assinará uma nota promissória no valor de venda do equipamento ora locado a título de em caso de perda ou dano ao equipamento causando sua inoperabilidade para futuras locação o locador seja restituído desse valor.
-  </p>
-
-  <p style="margin-top: 20px;"><strong>4. DISPOSIÇÕES GERAIS:</strong></p>
-  <p style="text-align: justify; margin-top: 5px;">
-    <strong>4.1</strong> O locatário se compromete a, no tempo e na forma acordada entre as partes, realizar a entrega do bem locado em perfeito estado de conservação aos prepostos da contratada, sob pena de ser responsabilizado por perdas e danos.<br/><br/>
-    <strong>4.2</strong> Em caso de mora na devolução do equipamento sem prévio acordo de renovação contratual e, em caso de inadimplemento do valor correspondente ao aluguel, fica o locatário ciente de que incidirá multa diária de R$ 100,00 (cem reais) até o limite do valor do equipamento, sem prejuízo da obrigação de arcar com os alugueis proporcionais ao tempo em que permanecer na posse do mesmo, sobre os quais incidirão juros de 1% (um por cento ao mês), correção monetária e multa de 2% (dois por cento) do valor devido.<br/><br/>
-    <strong>4.3</strong> Em caso de inadimplemento de quaisquer obrigações acima, fica o locatário ciente de que o locador poderá negativa-lo junto aos órgãos de proteção ao crédito e levar o título a protesto, sem prejuízo do direito de ação, ficando a cargo do locatário o pagamento de custas judiciais e honorários advocatícios em 20% (vinte por cento).<br/><br/>
-    <strong>4.4</strong> Não é fornecido Nota Fiscal para locação de bens móveis, fornecemos recibo conforme o Artigo 1 da Lei 8846 de 1994.<br/><br/>
-    <strong>4.5</strong> Na devolução antes do prazo previsto, não haverá ressarcimento de valores.<br/><br/>
-    <strong>4.6</strong> Após 07 de inadimplência em caso de relocação, o contrato será reincidido automaticamente, devendo ao locatário fazer a devolução do equipamento ora locado imediatamente, caso não ocorra poderá o locador tomar as providencias prevista na cláusula 4.3 do presente contrato.<br/><br/>
-    <strong>4.7</strong> Os equipamentos locados são de relocações continua, então podem conter sinais de uso como arranhões, manchas, desgastes de peças.<br/><br/>
-    <strong>4.8</strong> Todos equipamentos assim que retornam da locação passam por manutenção preventiva e higienização, antes de serem relocados.<br/><br/>
-    <strong>4.9</strong> Podem haver diferença na cor e nos modelos locados, mas todas as características informadas compõem todos produtos locados.<br/><br/>
-    <strong>4.10</strong> Não garantimos marcar e modelos específicos, pois trabalhamos com várias marcas e modelos, as fotos dos produtos são ilustrativas de produto novo.
+    <strong>4.1 -</strong> O locatário se compromete a, no tempo e na forma acordada entre as partes, realizar a entrega do bem locado em perfeito estado de conservação aos prepostos da contratada, sob pena de ser responsabilizado por perdas e danos.<br/><br/>
+    <strong>4.2 -</strong> Em caso de mora na devolução do equipamento sem prévio acordo de renovação contratual e, em caso de inadimplemento do valor correspondente ao aluguel, fica o locatário ciente de que incidirá multa diária de R$ 100,00 (cem reais) até o limite do valor do equipamento, sem prejuízo da obrigação de arcar com os alugueis proporcionais ao tempo em que permanecer na posse do mesmo, sobre os quais incidirão juros de 1% (um por cento ao mês), correção monetária e multa de 2% (dois por cento) do valor devido.<br/><br/>
+    <strong>4.3 -</strong> Em caso de inadimplemento de quaisquer obrigações acima, fica o locatário ciente de que o locador poderá negativa-lo junto aos órgãos de proteção ao crédito e levar o título a protesto, sem prejuízo do direito de ação, ficando a cargo do locatário o pagamento de custas judiciais e honorários advocatícios em 20% (vinte por cento).<br/><br/>
+    <strong>4.4 -</strong> Não é fornecido Nota Fiscal para locação de bens móveis, fornecemos recibo conforme o Artigo 1 da Lei 8846 de 1994.<br/><br/>
+    <strong>4.5 -</strong> Na devolução antes do prazo previsto, não haverá ressarcimento de valores.<br/><br/>
+    <strong>4.6 -</strong> Após 07 de inadimplência em caso de relocação, o contrato será reincidido automaticamente, devendo ao locatário fazer a devolução do equipamento ora locado imediatamente, caso não ocorra poderá o locador tomar as providencias prevista na cláusula 4.3 do presente contrato.<br/><br/>
+    <strong>4.7 -</strong> Os equipamentos locados são de relocações continua, então podem conter sinais de uso como arranhões, manchas, desgastes de peças.<br/><br/>
+    <strong>4.8 -</strong> Todos os equipamentos assim que retornam da locação passam por manutenção preventiva e higienização, antes de serem relocados.<br/><br/>
+    <strong>4.9 -</strong> Pode haver diferença na cor e nos modelos locados, mas todas as características informadas compõem todos os produtos locados.<br/><br/>
+    <strong>4.10 -</strong> Não garantimos marcar e modelos específicos, pois trabalhamos com várias marcas e modelos, as fotos dos produtos são ilustrativas de produto novo.
   </p>
 
   <p style="text-align: justify; margin-top: 20px;">
-    <strong>5.</strong> As partes elegem o foro de Vitória/ES para resolução de eventuais disputas relacionadas a este termo.
+    <strong>5 -</strong> As partes elegem o foro de Vitória/ES para resolução de eventuais disputas relacionadas a este termo.
   </p>
 
-  <p style="text-align: right; margin-top: 40px; font-weight: bold;">
-    Vitória ES, {{currentDate}}
-  </p>
-
-  <div style="margin-top: 60px; display: flex; justify-content: space-between; text-align: center; font-size: 15px;">
-    <div style="width: 45%;">
+  <div style="margin-top: 60px; text-align: center; font-size: 15px;">
+    <div style="width: 60%; margin: 0 auto;">
       <div style="border-bottom: 1px solid #000; margin-bottom: 8px;"></div>
-      <strong>{{companyName}}</strong><br/>
-      <span style="font-size: 13px; color: #555;">LOCADOR</span>
-    </div>
-    <div style="width: 45%;">
-      <div style="border-bottom: 1px solid #000; margin-bottom: 8px;"></div>
-      <strong>{{customerName}}</strong><br/>
-      <span style="font-size: 13px; color: #555;">LOCATÁRIO</span>
+      <strong>Assinatura do Locatário (a)</strong><br/>
+      <span style="font-size: 13px; color: #555;">{{customerName}}</span>
     </div>
   </div>
+
+  <p style="text-align: right; margin-top: 40px; font-weight: bold;">
+    Vitória - ES, {{currentDateFull}}
+  </p>
 </div>`
 
       updateSettings({
