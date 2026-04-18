@@ -45,6 +45,7 @@ import { useToast } from '@/hooks/use-toast'
 import { CheckCircle, FileText, Plus, Trash2, Upload, Edit, Save } from 'lucide-react'
 import { PermissionKey, usePermissions } from '@/hooks/use-permissions'
 import logoImg from '@/assets/logo_hospital_home_final-f2434.jpg'
+import { supabase } from '@/lib/supabase/client'
 
 const PERMISSIONS_LIST: { id: PermissionKey; label: string }[] = [
   { id: 'items:write', label: 'Cadastrar/Editar Itens' },
@@ -596,7 +597,7 @@ export default function Settings() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center justify-end gap-2">
                         <Button
                           variant="outline"
                           size="sm"
@@ -724,7 +725,7 @@ export default function Settings() {
                       <TableCell className="font-medium">{loc.name}</TableCell>
                       <TableCell>{loc.address}</TableCell>
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center justify-end gap-2">
                           <Button
                             variant="ghost"
                             size="icon"
@@ -821,6 +822,9 @@ export default function Settings() {
                         src={settings.logoUrl || logoImg}
                         alt="Logo"
                         className="max-w-full max-h-full object-contain"
+                        onError={(e) => {
+                          e.currentTarget.src = logoImg
+                        }}
                       />
                       {settings.logoUrl && (
                         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded">

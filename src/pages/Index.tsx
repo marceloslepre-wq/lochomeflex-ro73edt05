@@ -39,16 +39,14 @@ export default function Index() {
 
     setIsSubmitting(true)
     const { error } = await signIn(email, password)
-    setIsSubmitting(false)
 
     if (error) {
+      setIsSubmitting(false)
       toast({
         title: 'Erro de Autenticação',
         description: 'Email ou senha inválidos. Tente novamente. (Dica: Senha padrão é Mudar@123)',
         variant: 'destructive',
       })
-    } else {
-      navigate('/dashboard')
     }
   }
 

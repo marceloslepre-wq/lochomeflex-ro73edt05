@@ -174,6 +174,9 @@ export function ReceiptDialog({
               src={settings.logoUrl || logoImg}
               className="h-16 mx-auto mb-2 object-contain"
               alt="Logo"
+              onError={(e) => {
+                e.currentTarget.src = logoImg
+              }}
             />
             {settings.companyName || 'Hospital Home'}
             <div className="text-sm font-normal mt-1">

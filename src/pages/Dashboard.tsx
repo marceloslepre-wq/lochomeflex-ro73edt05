@@ -30,9 +30,10 @@ export default function Dashboard() {
     return sorted
       .filter((r) => {
         const c = customers.find((cust) => cust.id === r.customerId)
+        const searchLower = globalSearch.toLowerCase()
         return (
-          r.id.toLowerCase().includes(globalSearch.toLowerCase()) ||
-          c?.name.toLowerCase().includes(globalSearch.toLowerCase())
+          r.id.toLowerCase().includes(searchLower) ||
+          (c?.name && c.name.toLowerCase().includes(searchLower))
         )
       })
       .slice(0, 5)

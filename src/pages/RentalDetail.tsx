@@ -33,7 +33,7 @@ export default function RentalDetail() {
     const cState = cAddr.state || 'Não informado'
     const cZip = cAddr.zipCode || 'Não informado'
     const cEmail = customer.email || 'Não informado'
-    const cPhone = customer.phone_cell || 'Não informado'
+    const cPhone = customer.phone_cell || (customer as any).phoneCell || 'Não informado'
 
     let dAddrStr = 'Não possui endereço de entrega diferente'
     if (customer.hasDifferentDeliveryAddress && customer.deliveryAddress) {
@@ -133,7 +133,7 @@ export default function RentalDetail() {
     const cState = cAddr.state || 'Não informado'
     const cZip = cAddr.zipCode || 'Não informado'
     const cEmail = customer?.email || 'Não informado'
-    const cPhone = customer?.phone_cell || 'Não informado'
+    const cPhone = customer?.phone_cell || (customer as any)?.phoneCell || 'Não informado'
 
     let dAddrStr = 'Não possui endereço de entrega diferente'
     if (customer?.hasDifferentDeliveryAddress && customer?.deliveryAddress) {
@@ -201,7 +201,7 @@ export default function RentalDetail() {
 <div style="font-family: Arial, sans-serif; font-size: 12pt; line-height: 1.5; color: #000; padding: 2.5cm; max-width: 21cm; margin: 0 auto; box-sizing: border-box; background: white;">
 
 <div style="text-align: center; margin-bottom: 20px;">
-  <img src="${settings.logoUrl || logoImg}" style="max-height: 80px; margin-bottom: 15px;" />
+  <img src="${settings.logoUrl || logoImg}" onerror="this.src='${logoImg}'" style="max-height: 80px; margin-bottom: 15px;" />
 </div>
 
 <p style="text-align: justify; margin-top: 0;">
@@ -301,7 +301,7 @@ export default function RentalDetail() {
     return `
       <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #000; padding: 20px;">
         <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px;">
-          <img src="${settings.logoUrl || logoImg}" style="max-height: 80px; margin-bottom: 10px;" />
+          <img src="${settings.logoUrl || logoImg}" onerror="this.src='${logoImg}'" style="max-height: 80px; margin-bottom: 10px;" />
           <h1 style="font-size: 24px; margin: 0; text-transform: uppercase;">Recibo de Devolução</h1>
           <p style="margin: 5px 0 0;">Contrato Nº: ${rental?.contractNumber || rental?.id}</p>
         </div>
@@ -355,7 +355,7 @@ export default function RentalDetail() {
     return `
       <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #000; padding: 20px;">
         <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px;">
-          <img src="${settings.logoUrl || logoImg}" style="max-height: 80px; margin-bottom: 10px;" />
+          <img src="${settings.logoUrl || logoImg}" onerror="this.src='${logoImg}'" style="max-height: 80px; margin-bottom: 10px;" />
           <h1 style="font-size: 24px; margin: 0; text-transform: uppercase;">Recibo de Entrega / Locação</h1>
           <p style="margin: 5px 0 0;">Contrato Nº: ${rental?.contractNumber || rental?.id}</p>
         </div>
@@ -523,6 +523,9 @@ export default function RentalDetail() {
                   src={settings.logoUrl || logoImg}
                   className="max-h-20 mx-auto mb-4 object-contain"
                   alt="Logo"
+                  onError={(e) => {
+                    e.currentTarget.src = logoImg
+                  }}
                 />
               </div>
 

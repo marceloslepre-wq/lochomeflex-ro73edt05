@@ -62,6 +62,9 @@ export function AppSidebar() {
             src={settings.logoUrl || logoImg}
             alt="Logo"
             className="max-h-8 w-auto object-contain"
+            onError={(e) => {
+              e.currentTarget.src = logoImg
+            }}
           />
         </div>
       </SidebarHeader>
