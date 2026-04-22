@@ -86,10 +86,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(session?.user ?? null)
 
         if (session?.user) {
-          await fetchProfile(session.user.id)
+          fetchProfile(session.user.id)
         } else {
           setProfile(null)
-          setLoading(false)
         }
       } catch (err) {
         console.error('Auth init error:', err)
@@ -97,8 +96,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setProfile(null)
           setUser(null)
           setSession(null)
-          setLoading(false)
         }
+      } finally {
+        if (mounted) setLoading(false)
       }
     }
 
@@ -110,14 +110,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (!mounted) return
       setSession(session)
       setUser(session?.user ?? null)
+      setLoading(false)
 
       if (event === 'SIGNED_OUT') {
         setProfile(null)
-        setLoading(false)
       } else if (session?.user) {
         fetchProfile(session.user.id)
-      } else {
-        setLoading(false)
       }
     })
 

@@ -159,101 +159,108 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
 
     const loadData = async () => {
-      const { data: invData } = await supabase
-        .from('inventory')
-        .select('*')
-        .order('created_at', { ascending: false })
-      if (invData) {
-        setInventory(
-          invData.map((row: any) => ({
+      try {
+        const [
+          { data: invData, error: invError },
+          { data: setData, error: setError },
+          { data: profData, error: profError },
+          { data: rentData, error: rentError },
+        ] = await Promise.all([
+          supabase.from('inventory').select('*').order('created_at', { ascending: false }),
+          supabase.from('settings').select('*').limit(1).maybeSingle(),
+          supabase.from('profiles').select('*').order('created_at', { ascending: false }),
+          supabase.from('rentals').select('*').order('created_at', { ascending: false }),
+        ])
+
+        if (invError) console.error('Error fetching inventory:', invError)
+        if (invData) {
+          setInventory(
+            invData.map((row: any) => ({
+              id: row.id,
+              code: row.code,
+              name: row.name,
+              category: row.category,
+              description: row.description,
+              totalQty: row.total_qty,
+              availableQty: row.available_qty,
+              rentedQty: row.rented_qty,
+              conditionStatus: row.condition_status as any,
+              image: row.image,
+              assets: row.assets || [],
+              monthlyPrice: Number(row.monthly_price) || 0,
+              dailyPrice: Number(row.daily_price) || 0,
+            })),
+          )
+        }
+
+        if (setError) console.error('Error fetching settings:', setError)
+        if (setData) {
+          setSettingsId(setData.id)
+          setSettings({
+            primaryColor: setData.primary_color || '#1e40af',
+            logoUrl: setData.logo_url,
+            contractFileName: setData.contract_file_name,
+            contractTemplateHtml: setData.contract_template_html,
+            lateFeeType: (setData.late_fee_type as any) || 'daily',
+            lateFeeValue: Number(setData.late_fee_value) || 2,
+            companyName: setData.company_name || '',
+            companyDocument: setData.company_document || '',
+            companyAddress: setData.company_address || '',
+            categories: setData.categories || [
+              'Ferramentas',
+              'Equipamentos Pesados',
+              'Acessórios',
+              'Geral',
+            ],
+            locations: setData.locations || [],
+          })
+        }
+
+        if (profError) console.error('Error fetching profiles:', profError)
+        if (profData) {
+          const mappedUsers = profData.map((row: any) => ({
             id: row.id,
-            code: row.code,
+            auth_user_id: row.auth_user_id,
             name: row.name,
-            category: row.category,
-            description: row.description,
-            totalQty: row.total_qty,
-            availableQty: row.available_qty,
-            rentedQty: row.rented_qty,
-            conditionStatus: row.condition_status as any,
-            image: row.image,
-            assets: row.assets || [],
-            monthlyPrice: Number(row.monthly_price) || 0,
-            dailyPrice: Number(row.daily_price) || 0,
-          })),
-        )
-      }
+            email: row.email,
+            role: row.role,
+            active: row.active,
+            permissions: row.permissions || [],
+          }))
+          setUsers(mappedUsers)
+          const myProfile = mappedUsers.find((u) => u.email === user.email)
+          if (myProfile) setCurrentUser(myProfile)
+        }
 
-      const { data: setData } = await supabase.from('settings').select('*').limit(1).single()
-      if (setData) {
-        setSettingsId(setData.id)
-        setSettings({
-          primaryColor: setData.primary_color || '#1e40af',
-          logoUrl: setData.logo_url,
-          contractFileName: setData.contract_file_name,
-          contractTemplateHtml: setData.contract_template_html,
-          lateFeeType: (setData.late_fee_type as any) || 'daily',
-          lateFeeValue: Number(setData.late_fee_value) || 2,
-          companyName: setData.company_name || '',
-          companyDocument: setData.company_document || '',
-          companyAddress: setData.company_address || '',
-          categories: setData.categories || [
-            'Ferramentas',
-            'Equipamentos Pesados',
-            'Acessórios',
-            'Geral',
-          ],
-          locations: setData.locations || [],
-        })
-      }
+        if (rentError) console.error('Error fetching rentals:', rentError)
+        if (rentData) {
+          setRentals(
+            rentData.map((row: any) => ({
+              id: row.id,
+              customerId: row.customer_id,
+              startDate: row.start_date,
+              expectedReturnDate: row.expected_return_date,
+              actualReturnDate: row.actual_return_date,
+              status: row.status as any,
+              total: Number(row.total),
+              customContractText: row.custom_contract_text,
+              customContractHtml: row.custom_contract_html,
+              userId: row.user_id,
+              pickupLocationId: row.pickup_location_id,
+              items: row.items || [],
+              contractNumber: row.contract_number,
+            })),
+          )
+        }
 
-      const { data: profData } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false })
-      if (profData) {
-        const mappedUsers = profData.map((row: any) => ({
-          id: row.id,
-          auth_user_id: row.auth_user_id,
-          name: row.name,
-          email: row.email,
-          role: row.role,
-          active: row.active,
-          permissions: row.permissions || [],
-        }))
-        setUsers(mappedUsers)
-        const myProfile = mappedUsers.find((u) => u.email === user.email)
-        if (myProfile) setCurrentUser(myProfile)
+        refreshCustomers()
+      } catch (err) {
+        console.error('Error in loadData:', err)
       }
-
-      const { data: rentData } = await supabase
-        .from('rentals')
-        .select('*')
-        .order('created_at', { ascending: false })
-      if (rentData) {
-        setRentals(
-          rentData.map((row: any) => ({
-            id: row.id,
-            customerId: row.customer_id,
-            startDate: row.start_date,
-            expectedReturnDate: row.expected_return_date,
-            actualReturnDate: row.actual_return_date,
-            status: row.status as any,
-            total: Number(row.total),
-            customContractText: row.custom_contract_text,
-            customContractHtml: row.custom_contract_html,
-            userId: row.user_id,
-            pickupLocationId: row.pickup_location_id,
-            items: row.items || [],
-            contractNumber: row.contract_number,
-          })),
-        )
-      }
-
-      refreshCustomers()
     }
 
     loadData()
-  }, [user])
+  }, [user?.id])
 
   const addRental = async (rental: Rental): Promise<Rental | null> => {
     const tempId = rental.id || Math.random().toString()

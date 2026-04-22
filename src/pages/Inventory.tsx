@@ -57,8 +57,8 @@ export default function Inventory() {
   const filtered = inventory.filter((i) => {
     const term = search || globalSearch
     const matchesSearch =
-      i.name.toLowerCase().includes(term.toLowerCase()) ||
-      i.code.toLowerCase().includes(term.toLowerCase())
+      (i.name || '').toLowerCase().includes(term.toLowerCase()) ||
+      (i.code || '').toLowerCase().includes(term.toLowerCase())
     const matchesCategory = categoryFilter === 'Todas' || i.category === categoryFilter
 
     let matchesStatus = true
