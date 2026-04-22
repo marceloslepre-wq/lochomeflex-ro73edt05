@@ -42,17 +42,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .eq('auth_user_id', userId)
           .single()
 
+        if (error && error.code !== 'PGRST116') {
+          console.error('Profile fetch error:', error)
+        }
+
         if (!mounted) return
 
         if (data) {
           setProfile(data)
         } else {
           // Fallback se não encontrar por auth_user_id
-          const { data: fallbackData } = await supabase
+          const { data: fallbackData, error: fallbackError } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', userId)
             .single()
+
+          if (fallbackError && fallbackError.code !== 'PGRST116') {
+            console.error('Fallback profile fetch error:', fallbackError)
+          }
+
           if (mounted && fallbackData) setProfile(fallbackData)
         }
       } catch (err) {
@@ -64,17 +73,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const initAuth = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      if (!mounted) return
-      setSession(session)
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        await fetchProfile(session.user.id)
-      } else {
-        setProfile(null)
-        setLoading(false)
+      try {
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession()
+
+        if (error) throw error
+        if (!mounted) return
+
+        setSession(session)
+        setUser(session?.user ?? null)
+
+        if (session?.user) {
+          await fetchProfile(session.user.id)
+        } else {
+          setProfile(null)
+          setLoading(false)
+        }
+      } catch (err) {
+        console.error('Auth init error:', err)
+        if (mounted) {
+          setProfile(null)
+          setUser(null)
+          setSession(null)
+          setLoading(false)
+        }
       }
     }
 

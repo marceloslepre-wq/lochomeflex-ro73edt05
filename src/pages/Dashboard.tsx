@@ -7,17 +7,22 @@ import { Badge } from '@/components/ui/badge'
 import { Link } from 'react-router-dom'
 
 export default function Dashboard() {
-  const { inventory, rentals, customers, globalSearch } = useMainStore()
+  const store = useMainStore()
+  const inventory = store?.inventory || []
+  const rentals = store?.rentals || []
+  const customers = store?.customers || []
+  const globalSearch = store?.globalSearch || ''
+
   const { profile } = useAuth()
 
   const stats = useMemo(() => {
-    const totalItems = inventory.reduce((acc, curr) => acc + curr.totalQty, 0)
-    const activeRentals = rentals.filter((r) => r.status === 'Ativo').length
-    const overdueRentals = rentals.filter((r) => r.status === 'Atrasado').length
+    const totalItems = inventory.reduce((acc, curr) => acc + (curr?.totalQty || 0), 0)
+    const activeRentals = rentals.filter((r) => r?.status === 'Ativo').length
+    const overdueRentals = rentals.filter((r) => r?.status === 'Atrasado').length
 
     const today = new Date().toISOString().split('T')[0]
     const dueToday = rentals.filter(
-      (r) => r.status === 'Ativo' && r.expectedReturnDate === today,
+      (r) => r?.status === 'Ativo' && r?.expectedReturnDate === today,
     ).length
 
     return { totalItems, activeRentals, dueToday, overdueRentals }
@@ -29,10 +34,10 @@ export default function Dashboard() {
 
     return sorted
       .filter((r) => {
-        const c = customers.find((cust) => cust.id === r.customerId)
+        const c = customers.find((cust) => cust?.id === r?.customerId)
         const searchLower = globalSearch.toLowerCase()
         return (
-          r.id.toLowerCase().includes(searchLower) ||
+          r?.id?.toLowerCase().includes(searchLower) ||
           (c?.name && c.name.toLowerCase().includes(searchLower))
         )
       })

@@ -58,11 +58,11 @@ export const customerService = {
   },
 
   async createCustomer(customer: Omit<Customer, 'id'>) {
-    const { data, error } = await supabase
-      .from('customers')
-      .insert(mapToDb(customer))
-      .select()
-      .single()
+    const dbPayload = mapToDb(customer)
+    if (!dbPayload.matricula) {
+      dbPayload.matricula = 'AUTO'
+    }
+    const { data, error } = await supabase.from('customers').insert(dbPayload).select().single()
     if (error) throw error
     return mapFromDb(data)
   },
