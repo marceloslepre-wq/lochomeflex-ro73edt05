@@ -126,7 +126,7 @@ export default function Assets() {
     const matchesModel = selectedModel === 'all' || item.name === selectedModel
     if (assetSearch) {
       const searchLower = assetSearch.toLowerCase()
-      return item.assets?.some((a) => a.assetNumber.toLowerCase().includes(searchLower))
+      return item.assets?.some((a) => (a.assetNumber || '').toLowerCase().includes(searchLower))
     }
     return matchesModel
   })

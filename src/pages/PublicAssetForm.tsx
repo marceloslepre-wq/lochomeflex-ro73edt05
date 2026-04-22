@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
-import { CheckCircle2, Loader2, Package } from 'lucide-react'
+import { CheckCircle2, Loader2, Package, Camera, Upload, Image as ImageIcon } from 'lucide-react'
 
 export default function PublicAssetForm() {
   const { toast } = useToast()
@@ -52,6 +52,19 @@ export default function PublicAssetForm() {
     notes: '',
   })
 
+  const [image, setImage] = useState<string | null>(null)
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setImage(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.itemId) {
@@ -63,13 +76,14 @@ export default function PublicAssetForm() {
     try {
       const newAsset = {
         id: Math.random().toString(),
-        serialNumber: formData.serialNumber,
-        purchaseDate: formData.purchaseDate,
+        assetNumber: formData.serialNumber,
+        acquisitionDate: formData.purchaseDate,
         purchasePrice: Number(formData.purchasePrice),
         supplier: formData.supplier,
         notes: formData.notes,
-        status: 'Disponível',
+        conditionStatus: 'Disponível',
         addedAt: new Date().toISOString(),
+        image: image || undefined,
       }
 
       const { error } = await supabase.rpc('public_add_asset', {
@@ -110,6 +124,7 @@ export default function PublicAssetForm() {
                   supplier: '',
                   notes: '',
                 })
+                setImage(null)
               }}
             >
               Cadastrar Outro
@@ -216,6 +231,57 @@ export default function PublicAssetForm() {
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               />
+            </div>
+
+            <div className="space-y-3 pt-2">
+              <Label className="text-base font-semibold">Foto do Patrimônio</Label>
+              <div className="flex items-center gap-4">
+                <div className="relative w-24 h-24 border-2 border-dashed rounded-lg flex items-center justify-center bg-white overflow-hidden shrink-0">
+                  {image ? (
+                    <img src={image} alt="Preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <ImageIcon className="w-8 h-8 text-muted-foreground/50" />
+                  )}
+                  {image && (
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-1 right-1 w-6 h-6 opacity-80 hover:opacity-100"
+                      onClick={() => setImage(null)}
+                    >
+                      &times;
+                    </Button>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="photo-upload" className="cursor-pointer">
+                    <div className="bg-primary/10 text-primary hover:bg-primary/20 px-4 py-2 rounded-md text-sm font-medium inline-flex items-center gap-2 transition-colors">
+                      <Upload className="w-4 h-4" /> Escolher Arquivo
+                    </div>
+                  </Label>
+                  <Input
+                    id="photo-upload"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageUpload}
+                  />
+                  <Label htmlFor="camera-upload" className="cursor-pointer">
+                    <div className="bg-primary/10 text-primary hover:bg-primary/20 px-4 py-2 rounded-md text-sm font-medium inline-flex items-center gap-2 transition-colors">
+                      <Camera className="w-4 h-4" /> Tirar Foto
+                    </div>
+                  </Label>
+                  <Input
+                    id="camera-upload"
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={handleImageUpload}
+                  />
+                </div>
+              </div>
             </div>
 
             <Button

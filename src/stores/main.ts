@@ -64,6 +64,7 @@ export type Rental = {
 
 export type User = {
   id: string
+  auth_user_id?: string
   name: string
   email: string
   role: string
@@ -212,6 +213,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (profData) {
         const mappedUsers = profData.map((row: any) => ({
           id: row.id,
+          auth_user_id: row.auth_user_id,
           name: row.name,
           email: row.email,
           role: row.role,
