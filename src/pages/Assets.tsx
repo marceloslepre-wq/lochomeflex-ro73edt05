@@ -156,7 +156,8 @@ export default function Assets() {
               <SelectItem value="all">Todos os modelos</SelectItem>
               {models.map((model) => (
                 <SelectItem key={model.name} value={model.name}>
-                  ({model.code}) {model.name}
+                  {model.code ? `[${model.code}] - ` : ''}
+                  {model.name}
                 </SelectItem>
               ))}
             </SelectContent>

@@ -30,7 +30,7 @@ export default function PublicAssetForm() {
         const { data, error } = await supabase
           .from('inventory')
           .select('id, name, code')
-          .order('name')
+          .order('code', { ascending: true })
 
         if (error) throw error
         setModels(data || [])
@@ -170,7 +170,8 @@ export default function PublicAssetForm() {
                     ) : (
                       models.map((m) => (
                         <SelectItem key={m.id} value={m.id} className="py-3 cursor-pointer">
-                          {m.name} {m.code ? `(${m.code})` : ''}
+                          {m.code ? `[${m.code}] - ` : ''}
+                          {m.name}
                         </SelectItem>
                       ))
                     )}

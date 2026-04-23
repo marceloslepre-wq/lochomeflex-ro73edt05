@@ -74,7 +74,10 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
   }
 
   const availableItems = useMemo(
-    () => inventory.filter((i) => i.availableQty > 0 && i.conditionStatus === 'Disponível'),
+    () =>
+      inventory
+        .filter((i) => i.availableQty > 0 && i.conditionStatus === 'Disponível')
+        .sort((a, b) => (a.code || '').localeCompare(b.code || '')),
     [inventory],
   )
 
@@ -409,7 +412,12 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
                       className="w-full justify-between"
                     >
                       {selectedItemId
-                        ? inventory.find((i) => i.id === selectedItemId)?.name
+                        ? (() => {
+                            const item = inventory.find((i) => i.id === selectedItemId)
+                            return item
+                              ? `${item.code ? `[${item.code}] - ` : ''}${item.name}`
+                              : 'Selecione o modelo...'
+                          })()
                         : 'Selecione o modelo...'}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
@@ -423,7 +431,7 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
                           {availableItems.map((i) => (
                             <CommandItem
                               key={i.id}
-                              value={`${i.name} ${i.code}`}
+                              value={`${i.code} ${i.name}`}
                               onSelect={() => {
                                 setSelectedItemId(i.id)
                                 setItemOpen(false)
@@ -435,7 +443,8 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
                                   selectedItemId === i.id ? 'opacity-100' : 'opacity-0',
                                 )}
                               />
-                              {i.name} (Ref: {i.code}) - Disp: {i.availableQty}
+                              {i.code ? `[${i.code}] - ` : ''}
+                              {i.name} - Disp: {i.availableQty}
                             </CommandItem>
                           ))}
                         </CommandGroup>

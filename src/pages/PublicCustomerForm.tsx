@@ -352,6 +352,15 @@ export default function PublicCustomerForm() {
                   {formData.hasDifferentDeliveryAddress && (
                     <div className="grid gap-4 pl-6 border-l-2 border-primary/20 mt-4">
                       <div className="grid gap-2">
+                        <Label>CEP:</Label>
+                        <Input
+                          value={formData.deliveryAddress?.zipCode || ''}
+                          onChange={(e) => updateAddress('zipCode', e.target.value, true)}
+                          onBlur={(e) => fetchCep(e.target.value, true)}
+                          placeholder="Apenas números"
+                        />
+                      </div>
+                      <div className="grid gap-2">
                         <Label>Endereço de Entrega:</Label>
                         <Input
                           value={formData.deliveryAddress?.street || ''}
@@ -377,13 +386,6 @@ export default function PublicCustomerForm() {
                         <Input
                           value={formData.deliveryAddress?.state || ''}
                           onChange={(e) => updateAddress('state', e.target.value, true)}
-                        />
-                      </div>
-                      <div className="grid gap-2">
-                        <Label>CEP:</Label>
-                        <Input
-                          value={formData.deliveryAddress?.zipCode || ''}
-                          onChange={(e) => updateAddress('zipCode', e.target.value, true)}
                         />
                       </div>
                     </div>
