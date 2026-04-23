@@ -166,7 +166,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           { data: profData, error: profError },
           { data: rentData, error: rentError },
         ] = await Promise.all([
-          supabase.from('inventory').select('*').order('created_at', { ascending: false }),
+          supabase
+            .from('inventory')
+            .select(
+              'id, code, name, category, description, total_qty, available_qty, rented_qty, condition_status, image, monthly_price, daily_price',
+            )
+            .order('created_at', { ascending: false }),
           supabase.from('settings').select('*').limit(1).maybeSingle(),
           supabase.from('profiles').select('*').order('created_at', { ascending: false }),
           supabase.from('rentals').select('*').order('created_at', { ascending: false }),
