@@ -35,8 +35,8 @@ export default function Assets() {
   const [selectedModel, setSelectedModel] = useState<string>('all')
 
   const models = useMemo(() => {
-    const uniqueModels = Array.from(new Set(inventory.map((item) => item.name)))
-    return uniqueModels.sort()
+    const uniqueItems = Array.from(new Map(inventory.map((item) => [item.name, item])).values())
+    return uniqueItems.sort((a, b) => (a.code || '').localeCompare(b.code || ''))
   }, [inventory])
 
   const handleAssetImageUpload = (e: React.ChangeEvent<HTMLInputElement>, assetId: string) => {
@@ -155,8 +155,8 @@ export default function Assets() {
             <SelectContent>
               <SelectItem value="all">Todos os modelos</SelectItem>
               {models.map((model) => (
-                <SelectItem key={model} value={model}>
-                  {model}
+                <SelectItem key={model.name} value={model.name}>
+                  ({model.code}) {model.name}
                 </SelectItem>
               ))}
             </SelectContent>

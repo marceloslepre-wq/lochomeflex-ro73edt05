@@ -516,8 +516,13 @@ export const Constants = {
 //     USING: true
 //     WITH CHECK: true
 // Table: inventory
+//   Policy "anon_insert" (INSERT, PERMISSIVE) roles={anon}
+//     WITH CHECK: true
 //   Policy "anon_select" (SELECT, PERMISSIVE) roles={anon}
 //     USING: true
+//   Policy "anon_update" (UPDATE, PERMISSIVE) roles={anon}
+//     USING: true
+//     WITH CHECK: true
 //   Policy "authenticated_all" (ALL, PERMISSIVE) roles={authenticated}
 //     USING: true
 //     WITH CHECK: true
@@ -530,6 +535,8 @@ export const Constants = {
 //     USING: true
 //     WITH CHECK: true
 // Table: settings
+//   Policy "anon_select" (SELECT, PERMISSIVE) roles={anon}
+//     USING: true
 //   Policy "authenticated_all" (ALL, PERMISSIVE) roles={authenticated}
 //     USING: true
 //     WITH CHECK: true
@@ -622,6 +629,7 @@ export const Constants = {
 //   CREATE OR REPLACE FUNCTION public.set_customer_matricula()
 //    RETURNS trigger
 //    LANGUAGE plpgsql
+//    SECURITY DEFINER
 //   AS $function$
 //   DECLARE
 //     next_val INT;

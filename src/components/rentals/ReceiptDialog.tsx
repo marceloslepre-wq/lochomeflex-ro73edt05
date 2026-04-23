@@ -48,11 +48,18 @@ export function ReceiptDialog({
     text += `*Locatário:* ${customer?.name || 'Cliente'}\n`
     text += `*Contrato ${type === 'renewal' ? 'Original' : ''}:* ${rental.contractNumber || rental.id}\n\n`
 
+    const regularItems = rental.items.filter((ri) => ri.itemId !== 'freight')
+    const freightItem = rental.items.find((ri) => ri.itemId === 'freight')
+
     text += `*Equipamentos:*\n`
-    rental.items.forEach((ri) => {
+    regularItems.forEach((ri) => {
       const item = inventory.find((i) => i.id === ri.itemId)
       text += `- ${ri.qty}x ${item?.name || 'Item'} (SKU: ${item?.code || '-'}) ${ri.startDate && ri.endDate ? `(${new Date(ri.startDate).toLocaleDateString('pt-BR')} a ${new Date(ri.endDate).toLocaleDateString('pt-BR')})` : ''}\n`
     })
+
+    if (freightItem && freightItem.totalPrice) {
+      text += `\n*Frete:* R$ ${freightItem.totalPrice.toFixed(2)}\n`
+    }
 
     text += `\n*Período Geral:* `
     if (type === 'renewal' && renewalInfo) {
@@ -207,22 +214,32 @@ export function ReceiptDialog({
           <div className="border-t border-b py-2 mb-4">
             <span className="font-semibold">Equipamentos:</span>
             <ul className="mt-1 space-y-1">
-              {rental.items.map((ri, idx) => {
-                const item = inventory.find((i) => i.id === ri.itemId)
-                return (
-                  <li key={idx} className="flex flex-col">
-                    <span>
-                      {ri.qty}x {item?.name} (SKU: {item?.code || '-'})
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {ri.startDate && ri.endDate
-                        ? `De ${new Date(ri.startDate).toLocaleDateString('pt-BR')} até ${new Date(ri.endDate).toLocaleDateString('pt-BR')}`
-                        : ''}
-                    </span>
-                  </li>
-                )
-              })}
+              {rental.items
+                .filter((ri) => ri.itemId !== 'freight')
+                .map((ri, idx) => {
+                  const item = inventory.find((i) => i.id === ri.itemId)
+                  return (
+                    <li key={idx} className="flex flex-col">
+                      <span>
+                        {ri.qty}x {item?.name} (SKU: {item?.code || '-'})
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {ri.startDate && ri.endDate
+                          ? `De ${new Date(ri.startDate).toLocaleDateString('pt-BR')} até ${new Date(ri.endDate).toLocaleDateString('pt-BR')}`
+                          : ''}
+                      </span>
+                    </li>
+                  )
+                })}
             </ul>
+            {rental.items.find((ri) => ri.itemId === 'freight') && (
+              <div className="mt-2 pt-2 border-t border-dashed flex justify-between">
+                <span className="font-semibold">Frete:</span>
+                <span>
+                  R$ {rental.items.find((ri) => ri.itemId === 'freight')?.totalPrice?.toFixed(2)}
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="space-y-1">

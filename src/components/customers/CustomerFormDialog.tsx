@@ -343,6 +343,15 @@ export function CustomerFormDialog({
                   {formData.hasDifferentDeliveryAddress && (
                     <div className="grid gap-4 pl-6 border-l-2 border-muted mt-2">
                       <div className="grid gap-2">
+                        <Label>CEP:</Label>
+                        <Input
+                          value={formData.deliveryAddress?.zipCode || ''}
+                          onChange={(e) => updateAddress('zipCode', e.target.value, true)}
+                          onBlur={(e) => fetchCep(e.target.value, true)}
+                          placeholder="Apenas números"
+                        />
+                      </div>
+                      <div className="grid gap-2">
                         <Label>Endereço:</Label>
                         <Input
                           value={formData.deliveryAddress?.street || ''}
@@ -368,13 +377,6 @@ export function CustomerFormDialog({
                         <Input
                           value={formData.deliveryAddress?.state || ''}
                           onChange={(e) => updateAddress('state', e.target.value, true)}
-                        />
-                      </div>
-                      <div className="grid gap-2">
-                        <Label>CEP:</Label>
-                        <Input
-                          value={formData.deliveryAddress?.zipCode || ''}
-                          onChange={(e) => updateAddress('zipCode', e.target.value, true)}
                         />
                       </div>
                     </div>

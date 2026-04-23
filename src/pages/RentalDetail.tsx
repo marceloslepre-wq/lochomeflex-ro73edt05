@@ -63,11 +63,18 @@ export default function RentalDetail() {
 
     text += `1 - Pelo presente instrumento o locador aluga à locatária o(s) equipamento(s) abaixo discriminado(s), e se obriga a locá-lo(s) nas condições estabelecidas neste contrato: “${rental.contractNumber || rental.id}”\n\n`
 
+    const regularItems = rental.items.filter((ri) => ri.itemId !== 'freight')
+    const freightItem = rental.items.find((ri) => ri.itemId === 'freight')
+
     text += `2 - PREÇO E PRAZO DE LOCAÇÃO:\n`
-    rental.items.forEach((ri) => {
+    regularItems.forEach((ri) => {
       const item = inventory.find((i) => i.id === ri.itemId)
       text += `   • ${ri.qty}x - ${item?.name} (Código: ${item?.code || '-'}) (Retirada: ${new Date(ri.startDate || rental.startDate).toLocaleDateString('pt-BR')} | Devolução: ${new Date(ri.endDate || rental.expectedReturnDate).toLocaleDateString('pt-BR')} | Valor: R$ ${(ri.totalPrice || 0).toFixed(2)})\n`
     })
+
+    if (freightItem && freightItem.totalPrice) {
+      text += `   • Frete: R$ ${freightItem.totalPrice.toFixed(2)}\n`
+    }
 
     text += `\n2.1 - O locador compromete a manter no endereço informado no momento da locação responsável para receber o equipamento locado, esse deverá assinar o recibo de entrega no momento da entrega pela transportadora ou em loja física se for o caso.\n`
     text += `2.2 - No primeiro dia após o termino do prazo do contrato de locação a locatária deverá entrar em sua conta no site do locador e solicitar renovação ou cancelamento com recolhimento do(s) produto(s) ora locado(s), ou se preferir entrar em contato no Telefone: (0xx27)3026-3300 ou email: aluguel@hospitalhome.com.br, para efetuar a renovação do aluguel e pagamento do mês seguinte dentro da vigência do contrato.\n`
@@ -179,7 +186,10 @@ export default function RentalDetail() {
       return new Date(dateStr).toLocaleDateString('pt-BR')
     }
 
-    const itemsHtml = rental.items
+    const regularItems = rental.items.filter((ri) => ri.itemId !== 'freight')
+    const freightItem = rental.items.find((ri) => ri.itemId === 'freight')
+
+    let itemsHtml = regularItems
       .map((ri) => {
         const item = inventory.find((i) => i.id === ri.itemId)
         const start = formatDate(ri.startDate || rental.startDate)
@@ -196,6 +206,13 @@ export default function RentalDetail() {
       </tr>`
       })
       .join('')
+
+    if (freightItem && freightItem.totalPrice) {
+      itemsHtml += `<tr>
+        <td colspan="5" style="border: 1px solid #000; padding: 8px; text-align: right; font-weight: bold;">Frete</td>
+        <td style="border: 1px solid #000; padding: 8px; text-align: right;">${formatCurrency(freightItem.totalPrice)}</td>
+      </tr>`
+    }
 
     return `
 <div style="font-family: Arial, sans-serif; font-size: 12pt; line-height: 1.5; color: #000; padding: 2.5cm; max-width: 21cm; margin: 0 auto; box-sizing: border-box; background: white;">
@@ -325,6 +342,7 @@ export default function RentalDetail() {
           </thead>
           <tbody>
             ${rental?.items
+              .filter((ri) => ri.itemId !== 'freight')
               .map((ri) => {
                 const item = inventory.find((i) => i.id === ri.itemId)
                 return `
@@ -379,6 +397,7 @@ export default function RentalDetail() {
           </thead>
           <tbody>
             ${rental?.items
+              .filter((ri) => ri.itemId !== 'freight')
               .map((ri) => {
                 const item = inventory.find((i) => i.id === ri.itemId)
                 return `

@@ -44,6 +44,7 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
   const [items, setItems] = useState<RentalItem[]>([])
   const [pickupLocationId, setPickupLocationId] = useState('')
   const [defaultDuration, setDefaultDuration] = useState<number | null>(null)
+  const [freight, setFreight] = useState<number>(0)
 
   const [customerOpen, setCustomerOpen] = useState(false)
   const [itemOpen, setItemOpen] = useState(false)
@@ -81,8 +82,8 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
 
   const finalTotal = useMemo(() => {
     const rawTotal = items.reduce((acc, curr) => acc + (curr.totalPrice || 0), 0)
-    return Math.round(rawTotal)
-  }, [items])
+    return Math.round(rawTotal + freight)
+  }, [items, freight])
 
   if (!can('rentals:manage')) return null
 
@@ -208,7 +209,7 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
       new Date(startDates[0] || todayStr).toLocaleDateString('pt-BR'),
     )
 
-    const itemsHtml = items
+    let itemsHtml = items
       .map((ri) => {
         const item = inventory.find((i) => i.id === ri.itemId)
         const start = new Date(ri.startDate || todayStr).toLocaleDateString('pt-BR')
@@ -225,6 +226,13 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
       </tr>`
       })
       .join('')
+
+    if (freight > 0) {
+      itemsHtml += `<tr>
+        <td colspan="5" style="border: 1px solid #000; padding: 8px; text-align: right; font-weight: bold;">Frete</td>
+        <td style="border: 1px solid #000; padding: 8px; text-align: right;">${freight.toFixed(2)}</td>
+      </tr>`
+    }
 
     html = html.replace(/{{itemsList}}/g, itemsHtml)
     return html
@@ -248,18 +256,28 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
 
     const customHtml = generateContractHtml(finalTotal)
 
+    const payloadItems = items.map((i) => ({
+      itemId: i.itemId,
+      qty: i.qty,
+      startDate: i.startDate,
+      endDate: i.endDate,
+      dailyPrice: i.dailyPrice,
+      totalPrice: i.totalPrice,
+    }))
+
+    if (freight > 0) {
+      payloadItems.push({
+        itemId: 'freight',
+        qty: 1,
+        totalPrice: freight,
+      } as any)
+    }
+
     const createdRental = await addRental({
       id: newId,
       customerId,
       pickupLocationId,
-      items: items.map((i) => ({
-        itemId: i.itemId,
-        qty: i.qty,
-        startDate: i.startDate,
-        endDate: i.endDate,
-        dailyPrice: i.dailyPrice,
-        totalPrice: i.totalPrice,
-      })),
+      items: payloadItems,
       startDate: startDates[0],
       expectedReturnDate: endDates[endDates.length - 1],
       status: 'Ativo',
@@ -509,7 +527,21 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
             )}
           </div>
 
-          <div className="flex justify-end items-center mt-4 border-t pt-4">
+          <div className="flex flex-col sm:flex-row justify-between items-center mt-4 border-t pt-4 gap-4">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="freight" className="text-base whitespace-nowrap">
+                Frete (R$):
+              </Label>
+              <Input
+                id="freight"
+                type="number"
+                min="0"
+                step="0.01"
+                value={freight || ''}
+                onChange={(e) => setFreight(parseFloat(e.target.value) || 0)}
+                className="w-32"
+              />
+            </div>
             <div className="text-right">
               <span className="text-sm text-muted-foreground mr-4">Total Arredondado:</span>
               <span className="text-2xl font-bold">R$ {finalTotal.toFixed(2)}</span>
