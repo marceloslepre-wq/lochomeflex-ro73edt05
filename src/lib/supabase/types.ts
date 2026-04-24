@@ -114,6 +114,50 @@ export type Database = {
         }
         Relationships: []
       }
+      patrimonio: {
+        Row: {
+          created_at: string
+          data_aquisicao: string | null
+          estado: string | null
+          id: string
+          inventory_id: string
+          localizacao: string | null
+          numero_patrimonio: string
+          observacoes: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data_aquisicao?: string | null
+          estado?: string | null
+          id?: string
+          inventory_id: string
+          localizacao?: string | null
+          numero_patrimonio: string
+          observacoes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data_aquisicao?: string | null
+          estado?: string | null
+          id?: string
+          inventory_id?: string
+          localizacao?: string | null
+          numero_patrimonio?: string
+          observacoes?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'patrimonio_inventory_id_fkey'
+            columns: ['inventory_id']
+            isOneToOne: false
+            referencedRelation: 'inventory'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       profiles: {
         Row: {
           active: boolean
@@ -445,6 +489,16 @@ export const Constants = {
 //   monthly_price: numeric (nullable, default: 0)
 //   daily_price: numeric (nullable, default: 0)
 //   assets: jsonb (nullable, default: '[]'::jsonb)
+// Table: patrimonio
+//   id: uuid (not null, default: gen_random_uuid())
+//   inventory_id: uuid (not null)
+//   numero_patrimonio: text (not null)
+//   data_aquisicao: date (nullable)
+//   estado: text (nullable)
+//   localizacao: text (nullable)
+//   observacoes: text (nullable)
+//   created_at: timestamp with time zone (not null, default: now())
+//   updated_at: timestamp with time zone (not null, default: now())
 // Table: profiles
 //   id: uuid (not null, default: gen_random_uuid())
 //   auth_user_id: uuid (nullable)
@@ -490,6 +544,11 @@ export const Constants = {
 //   PRIMARY KEY customers_pkey: PRIMARY KEY (id)
 // Table: inventory
 //   PRIMARY KEY inventory_pkey: PRIMARY KEY (id)
+// Table: patrimonio
+//   CHECK patrimonio_estado_check: CHECK ((estado = ANY (ARRAY['novo'::text, 'bom'::text, 'regular'::text, 'ruim'::text])))
+//   FOREIGN KEY patrimonio_inventory_id_fkey: FOREIGN KEY (inventory_id) REFERENCES inventory(id) ON DELETE CASCADE
+//   UNIQUE patrimonio_numero_patrimonio_key: UNIQUE (numero_patrimonio)
+//   PRIMARY KEY patrimonio_pkey: PRIMARY KEY (id)
 // Table: profiles
 //   FOREIGN KEY profiles_auth_user_id_fkey: FOREIGN KEY (auth_user_id) REFERENCES auth.users(id) ON DELETE CASCADE
 //   PRIMARY KEY profiles_pkey: PRIMARY KEY (id)
@@ -523,6 +582,12 @@ export const Constants = {
 //   Policy "anon_update" (UPDATE, PERMISSIVE) roles={anon}
 //     USING: true
 //     WITH CHECK: true
+//   Policy "authenticated_all" (ALL, PERMISSIVE) roles={authenticated}
+//     USING: true
+//     WITH CHECK: true
+// Table: patrimonio
+//   Policy "anon_select" (SELECT, PERMISSIVE) roles={anon}
+//     USING: true
 //   Policy "authenticated_all" (ALL, PERMISSIVE) roles={authenticated}
 //     USING: true
 //     WITH CHECK: true
@@ -649,11 +714,28 @@ export const Constants = {
 //   END;
 //   $function$
 //
+// FUNCTION update_patrimonio_updated_at()
+//   CREATE OR REPLACE FUNCTION public.update_patrimonio_updated_at()
+//    RETURNS trigger
+//    LANGUAGE plpgsql
+//   AS $function$
+//   BEGIN
+//       NEW.updated_at = NOW();
+//       RETURN NEW;
+//   END;
+//   $function$
+//
 
 // --- TRIGGERS ---
 // Table: customers
 //   trg_set_customer_matricula: CREATE TRIGGER trg_set_customer_matricula BEFORE INSERT ON public.customers FOR EACH ROW EXECUTE FUNCTION set_customer_matricula()
+// Table: patrimonio
+//   update_patrimonio_updated_at: CREATE TRIGGER update_patrimonio_updated_at BEFORE UPDATE ON public.patrimonio FOR EACH ROW EXECUTE FUNCTION update_patrimonio_updated_at()
 // Table: profiles
 //   on_profile_created: CREATE TRIGGER on_profile_created BEFORE INSERT ON public.profiles FOR EACH ROW EXECUTE FUNCTION handle_new_profile()
 // Table: rentals
 //   trg_set_contract_number: CREATE TRIGGER trg_set_contract_number BEFORE INSERT ON public.rentals FOR EACH ROW EXECUTE FUNCTION set_contract_number()
+
+// --- INDEXES ---
+// Table: patrimonio
+//   CREATE UNIQUE INDEX patrimonio_numero_patrimonio_key ON public.patrimonio USING btree (numero_patrimonio)

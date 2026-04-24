@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react'
-import useMainStore, { Asset, InventoryItem } from '@/stores/main'
+import { useState, useMemo, useEffect, useRef } from 'react'
+import useMainStore, { InventoryItem } from '@/stores/main'
 import { Card, CardContent } from '@/components/ui/card'
 import {
   Table,
@@ -10,7 +10,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Plus, Trash2, Upload, Briefcase } from 'lucide-react'
+import { Plus, Trash2, Briefcase } from 'lucide-react'
 import { ShareAssetLinkDialog } from '@/components/assets/ShareAssetLinkDialog'
 import {
   Select,
@@ -28,6 +28,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { supabase } from '@/lib/supabase/client'
 
 export default function Assets() {
   const { inventory, updateInventoryItem } = useMainStore()
@@ -39,85 +40,155 @@ export default function Assets() {
     return uniqueItems.sort((a, b) => (a.code || '').localeCompare(b.code || ''))
   }, [inventory])
 
-  const handleAssetImageUpload = (e: React.ChangeEvent<HTMLInputElement>, assetId: string) => {
-    if (!selectedItem) return
-    const file = e.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        const newAssets = (selectedItem.assets || []).map((a) =>
-          a.id === assetId ? { ...a, image: reader.result as string } : a,
-        )
-        updateInventoryItem(selectedItem.id, { assets: newAssets })
-        setSelectedItem({ ...selectedItem, assets: newAssets })
+  // Flag/Ref para evitar múltiplas chamadas e dependência correta []
+  const fetchedAllRef = useRef(false)
+  const [allPatrimonios, setAllPatrimonios] = useState<
+    { id: string; inventory_id: string; numero_patrimonio: string }[]
+  >([])
+
+  useEffect(() => {
+    if (fetchedAllRef.current) return
+    fetchedAllRef.current = true
+
+    const fetchAll = async () => {
+      const { data } = await supabase
+        .from('patrimonio')
+        .select('id, inventory_id, numero_patrimonio')
+      if (data) {
+        setAllPatrimonios(data)
       }
-      reader.readAsDataURL(file)
+    }
+    fetchAll()
+  }, [])
+
+  const patrimonioCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    allPatrimonios.forEach((p) => {
+      counts[p.inventory_id] = (counts[p.inventory_id] || 0) + 1
+    })
+    return counts
+  }, [allPatrimonios])
+
+  // Estado local para o lazy load da aba Gerenciar
+  const [patrimonios, setPatrimonios] = useState<any[]>([])
+  const [loadingAssets, setLoadingAssets] = useState(false)
+  const loadedIdRef = useRef<string | null>(null)
+
+  // UseEffect com dependência correta [selectedItem?.id] e validação (evita loop infinito)
+  useEffect(() => {
+    if (selectedItem?.id && loadedIdRef.current !== selectedItem.id) {
+      loadedIdRef.current = selectedItem.id
+      setLoadingAssets(true)
+
+      const fetchPatrimonios = async () => {
+        const { data, error } = await supabase
+          .from('patrimonio')
+          .select('*')
+          .eq('inventory_id', selectedItem.id)
+          .order('created_at', { ascending: true })
+
+        if (!error && data) {
+          setPatrimonios(data)
+        }
+        setLoadingAssets(false)
+      }
+
+      fetchPatrimonios()
+    } else if (!selectedItem) {
+      loadedIdRef.current = null
+      setPatrimonios([])
+    }
+  }, [selectedItem?.id])
+
+  const addAsset = async () => {
+    if (!selectedItem) return
+    const novoNumero = `PAT-${Math.floor(Math.random() * 10000)}`
+
+    const { data, error } = await supabase
+      .from('patrimonio')
+      .insert({
+        inventory_id: selectedItem.id,
+        numero_patrimonio: novoNumero,
+        estado: 'novo',
+        data_aquisicao: new Date().toISOString().split('T')[0],
+      })
+      .select()
+      .single()
+
+    if (!error && data) {
+      setPatrimonios([...patrimonios, data])
+      setAllPatrimonios([
+        ...allPatrimonios,
+        { id: data.id, inventory_id: data.inventory_id, numero_patrimonio: data.numero_patrimonio },
+      ])
+
+      const newTotal = selectedItem.totalQty + 1
+      const newAvail = selectedItem.availableQty + 1
+
+      updateInventoryItem(selectedItem.id, {
+        totalQty: newTotal,
+        availableQty: newAvail,
+      })
+
+      setSelectedItem({
+        ...selectedItem,
+        totalQty: newTotal,
+        availableQty: newAvail,
+      })
     }
   }
 
-  const addAsset = () => {
+  const removeAsset = async (id: string) => {
     if (!selectedItem) return
-    const newAsset: any = {
-      id: Math.random().toString(),
-      assetNumber: `PAT-${Math.floor(Math.random() * 10000)}`,
-      conditionStatus: 'Disponível',
-      acquisitionDate: new Date().toISOString().split('T')[0],
+    const { error } = await supabase.from('patrimonio').delete().eq('id', id)
+
+    if (!error) {
+      setPatrimonios(patrimonios.filter((p) => p.id !== id))
+      setAllPatrimonios(allPatrimonios.filter((p) => p.id !== id))
+
+      const newTotal = Math.max(0, selectedItem.totalQty - 1)
+      const newAvail = Math.max(0, selectedItem.availableQty - 1)
+
+      updateInventoryItem(selectedItem.id, {
+        totalQty: newTotal,
+        availableQty: newAvail,
+      })
+
+      setSelectedItem({
+        ...selectedItem,
+        totalQty: newTotal,
+        availableQty: newAvail,
+      })
     }
-    const newAssets = [...(selectedItem.assets || []), newAsset]
-    updateInventoryItem(selectedItem.id, {
-      assets: newAssets,
-      totalQty: selectedItem.totalQty + 1,
-      availableQty: selectedItem.availableQty + 1,
-    })
-    setSelectedItem({
-      ...selectedItem,
-      assets: newAssets,
-      totalQty: selectedItem.totalQty + 1,
-      availableQty: selectedItem.availableQty + 1,
-    })
   }
 
-  const removeAsset = (id: string) => {
-    if (!selectedItem) return
-    const newAssets = (selectedItem.assets || []).filter((a) => a.id !== id)
-    updateInventoryItem(selectedItem.id, {
-      assets: newAssets,
-      totalQty: Math.max(0, selectedItem.totalQty - 1),
-      availableQty: Math.max(0, selectedItem.availableQty - 1),
-    })
-    setSelectedItem({
-      ...selectedItem,
-      assets: newAssets,
-      totalQty: Math.max(0, selectedItem.totalQty - 1),
-      availableQty: Math.max(0, selectedItem.availableQty - 1),
-    })
+  const updateAssetStatus = async (id: string, status: string) => {
+    setPatrimonios(patrimonios.map((p) => (p.id === id ? { ...p, estado: status } : p)))
+    await supabase.from('patrimonio').update({ estado: status }).eq('id', id)
   }
 
-  const updateAssetStatus = (id: string, status: any) => {
-    if (!selectedItem) return
-    const newAssets = (selectedItem.assets || []).map((a) =>
-      a.id === id ? { ...a, conditionStatus: status } : a,
+  const handleAssetNumberChange = (id: string, number: string) => {
+    setPatrimonios(patrimonios.map((p) => (p.id === id ? { ...p, numero_patrimonio: number } : p)))
+  }
+
+  const handleAssetNumberBlur = async (id: string, number: string) => {
+    await supabase.from('patrimonio').update({ numero_patrimonio: number }).eq('id', id)
+    setAllPatrimonios(
+      allPatrimonios.map((p) => (p.id === id ? { ...p, numero_patrimonio: number } : p)),
     )
-    updateInventoryItem(selectedItem.id, { assets: newAssets })
-    setSelectedItem({ ...selectedItem, assets: newAssets })
   }
 
-  const updateAssetNumber = (id: string, number: string) => {
-    if (!selectedItem) return
-    const newAssets = (selectedItem.assets || []).map((a) =>
-      a.id === id ? { ...a, assetNumber: number } : a,
-    )
-    updateInventoryItem(selectedItem.id, { assets: newAssets })
-    setSelectedItem({ ...selectedItem, assets: newAssets })
+  const updateAssetAcquisitionDate = async (id: string, date: string) => {
+    setPatrimonios(patrimonios.map((p) => (p.id === id ? { ...p, data_aquisicao: date } : p)))
+    await supabase.from('patrimonio').update({ data_aquisicao: date }).eq('id', id)
   }
 
-  const updateAssetAcquisitionDate = (id: string, date: string) => {
-    if (!selectedItem) return
-    const newAssets = (selectedItem.assets || []).map((a: any) =>
-      a.id === id ? { ...a, acquisitionDate: date } : a,
-    )
-    updateInventoryItem(selectedItem.id, { assets: newAssets })
-    setSelectedItem({ ...selectedItem, assets: newAssets })
+  const handleLocationChange = (id: string, loc: string) => {
+    setPatrimonios(patrimonios.map((p) => (p.id === id ? { ...p, localizacao: loc } : p)))
+  }
+
+  const handleLocationBlur = async (id: string, loc: string) => {
+    await supabase.from('patrimonio').update({ localizacao: loc }).eq('id', id)
   }
 
   const [assetSearch, setAssetSearch] = useState('')
@@ -126,7 +197,11 @@ export default function Assets() {
     const matchesModel = selectedModel === 'all' || item.name === selectedModel
     if (assetSearch) {
       const searchLower = assetSearch.toLowerCase()
-      return item.assets?.some((a) => (a.assetNumber || '').toLowerCase().includes(searchLower))
+      const itemPatrimonios = allPatrimonios.filter((p) => p.inventory_id === item.id)
+      return (
+        matchesModel &&
+        itemPatrimonios.some((p) => (p.numero_patrimonio || '').toLowerCase().includes(searchLower))
+      )
     }
     return matchesModel
   })
@@ -183,7 +258,7 @@ export default function Assets() {
                   <TableCell className="font-medium">{item.name}</TableCell>
                   <TableCell>{item.category}</TableCell>
                   <TableCell className="text-center">{item.totalQty}</TableCell>
-                  <TableCell className="text-center">{item.assets?.length || 0}</TableCell>
+                  <TableCell className="text-center">{patrimonioCounts[item.id] || 0}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
                       <Dialog
@@ -203,9 +278,7 @@ export default function Assets() {
                               <DialogTitle>Patrimônios: {selectedItem.name}</DialogTitle>
                             </DialogHeader>
                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 mt-2 gap-4">
-                              <div className="flex items-center gap-2">
-                                {/* Links movidos para a tabela principal */}
-                              </div>
+                              <div className="flex items-center gap-2"></div>
                               <Button size="sm" onClick={addAsset}>
                                 <Plus className="w-4 h-4 mr-2" /> Adicionar Unidade
                               </Button>
@@ -214,15 +287,24 @@ export default function Assets() {
                               <Table>
                                 <TableHeader>
                                   <TableRow>
-                                    <TableHead className="w-16">Foto</TableHead>
                                     <TableHead>Nº Patrimônio</TableHead>
                                     <TableHead>Data Aquisição</TableHead>
+                                    <TableHead>Localização</TableHead>
                                     <TableHead>Estado</TableHead>
                                     <TableHead className="text-right">Ação</TableHead>
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                  {!selectedItem.assets || selectedItem.assets.length === 0 ? (
+                                  {loadingAssets ? (
+                                    <TableRow>
+                                      <TableCell
+                                        colSpan={5}
+                                        className="text-center py-8 text-muted-foreground"
+                                      >
+                                        Carregando patrimônios...
+                                      </TableCell>
+                                    </TableRow>
+                                  ) : patrimonios.length === 0 ? (
                                     <TableRow>
                                       <TableCell
                                         colSpan={5}
@@ -232,35 +314,16 @@ export default function Assets() {
                                       </TableCell>
                                     </TableRow>
                                   ) : (
-                                    selectedItem.assets.map((asset) => (
+                                    patrimonios.map((asset) => (
                                       <TableRow key={asset.id}>
                                         <TableCell>
-                                          <div className="relative group w-10 h-10 rounded border overflow-hidden">
-                                            {asset.image ? (
-                                              <img
-                                                src={asset.image}
-                                                alt="Asset"
-                                                className="w-full h-full object-cover"
-                                              />
-                                            ) : (
-                                              <div className="w-full h-full bg-muted flex items-center justify-center text-muted-foreground">
-                                                <Upload className="w-4 h-4" />
-                                              </div>
-                                            )}
-                                            <input
-                                              type="file"
-                                              title="Atualizar Foto"
-                                              className="absolute inset-0 opacity-0 cursor-pointer"
-                                              accept="image/*"
-                                              onChange={(e) => handleAssetImageUpload(e, asset.id)}
-                                            />
-                                          </div>
-                                        </TableCell>
-                                        <TableCell>
                                           <Input
-                                            value={asset.assetNumber}
+                                            value={asset.numero_patrimonio || ''}
                                             onChange={(e) =>
-                                              updateAssetNumber(asset.id, e.target.value)
+                                              handleAssetNumberChange(asset.id, e.target.value)
+                                            }
+                                            onBlur={(e) =>
+                                              handleAssetNumberBlur(asset.id, e.target.value)
                                             }
                                             className="h-8"
                                           />
@@ -268,7 +331,7 @@ export default function Assets() {
                                         <TableCell>
                                           <Input
                                             type="date"
-                                            value={(asset as any).acquisitionDate || ''}
+                                            value={asset.data_aquisicao || ''}
                                             onChange={(e) =>
                                               updateAssetAcquisitionDate(asset.id, e.target.value)
                                             }
@@ -276,23 +339,31 @@ export default function Assets() {
                                           />
                                         </TableCell>
                                         <TableCell>
+                                          <Input
+                                            value={asset.localizacao || ''}
+                                            onChange={(e) =>
+                                              handleLocationChange(asset.id, e.target.value)
+                                            }
+                                            onBlur={(e) =>
+                                              handleLocationBlur(asset.id, e.target.value)
+                                            }
+                                            className="h-8 text-xs"
+                                            placeholder="Ex: Prateleira A"
+                                          />
+                                        </TableCell>
+                                        <TableCell>
                                           <Select
-                                            value={asset.conditionStatus}
+                                            value={asset.estado || 'novo'}
                                             onValueChange={(v) => updateAssetStatus(asset.id, v)}
                                           >
                                             <SelectTrigger className="h-8 w-[130px]">
                                               <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
-                                              <SelectItem value="Disponível">Disponível</SelectItem>
-                                              <SelectItem value="Manutenção">
-                                                Em Manutenção
-                                              </SelectItem>
-                                              <SelectItem value="Indisponível">
-                                                Indisponível
-                                              </SelectItem>
-                                              <SelectItem value="Vendido">Vendido</SelectItem>
-                                              <SelectItem value="Esgotado">Esgotado</SelectItem>
+                                              <SelectItem value="novo">Novo</SelectItem>
+                                              <SelectItem value="bom">Bom</SelectItem>
+                                              <SelectItem value="regular">Regular</SelectItem>
+                                              <SelectItem value="ruim">Ruim</SelectItem>
                                             </SelectContent>
                                           </Select>
                                         </TableCell>
