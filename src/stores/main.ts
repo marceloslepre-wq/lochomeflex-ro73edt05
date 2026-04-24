@@ -151,11 +151,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const loadItemAssets = async (id: string): Promise<Asset[]> => {
     try {
-      const { data, error } = await supabase.from('inventory').select('*').eq('id', id).single()
+      const { data, error } = await supabase.from('patrimonio').select('*').eq('inventory_id', id)
 
       if (error) throw error
 
-      const fetchedAssets = data?.assets || []
+      const fetchedAssets: Asset[] = (data || []).map((p: any) => ({
+        id: p.id,
+        assetNumber: p.numero_patrimonio,
+        conditionStatus:
+          p.estado === 'novo' || p.estado === 'bom'
+            ? 'Disponível'
+            : p.estado === 'regular'
+              ? 'Manutenção'
+              : 'Indisponível',
+      }))
 
       setInventory((prev) => prev.map((i) => (i.id === id ? { ...i, assets: fetchedAssets } : i)))
 

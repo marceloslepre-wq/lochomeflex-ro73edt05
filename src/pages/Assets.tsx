@@ -30,6 +30,16 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { supabase } from '@/lib/supabase/client'
 
+export type Patrimonio = {
+  id: string
+  inventory_id: string
+  numero_patrimonio: string
+  data_aquisicao: string | null
+  estado: string | null
+  localizacao: string | null
+  observacoes: string | null
+}
+
 export default function Assets() {
   const { inventory, updateInventoryItem } = useMainStore()
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null)
@@ -70,7 +80,7 @@ export default function Assets() {
   }, [allPatrimonios])
 
   // Estado local para o lazy load da aba Gerenciar
-  const [patrimonios, setPatrimonios] = useState<any[]>([])
+  const [patrimonios, setPatrimonios] = useState<Patrimonio[]>([])
   const [loadingAssets, setLoadingAssets] = useState(false)
   const loadedIdRef = useRef<string | null>(null)
 
@@ -88,7 +98,7 @@ export default function Assets() {
           .order('created_at', { ascending: true })
 
         if (!error && data) {
-          setPatrimonios(data)
+          setPatrimonios(data as Patrimonio[])
         }
         setLoadingAssets(false)
       }
@@ -116,7 +126,7 @@ export default function Assets() {
       .single()
 
     if (!error && data) {
-      setPatrimonios([...patrimonios, data])
+      setPatrimonios([...patrimonios, data as Patrimonio])
       setAllPatrimonios([
         ...allPatrimonios,
         { id: data.id, inventory_id: data.inventory_id, numero_patrimonio: data.numero_patrimonio },
