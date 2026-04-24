@@ -117,6 +117,7 @@ interface MainStore {
   deleteUser: (id: string) => void
   refreshCustomers: () => void
   deleteRental: (id: string) => Promise<void>
+  loadItemAssets: (id: string) => Promise<Asset[]>
 }
 
 const StoreContext = createContext<MainStore | null>(null)
@@ -146,6 +147,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const refreshCustomers = () => {
     customerService.getCustomers().then(setCustomers).catch(console.error)
+  }
+
+  const loadItemAssets = async (id: string): Promise<Asset[]> => {
+    try {
+      const { data, error } = await supabase.from('inventory').select('*').eq('id', id).single()
+
+      if (error) throw error
+
+      const fetchedAssets = data?.assets || []
+
+      setInventory((prev) => prev.map((i) => (i.id === id ? { ...i, assets: fetchedAssets } : i)))
+
+      return fetchedAssets
+    } catch (err) {
+      console.error('Error fetching assets:', err)
+      return []
+    }
   }
 
   useEffect(() => {
@@ -590,6 +608,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         deleteUser,
         refreshCustomers,
         deleteRental,
+        loadItemAssets,
       },
     },
     children,
