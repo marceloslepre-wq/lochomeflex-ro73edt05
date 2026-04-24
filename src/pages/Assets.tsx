@@ -39,11 +39,13 @@ export type Patrimonio = {
   estado: string | null
   localizacao: string | null
   observacoes: string | null
+  fornecedor?: string | null
 }
 
 export default function Assets() {
   const { toast } = useToast()
-  const { inventory, updateInventoryItem } = useMainStore()
+  const { inventory, updateInventoryItem, settings } = useMainStore()
+  const locations = settings?.locations || []
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null)
   const [selectedModel, setSelectedModel] = useState<string>('all')
 
@@ -90,6 +92,7 @@ export default function Assets() {
     data_aquisicao: new Date().toISOString().split('T')[0],
     estado: 'novo',
     localizacao: '',
+    fornecedor: '',
   })
 
   useEffect(() => {
@@ -125,6 +128,7 @@ export default function Assets() {
       data_aquisicao: new Date().toISOString().split('T')[0],
       estado: 'novo',
       localizacao: '',
+      fornecedor: '',
     })
     setIsAdding(true)
   }
@@ -148,7 +152,8 @@ export default function Assets() {
         estado: newAsset.estado,
         data_aquisicao: newAsset.data_aquisicao,
         localizacao: newAsset.localizacao || null,
-      })
+        fornecedor: newAsset.fornecedor || null,
+      } as any)
       .select()
       .single()
 
@@ -292,16 +297,31 @@ export default function Assets() {
     }
   }
 
-  const handleLocationChange = (id: string, loc: string) => {
+  const handleLocationChangeAndSave = async (id: string, loc: string) => {
     setPatrimonios(patrimonios.map((p) => (p.id === id ? { ...p, localizacao: loc } : p)))
-  }
-
-  const handleLocationBlur = async (id: string, loc: string) => {
     const { error } = await supabase.from('patrimonio').update({ localizacao: loc }).eq('id', id)
     if (error) {
       toast({
         title: 'Erro',
         description: 'Erro ao atualizar localização.',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const handleFornecedorChange = (id: string, fornecedor: string) => {
+    setPatrimonios(patrimonios.map((p) => (p.id === id ? { ...p, fornecedor } : p)))
+  }
+
+  const handleFornecedorBlur = async (id: string, fornecedor: string) => {
+    const { error } = await supabase
+      .from('patrimonio')
+      .update({ fornecedor } as any)
+      .eq('id', id)
+    if (error) {
+      toast({
+        title: 'Erro',
+        description: 'Erro ao atualizar fornecedor.',
         variant: 'destructive',
       })
     }
@@ -408,6 +428,7 @@ export default function Assets() {
                                   <TableRow>
                                     <TableHead>Nº Patrimônio</TableHead>
                                     <TableHead>Data Aquisição</TableHead>
+                                    <TableHead>Fornecedor</TableHead>
                                     <TableHead>Localização</TableHead>
                                     <TableHead>Estado</TableHead>
                                     <TableHead className="text-right">Ação</TableHead>
@@ -417,7 +438,7 @@ export default function Assets() {
                                   {loadingAssets ? (
                                     <TableRow>
                                       <TableCell
-                                        colSpan={5}
+                                        colSpan={6}
                                         className="text-center py-8 text-muted-foreground"
                                       >
                                         Carregando patrimônios...
@@ -456,16 +477,35 @@ export default function Assets() {
                                           </TableCell>
                                           <TableCell>
                                             <Input
-                                              value={newAsset.localizacao || ''}
+                                              value={newAsset.fornecedor || ''}
                                               onChange={(e) =>
                                                 setNewAsset({
                                                   ...newAsset,
-                                                  localizacao: e.target.value,
+                                                  fornecedor: e.target.value,
                                                 })
                                               }
                                               className="h-8 text-xs"
-                                              placeholder="Ex: Prateleira A"
+                                              placeholder="Fornecedor..."
                                             />
+                                          </TableCell>
+                                          <TableCell>
+                                            <Select
+                                              value={newAsset.localizacao || ''}
+                                              onValueChange={(v) =>
+                                                setNewAsset({ ...newAsset, localizacao: v })
+                                              }
+                                            >
+                                              <SelectTrigger className="h-8 w-[130px] text-xs">
+                                                <SelectValue placeholder="Local..." />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                {locations.map((loc: any) => (
+                                                  <SelectItem key={loc.id} value={loc.name}>
+                                                    {loc.name}
+                                                  </SelectItem>
+                                                ))}
+                                              </SelectContent>
+                                            </Select>
                                           </TableCell>
                                           <TableCell>
                                             <Select
@@ -512,7 +552,7 @@ export default function Assets() {
                                       {!isAdding && patrimonios.length === 0 ? (
                                         <TableRow>
                                           <TableCell
-                                            colSpan={5}
+                                            colSpan={6}
                                             className="text-center py-8 text-muted-foreground"
                                           >
                                             Nenhum patrimônio cadastrado.
@@ -548,16 +588,35 @@ export default function Assets() {
                                             </TableCell>
                                             <TableCell>
                                               <Input
-                                                value={asset.localizacao || ''}
+                                                value={asset.fornecedor || ''}
                                                 onChange={(e) =>
-                                                  handleLocationChange(asset.id, e.target.value)
+                                                  handleFornecedorChange(asset.id, e.target.value)
                                                 }
                                                 onBlur={(e) =>
-                                                  handleLocationBlur(asset.id, e.target.value)
+                                                  handleFornecedorBlur(asset.id, e.target.value)
                                                 }
                                                 className="h-8 text-xs"
-                                                placeholder="Ex: Prateleira A"
+                                                placeholder="Fornecedor..."
                                               />
+                                            </TableCell>
+                                            <TableCell>
+                                              <Select
+                                                value={asset.localizacao || ''}
+                                                onValueChange={(v) =>
+                                                  handleLocationChangeAndSave(asset.id, v)
+                                                }
+                                              >
+                                                <SelectTrigger className="h-8 w-[130px] text-xs">
+                                                  <SelectValue placeholder="Local..." />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                  {locations.map((loc: any) => (
+                                                    <SelectItem key={loc.id} value={loc.name}>
+                                                      {loc.name}
+                                                    </SelectItem>
+                                                  ))}
+                                                </SelectContent>
+                                              </Select>
                                             </TableCell>
                                             <TableCell>
                                               <Select
