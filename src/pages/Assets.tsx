@@ -10,7 +10,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Plus, Trash2, Briefcase } from 'lucide-react'
+import { Plus, Trash2, Briefcase, Save, X } from 'lucide-react'
 import { ShareAssetLinkDialog } from '@/components/assets/ShareAssetLinkDialog'
 import {
   Select,
@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { supabase } from '@/lib/supabase/client'
+import { useToast } from '@/hooks/use-toast'
 
 export type Patrimonio = {
   id: string
@@ -41,6 +42,7 @@ export type Patrimonio = {
 }
 
 export default function Assets() {
+  const { toast } = useToast()
   const { inventory, updateInventoryItem } = useMainStore()
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null)
   const [selectedModel, setSelectedModel] = useState<string>('all')
@@ -50,7 +52,6 @@ export default function Assets() {
     return uniqueItems.sort((a, b) => (a.code || '').localeCompare(b.code || ''))
   }, [inventory])
 
-  // Flag/Ref para evitar múltiplas chamadas e dependência correta []
   const fetchedAllRef = useRef(false)
   const [allPatrimonios, setAllPatrimonios] = useState<
     { id: string; inventory_id: string; numero_patrimonio: string }[]
@@ -79,16 +80,23 @@ export default function Assets() {
     return counts
   }, [allPatrimonios])
 
-  // Estado local para o lazy load da aba Gerenciar
   const [patrimonios, setPatrimonios] = useState<Patrimonio[]>([])
   const [loadingAssets, setLoadingAssets] = useState(false)
   const loadedIdRef = useRef<string | null>(null)
 
-  // UseEffect com dependência correta [selectedItem?.id] e validação (evita loop infinito)
+  const [isAdding, setIsAdding] = useState(false)
+  const [newAsset, setNewAsset] = useState<Partial<Patrimonio>>({
+    numero_patrimonio: '',
+    data_aquisicao: new Date().toISOString().split('T')[0],
+    estado: 'novo',
+    localizacao: '',
+  })
+
   useEffect(() => {
     if (selectedItem?.id && loadedIdRef.current !== selectedItem.id) {
       loadedIdRef.current = selectedItem.id
       setLoadingAssets(true)
+      setIsAdding(false)
 
       const fetchPatrimonios = async () => {
         const { data, error } = await supabase
@@ -107,30 +115,57 @@ export default function Assets() {
     } else if (!selectedItem) {
       loadedIdRef.current = null
       setPatrimonios([])
+      setIsAdding(false)
     }
   }, [selectedItem?.id])
 
-  const addAsset = async () => {
+  const handleAddClick = () => {
+    setNewAsset({
+      numero_patrimonio: '',
+      data_aquisicao: new Date().toISOString().split('T')[0],
+      estado: 'novo',
+      localizacao: '',
+    })
+    setIsAdding(true)
+  }
+
+  const handleSaveNewAsset = async () => {
     if (!selectedItem) return
-    const novoNumero = `PAT-${Math.floor(Math.random() * 10000)}`
+    if (!newAsset.numero_patrimonio?.trim() || !newAsset.data_aquisicao || !newAsset.estado) {
+      toast({
+        title: 'Atenção',
+        description: 'Preencha Nº, Data e Estado.',
+        variant: 'destructive',
+      })
+      return
+    }
 
     const { data, error } = await supabase
       .from('patrimonio')
       .insert({
         inventory_id: selectedItem.id,
-        numero_patrimonio: novoNumero,
-        estado: 'novo',
-        data_aquisicao: new Date().toISOString().split('T')[0],
+        numero_patrimonio: newAsset.numero_patrimonio.trim(),
+        estado: newAsset.estado,
+        data_aquisicao: newAsset.data_aquisicao,
+        localizacao: newAsset.localizacao || null,
       })
       .select()
       .single()
 
-    if (!error && data) {
+    if (error) {
+      toast({
+        title: 'Erro',
+        description: 'Nº do patrimônio já existe ou ocorreu um erro.',
+        variant: 'destructive',
+      })
+    } else if (data) {
+      toast({ title: 'Sucesso', description: 'Patrimônio adicionado com sucesso.' })
       setPatrimonios([...patrimonios, data as Patrimonio])
       setAllPatrimonios([
         ...allPatrimonios,
         { id: data.id, inventory_id: data.inventory_id, numero_patrimonio: data.numero_patrimonio },
       ])
+      setIsAdding(false)
 
       const newTotal = selectedItem.totalQty + 1
       const newAvail = selectedItem.availableQty + 1
@@ -139,7 +174,6 @@ export default function Assets() {
         totalQty: newTotal,
         availableQty: newAvail,
       })
-
       setSelectedItem({
         ...selectedItem,
         totalQty: newTotal,
@@ -163,18 +197,33 @@ export default function Assets() {
         totalQty: newTotal,
         availableQty: newAvail,
       })
-
       setSelectedItem({
         ...selectedItem,
         totalQty: newTotal,
         availableQty: newAvail,
       })
+      toast({ title: 'Sucesso', description: 'Patrimônio removido.' })
+    } else {
+      toast({ title: 'Erro', description: 'Erro ao remover.', variant: 'destructive' })
     }
   }
 
   const updateAssetStatus = async (id: string, status: string) => {
+    if (!status) {
+      toast({ title: 'Atenção', description: 'Estado é obrigatório.', variant: 'destructive' })
+      return
+    }
+    const previous = patrimonios.find((p) => p.id === id)?.estado
     setPatrimonios(patrimonios.map((p) => (p.id === id ? { ...p, estado: status } : p)))
-    await supabase.from('patrimonio').update({ estado: status }).eq('id', id)
+    const { error } = await supabase.from('patrimonio').update({ estado: status }).eq('id', id)
+    if (error) {
+      toast({ title: 'Erro', description: 'Erro ao atualizar estado.', variant: 'destructive' })
+      setPatrimonios(
+        patrimonios.map((p) => (p.id === id ? { ...p, estado: previous || 'novo' } : p)),
+      )
+    } else {
+      toast({ title: 'Sucesso', description: 'Estado atualizado.' })
+    }
   }
 
   const handleAssetNumberChange = (id: string, number: string) => {
@@ -182,15 +231,65 @@ export default function Assets() {
   }
 
   const handleAssetNumberBlur = async (id: string, number: string) => {
-    await supabase.from('patrimonio').update({ numero_patrimonio: number }).eq('id', id)
-    setAllPatrimonios(
-      allPatrimonios.map((p) => (p.id === id ? { ...p, numero_patrimonio: number } : p)),
-    )
+    const original = allPatrimonios.find((p) => p.id === id)?.numero_patrimonio
+    if (!number.trim()) {
+      toast({
+        title: 'Atenção',
+        description: 'Nº do patrimônio é obrigatório.',
+        variant: 'destructive',
+      })
+      if (original)
+        setPatrimonios(
+          patrimonios.map((p) => (p.id === id ? { ...p, numero_patrimonio: original } : p)),
+        )
+      return
+    }
+    if (number === original) return
+
+    const { error } = await supabase
+      .from('patrimonio')
+      .update({ numero_patrimonio: number })
+      .eq('id', id)
+    if (error) {
+      toast({
+        title: 'Erro',
+        description: 'Erro ao atualizar Nº. Pode já estar em uso.',
+        variant: 'destructive',
+      })
+      if (original)
+        setPatrimonios(
+          patrimonios.map((p) => (p.id === id ? { ...p, numero_patrimonio: original } : p)),
+        )
+    } else {
+      setAllPatrimonios(
+        allPatrimonios.map((p) => (p.id === id ? { ...p, numero_patrimonio: number } : p)),
+      )
+      toast({ title: 'Sucesso', description: 'Nº atualizado com sucesso.' })
+    }
   }
 
   const updateAssetAcquisitionDate = async (id: string, date: string) => {
-    setPatrimonios(patrimonios.map((p) => (p.id === id ? { ...p, data_aquisicao: date } : p)))
-    await supabase.from('patrimonio').update({ data_aquisicao: date }).eq('id', id)
+    if (!date) {
+      toast({
+        title: 'Atenção',
+        description: 'Data de aquisição é obrigatória.',
+        variant: 'destructive',
+      })
+      return
+    }
+    const previous = patrimonios.find((p) => p.id === id)?.data_aquisicao
+    if (date === previous) return
+
+    const { error } = await supabase
+      .from('patrimonio')
+      .update({ data_aquisicao: date })
+      .eq('id', id)
+    if (error) {
+      toast({ title: 'Erro', description: 'Erro ao atualizar data.', variant: 'destructive' })
+    } else {
+      setPatrimonios(patrimonios.map((p) => (p.id === id ? { ...p, data_aquisicao: date } : p)))
+      toast({ title: 'Sucesso', description: 'Data atualizada.' })
+    }
   }
 
   const handleLocationChange = (id: string, loc: string) => {
@@ -198,7 +297,14 @@ export default function Assets() {
   }
 
   const handleLocationBlur = async (id: string, loc: string) => {
-    await supabase.from('patrimonio').update({ localizacao: loc }).eq('id', id)
+    const { error } = await supabase.from('patrimonio').update({ localizacao: loc }).eq('id', id)
+    if (error) {
+      toast({
+        title: 'Erro',
+        description: 'Erro ao atualizar localização.',
+        variant: 'destructive',
+      })
+    }
   }
 
   const [assetSearch, setAssetSearch] = useState('')
@@ -274,7 +380,10 @@ export default function Assets() {
                       <Dialog
                         onOpenChange={(o) => {
                           if (o) setSelectedItem(item)
-                          else setSelectedItem(null)
+                          else {
+                            setSelectedItem(null)
+                            setIsAdding(false)
+                          }
                         }}
                       >
                         <DialogTrigger asChild>
@@ -289,7 +398,7 @@ export default function Assets() {
                             </DialogHeader>
                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 mt-2 gap-4">
                               <div className="flex items-center gap-2"></div>
-                              <Button size="sm" onClick={addAsset}>
+                              <Button size="sm" onClick={handleAddClick} disabled={isAdding}>
                                 <Plus className="w-4 h-4 mr-2" /> Adicionar Unidade
                               </Button>
                             </div>
@@ -314,82 +423,176 @@ export default function Assets() {
                                         Carregando patrimônios...
                                       </TableCell>
                                     </TableRow>
-                                  ) : patrimonios.length === 0 ? (
-                                    <TableRow>
-                                      <TableCell
-                                        colSpan={5}
-                                        className="text-center py-8 text-muted-foreground"
-                                      >
-                                        Nenhum patrimônio cadastrado.
-                                      </TableCell>
-                                    </TableRow>
                                   ) : (
-                                    patrimonios.map((asset) => (
-                                      <TableRow key={asset.id}>
-                                        <TableCell>
-                                          <Input
-                                            value={asset.numero_patrimonio || ''}
-                                            onChange={(e) =>
-                                              handleAssetNumberChange(asset.id, e.target.value)
-                                            }
-                                            onBlur={(e) =>
-                                              handleAssetNumberBlur(asset.id, e.target.value)
-                                            }
-                                            className="h-8"
-                                          />
-                                        </TableCell>
-                                        <TableCell>
-                                          <Input
-                                            type="date"
-                                            value={asset.data_aquisicao || ''}
-                                            onChange={(e) =>
-                                              updateAssetAcquisitionDate(asset.id, e.target.value)
-                                            }
-                                            className="h-8 text-xs"
-                                          />
-                                        </TableCell>
-                                        <TableCell>
-                                          <Input
-                                            value={asset.localizacao || ''}
-                                            onChange={(e) =>
-                                              handleLocationChange(asset.id, e.target.value)
-                                            }
-                                            onBlur={(e) =>
-                                              handleLocationBlur(asset.id, e.target.value)
-                                            }
-                                            className="h-8 text-xs"
-                                            placeholder="Ex: Prateleira A"
-                                          />
-                                        </TableCell>
-                                        <TableCell>
-                                          <Select
-                                            value={asset.estado || 'novo'}
-                                            onValueChange={(v) => updateAssetStatus(asset.id, v)}
+                                    <>
+                                      {isAdding && (
+                                        <TableRow className="bg-muted/30">
+                                          <TableCell>
+                                            <Input
+                                              value={newAsset.numero_patrimonio || ''}
+                                              onChange={(e) =>
+                                                setNewAsset({
+                                                  ...newAsset,
+                                                  numero_patrimonio: e.target.value,
+                                                })
+                                              }
+                                              className="h-8"
+                                              placeholder="Obrigatório"
+                                              autoFocus
+                                            />
+                                          </TableCell>
+                                          <TableCell>
+                                            <Input
+                                              type="date"
+                                              value={newAsset.data_aquisicao || ''}
+                                              onChange={(e) =>
+                                                setNewAsset({
+                                                  ...newAsset,
+                                                  data_aquisicao: e.target.value,
+                                                })
+                                              }
+                                              className="h-8 text-xs"
+                                            />
+                                          </TableCell>
+                                          <TableCell>
+                                            <Input
+                                              value={newAsset.localizacao || ''}
+                                              onChange={(e) =>
+                                                setNewAsset({
+                                                  ...newAsset,
+                                                  localizacao: e.target.value,
+                                                })
+                                              }
+                                              className="h-8 text-xs"
+                                              placeholder="Ex: Prateleira A"
+                                            />
+                                          </TableCell>
+                                          <TableCell>
+                                            <Select
+                                              value={newAsset.estado || 'novo'}
+                                              onValueChange={(v) =>
+                                                setNewAsset({ ...newAsset, estado: v })
+                                              }
+                                            >
+                                              <SelectTrigger className="h-8 w-[130px]">
+                                                <SelectValue />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="novo">Novo</SelectItem>
+                                                <SelectItem value="bom">Bom</SelectItem>
+                                                <SelectItem value="regular">Regular</SelectItem>
+                                                <SelectItem value="ruim">Ruim</SelectItem>
+                                              </SelectContent>
+                                            </Select>
+                                          </TableCell>
+                                          <TableCell className="text-right">
+                                            <div className="flex justify-end gap-1">
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 text-green-600"
+                                                onClick={handleSaveNewAsset}
+                                                title="Salvar"
+                                              >
+                                                <Save className="w-4 h-4" />
+                                              </Button>
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 text-muted-foreground"
+                                                onClick={() => setIsAdding(false)}
+                                                title="Cancelar"
+                                              >
+                                                <X className="w-4 h-4" />
+                                              </Button>
+                                            </div>
+                                          </TableCell>
+                                        </TableRow>
+                                      )}
+                                      {!isAdding && patrimonios.length === 0 ? (
+                                        <TableRow>
+                                          <TableCell
+                                            colSpan={5}
+                                            className="text-center py-8 text-muted-foreground"
                                           >
-                                            <SelectTrigger className="h-8 w-[130px]">
-                                              <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem value="novo">Novo</SelectItem>
-                                              <SelectItem value="bom">Bom</SelectItem>
-                                              <SelectItem value="regular">Regular</SelectItem>
-                                              <SelectItem value="ruim">Ruim</SelectItem>
-                                            </SelectContent>
-                                          </Select>
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                          <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            className="text-destructive h-8 w-8"
-                                            onClick={() => removeAsset(asset.id)}
-                                          >
-                                            <Trash2 className="w-4 h-4" />
-                                          </Button>
-                                        </TableCell>
-                                      </TableRow>
-                                    ))
+                                            Nenhum patrimônio cadastrado.
+                                          </TableCell>
+                                        </TableRow>
+                                      ) : (
+                                        patrimonios.map((asset) => (
+                                          <TableRow key={asset.id}>
+                                            <TableCell>
+                                              <Input
+                                                value={asset.numero_patrimonio || ''}
+                                                onChange={(e) =>
+                                                  handleAssetNumberChange(asset.id, e.target.value)
+                                                }
+                                                onBlur={(e) =>
+                                                  handleAssetNumberBlur(asset.id, e.target.value)
+                                                }
+                                                className="h-8"
+                                              />
+                                            </TableCell>
+                                            <TableCell>
+                                              <Input
+                                                type="date"
+                                                value={asset.data_aquisicao || ''}
+                                                onChange={(e) =>
+                                                  updateAssetAcquisitionDate(
+                                                    asset.id,
+                                                    e.target.value,
+                                                  )
+                                                }
+                                                className="h-8 text-xs"
+                                              />
+                                            </TableCell>
+                                            <TableCell>
+                                              <Input
+                                                value={asset.localizacao || ''}
+                                                onChange={(e) =>
+                                                  handleLocationChange(asset.id, e.target.value)
+                                                }
+                                                onBlur={(e) =>
+                                                  handleLocationBlur(asset.id, e.target.value)
+                                                }
+                                                className="h-8 text-xs"
+                                                placeholder="Ex: Prateleira A"
+                                              />
+                                            </TableCell>
+                                            <TableCell>
+                                              <Select
+                                                value={asset.estado || 'novo'}
+                                                onValueChange={(v) =>
+                                                  updateAssetStatus(asset.id, v)
+                                                }
+                                              >
+                                                <SelectTrigger className="h-8 w-[130px]">
+                                                  <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                  <SelectItem value="novo">Novo</SelectItem>
+                                                  <SelectItem value="bom">Bom</SelectItem>
+                                                  <SelectItem value="regular">Regular</SelectItem>
+                                                  <SelectItem value="ruim">Ruim</SelectItem>
+                                                </SelectContent>
+                                              </Select>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                              <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                className="text-destructive h-8 w-8"
+                                                onClick={() => removeAsset(asset.id)}
+                                                title="Excluir"
+                                              >
+                                                <Trash2 className="w-4 h-4" />
+                                              </Button>
+                                            </TableCell>
+                                          </TableRow>
+                                        ))
+                                      )}
+                                    </>
                                   )}
                                 </TableBody>
                               </Table>
