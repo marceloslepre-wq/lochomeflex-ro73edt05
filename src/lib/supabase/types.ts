@@ -119,34 +119,43 @@ export type Database = {
           created_at: string
           data_aquisicao: string | null
           estado: string | null
+          fornecedor: string | null
+          foto_url: string | null
           id: string
           inventory_id: string
           localizacao: string | null
           numero_patrimonio: string
           observacoes: string | null
           updated_at: string
+          valor_compra: number | null
         }
         Insert: {
           created_at?: string
           data_aquisicao?: string | null
           estado?: string | null
+          fornecedor?: string | null
+          foto_url?: string | null
           id?: string
           inventory_id: string
           localizacao?: string | null
           numero_patrimonio: string
           observacoes?: string | null
           updated_at?: string
+          valor_compra?: number | null
         }
         Update: {
           created_at?: string
           data_aquisicao?: string | null
           estado?: string | null
+          fornecedor?: string | null
+          foto_url?: string | null
           id?: string
           inventory_id?: string
           localizacao?: string | null
           numero_patrimonio?: string
           observacoes?: string | null
           updated_at?: string
+          valor_compra?: number | null
         }
         Relationships: [
           {
@@ -499,6 +508,9 @@ export const Constants = {
 //   observacoes: text (nullable)
 //   created_at: timestamp with time zone (not null, default: now())
 //   updated_at: timestamp with time zone (not null, default: now())
+//   fornecedor: text (nullable)
+//   valor_compra: numeric (nullable, default: 0)
+//   foto_url: text (nullable)
 // Table: profiles
 //   id: uuid (not null, default: gen_random_uuid())
 //   auth_user_id: uuid (nullable)
@@ -714,6 +726,30 @@ export const Constants = {
 //   END;
 //   $function$
 //
+// FUNCTION update_inventory_qty_on_patrimonio()
+//   CREATE OR REPLACE FUNCTION public.update_inventory_qty_on_patrimonio()
+//    RETURNS trigger
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//   AS $function$
+//   BEGIN
+//     IF TG_OP = 'INSERT' THEN
+//       UPDATE public.inventory
+//       SET total_qty = total_qty + 1,
+//           available_qty = available_qty + 1
+//       WHERE id = NEW.inventory_id;
+//       RETURN NEW;
+//     ELSIF TG_OP = 'DELETE' THEN
+//       UPDATE public.inventory
+//       SET total_qty = GREATEST(0, total_qty - 1),
+//           available_qty = GREATEST(0, available_qty - 1)
+//       WHERE id = OLD.inventory_id;
+//       RETURN OLD;
+//     END IF;
+//     RETURN NULL;
+//   END;
+//   $function$
+//
 // FUNCTION update_patrimonio_updated_at()
 //   CREATE OR REPLACE FUNCTION public.update_patrimonio_updated_at()
 //    RETURNS trigger
@@ -730,6 +766,7 @@ export const Constants = {
 // Table: customers
 //   trg_set_customer_matricula: CREATE TRIGGER trg_set_customer_matricula BEFORE INSERT ON public.customers FOR EACH ROW EXECUTE FUNCTION set_customer_matricula()
 // Table: patrimonio
+//   trg_update_inventory_qty_on_patrimonio: CREATE TRIGGER trg_update_inventory_qty_on_patrimonio AFTER INSERT OR DELETE ON public.patrimonio FOR EACH ROW EXECUTE FUNCTION update_inventory_qty_on_patrimonio()
 //   update_patrimonio_updated_at: CREATE TRIGGER update_patrimonio_updated_at BEFORE UPDATE ON public.patrimonio FOR EACH ROW EXECUTE FUNCTION update_patrimonio_updated_at()
 // Table: profiles
 //   on_profile_created: CREATE TRIGGER on_profile_created BEFORE INSERT ON public.profiles FOR EACH ROW EXECUTE FUNCTION handle_new_profile()

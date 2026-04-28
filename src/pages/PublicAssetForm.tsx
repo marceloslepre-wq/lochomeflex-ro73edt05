@@ -50,6 +50,7 @@ export default function PublicAssetForm() {
     purchasePrice: '',
     supplier: '',
     notes: '',
+    estado: 'novo',
   })
 
   const [image, setImage] = useState<string | null>(null)
@@ -74,21 +75,15 @@ export default function PublicAssetForm() {
 
     setLoading(true)
     try {
-      const newAsset = {
-        id: Math.random().toString(),
-        assetNumber: formData.serialNumber,
-        acquisitionDate: formData.purchaseDate,
-        purchasePrice: Number(formData.purchasePrice),
-        supplier: formData.supplier,
-        notes: formData.notes,
-        conditionStatus: 'Disponível',
-        addedAt: new Date().toISOString(),
-        image: image || undefined,
-      }
-
-      const { error } = await supabase.rpc('public_add_asset', {
-        p_item_id: formData.itemId,
-        p_asset: newAsset,
+      const { error } = await supabase.from('patrimonio').insert({
+        inventory_id: formData.itemId,
+        numero_patrimonio: formData.serialNumber,
+        data_aquisicao: formData.purchaseDate || null,
+        valor_compra: formData.purchasePrice ? Number(formData.purchasePrice) : null,
+        fornecedor: formData.supplier || null,
+        observacoes: formData.notes || null,
+        estado: formData.estado,
+        foto_url: image || null,
       })
 
       if (error) throw error
@@ -123,6 +118,7 @@ export default function PublicAssetForm() {
                   purchasePrice: '',
                   supplier: '',
                   notes: '',
+                  estado: 'novo',
                 })
                 setImage(null)
               }}
@@ -214,14 +210,33 @@ export default function PublicAssetForm() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Fornecedor</Label>
-              <Input
-                className="h-11 bg-white"
-                placeholder="Nome da empresa fornecedora"
-                value={formData.supplier}
-                onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Fornecedor</Label>
+                <Input
+                  className="h-11 bg-white"
+                  placeholder="Nome da empresa fornecedora"
+                  value={formData.supplier}
+                  onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Estado *</Label>
+                <Select
+                  value={formData.estado}
+                  onValueChange={(v) => setFormData({ ...formData, estado: v })}
+                >
+                  <SelectTrigger className="h-11 bg-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="novo">Novo</SelectItem>
+                    <SelectItem value="bom">Bom</SelectItem>
+                    <SelectItem value="regular">Regular</SelectItem>
+                    <SelectItem value="ruim">Ruim</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="space-y-2">
