@@ -598,6 +598,8 @@ export const Constants = {
 //     USING: true
 //     WITH CHECK: true
 // Table: patrimonio
+//   Policy "anon_insert" (INSERT, PERMISSIVE) roles={anon}
+//     WITH CHECK: true
 //   Policy "anon_select" (SELECT, PERMISSIVE) roles={anon}
 //     USING: true
 //   Policy "authenticated_all" (ALL, PERMISSIVE) roles={authenticated}

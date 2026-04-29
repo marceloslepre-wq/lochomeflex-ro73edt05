@@ -12,7 +12,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Textarea } from '@/components/ui/textarea'
-import { Plus, Edit, Loader2 } from 'lucide-react'
+import { Plus, Edit, Loader2, Upload, Camera, Trash2 } from 'lucide-react'
+import { useRef } from 'react'
 import { useToast } from '@/hooks/use-toast'
 import { Address } from '@/stores/main'
 import { customerService, Customer } from '@/services/customers'
@@ -37,6 +38,11 @@ export function CustomerFormDialog({
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
 
+  const [existingDocs, setExistingDocs] = useState<any[]>(customer?.documento_url || [])
+  const [pendingFiles, setPendingFiles] = useState<File[]>([])
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+
   const [formData, setFormData] = useState({
     matricula: customer?.matricula || '',
     name: customer?.name || '',
@@ -53,6 +59,31 @@ export function CustomerFormDialog({
   })
 
   const [docError, setDocError] = useState('')
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    const validFiles = files.filter((f) => {
+      const isValidSize = f.size <= 10 * 1024 * 1024
+      if (!isValidSize) {
+        toast({
+          title: 'Erro',
+          description: `Arquivo ${f.name} excede o limite de 10MB.`,
+          variant: 'destructive',
+        })
+      }
+      return isValidSize
+    })
+    setPendingFiles((prev) => [...prev, ...validFiles])
+    if (e.target) e.target.value = ''
+  }
+
+  const handleRemoveExisting = (idx: number) => {
+    setExistingDocs((prev) => prev.filter((_, i) => i !== idx))
+  }
+
+  const handleRemovePending = (idx: number) => {
+    setPendingFiles((prev) => prev.filter((_, i) => i !== idx))
+  }
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -149,16 +180,40 @@ export function CustomerFormDialog({
       const payload: any = { ...formData }
       delete payload.phone
       payload.phone_cell = formData.phoneCell || formData.phoneRes || formData.phoneCom
+      payload.documento_url = existingDocs
 
+      let savedCustomer
       if (customer) {
-        await customerService.updateCustomer(customer.id, payload)
+        savedCustomer = await customerService.updateCustomer(customer.id, payload)
         toast({ title: 'Cliente Atualizado', description: 'Dados salvos com sucesso.' })
       } else {
         const nextMatricula = await customerService.getNextMatricula()
         payload.matricula = nextMatricula
-        await customerService.createCustomer(payload)
+        savedCustomer = await customerService.createCustomer(payload)
         toast({ title: 'Cliente Cadastrado', description: `${formData.name} adicionado.` })
       }
+
+      if (pendingFiles.length > 0) {
+        const newDocs = []
+        for (const file of pendingFiles) {
+          try {
+            const doc = await customerService.uploadDocument(savedCustomer.id, file)
+            newDocs.push(doc)
+          } catch (err) {
+            toast({
+              title: 'Erro',
+              description: `Erro ao enviar ${file.name}`,
+              variant: 'destructive',
+            })
+          }
+        }
+
+        if (newDocs.length > 0) {
+          const finalDocs = [...existingDocs, ...newDocs]
+          await customerService.updateCustomer(savedCustomer.id, { documento_url: finalDocs })
+        }
+      }
+
       setOpen(false)
       if (onSuccess) onSuccess()
       if (!customer) {
@@ -174,7 +229,10 @@ export function CustomerFormDialog({
           hasDifferentDeliveryAddress: false,
           deliveryAddress: { ...emptyAddress },
           observations: '',
+          attachment: '',
         })
+        setExistingDocs([])
+        setPendingFiles([])
       }
     } catch (error) {
       toast({
@@ -196,8 +254,33 @@ export function CustomerFormDialog({
     })
   }
 
+  const handleOpenChange = (newOpen: boolean) => {
+    setOpen(newOpen)
+    if (!newOpen) {
+      if (!customer) {
+        setFormData({
+          matricula: '',
+          name: '',
+          document: '',
+          phoneRes: '',
+          phoneCell: '',
+          phoneCom: '',
+          email: '',
+          address: { ...emptyAddress },
+          hasDifferentDeliveryAddress: false,
+          deliveryAddress: { ...emptyAddress },
+          observations: '',
+          attachment: '',
+        })
+      }
+      setExistingDocs(customer?.documento_url || [])
+      setPendingFiles([])
+      setDocError('')
+    }
+  }
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {customer ? (
           <Button variant="ghost" size="icon" className="h-8 w-8 text-primary">
@@ -384,7 +467,89 @@ export function CustomerFormDialog({
                 </div>
 
                 <div className="grid gap-2">
-                  <Label>Documento / Foto (Opcional):</Label>
+                  <Label>Documentos / Fotos (Novo Upload):</Label>
+                  <div className="flex flex-col gap-2">
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <Upload className="w-4 h-4 mr-2" /> Escolher Arquivo
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => cameraInputRef.current?.click()}
+                      >
+                        <Camera className="w-4 h-4 mr-2" /> Tirar Foto
+                      </Button>
+                      <input
+                        type="file"
+                        className="hidden"
+                        ref={fileInputRef}
+                        accept=".jpg,.jpeg,.png,.webp,.pdf"
+                        multiple
+                        onChange={handleFileChange}
+                      />
+                      <input
+                        type="file"
+                        className="hidden"
+                        ref={cameraInputRef}
+                        accept="image/*"
+                        capture="environment"
+                        onChange={handleFileChange}
+                      />
+                    </div>
+
+                    {(existingDocs.length > 0 || pendingFiles.length > 0) && (
+                      <div className="flex flex-col gap-2 mt-2">
+                        {existingDocs.map((doc, idx) => (
+                          <div
+                            key={`existing-${idx}`}
+                            className="flex items-center justify-between bg-muted/50 p-2 rounded text-sm"
+                          >
+                            <div className="truncate max-w-[200px]" title={doc.name}>
+                              {doc.name}
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-destructive hover:bg-destructive/10"
+                              onClick={() => handleRemoveExisting(idx)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                        {pendingFiles.map((file, idx) => (
+                          <div
+                            key={`pending-${idx}`}
+                            className="flex items-center justify-between bg-muted/50 p-2 rounded text-sm border border-dashed border-muted-foreground/30"
+                          >
+                            <div className="truncate max-w-[200px]" title={file.name}>
+                              {file.name}{' '}
+                              <span className="text-xs text-muted-foreground ml-1">(Pendente)</span>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-destructive hover:bg-destructive/10"
+                              onClick={() => handleRemovePending(idx)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label>Anexo Simples (Legado):</Label>
                   <div className="flex items-center gap-4">
                     {formData.attachment ? (
                       <div className="relative w-20 h-20 rounded border overflow-hidden">

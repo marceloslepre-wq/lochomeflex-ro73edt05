@@ -1,6 +1,13 @@
 import { supabase } from '@/lib/supabase/client'
 import { Address } from '@/stores/main'
 
+export interface CustomerDocument {
+  name: string
+  url: string
+  date: string
+  path: string
+}
+
 export interface Customer {
   id: string
   matricula: string
@@ -15,6 +22,7 @@ export interface Customer {
   hasDifferentDeliveryAddress?: boolean
   deliveryAddress?: Address
   observations?: string
+  documento_url?: CustomerDocument[]
 }
 
 const mapFromDb = (row: any): Customer => ({
@@ -31,6 +39,7 @@ const mapFromDb = (row: any): Customer => ({
   hasDifferentDeliveryAddress: row.has_different_delivery_address,
   deliveryAddress: row.delivery_address,
   observations: row.observations,
+  documento_url: row.documento_url || [],
 })
 
 const mapToDb = (customer: Partial<Customer>) => ({
@@ -45,6 +54,7 @@ const mapToDb = (customer: Partial<Customer>) => ({
   has_different_delivery_address: customer.hasDifferentDeliveryAddress,
   delivery_address: customer.deliveryAddress,
   observations: customer.observations,
+  documento_url: customer.documento_url,
 })
 
 export const customerService = {
@@ -97,5 +107,24 @@ export const customerService = {
       }
     }
     return '0001'
+  },
+
+  async uploadDocument(customerId: string, file: File): Promise<CustomerDocument> {
+    const fileExt = file.name.split('.').pop() || ''
+    const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`
+    const filePath = `${customerId}/${fileName}`
+
+    const { error } = await supabase.storage.from('clientes').upload(filePath, file)
+
+    if (error) throw error
+
+    const { data: publicUrlData } = supabase.storage.from('clientes').getPublicUrl(filePath)
+
+    return {
+      name: file.name,
+      url: publicUrlData.publicUrl,
+      date: new Date().toISOString(),
+      path: filePath,
+    }
   },
 }

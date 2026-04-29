@@ -11,7 +11,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
-import { Search, User, Trash2 } from 'lucide-react'
+import { Search, User, Trash2, Download } from 'lucide-react'
 import { CustomerFormDialog } from '@/components/customers/CustomerFormDialog'
 import { ShareCustomerLinkDialog } from '@/components/customers/ShareCustomerLinkDialog'
 import { Button } from '@/components/ui/button'
@@ -110,19 +110,20 @@ export default function Customers() {
                 <TableHead>Documento</TableHead>
                 <TableHead>Contato</TableHead>
                 <TableHead>Email</TableHead>
+                <TableHead>Documentos</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                     Carregando clientes...
                   </TableCell>
                 </TableRow>
               ) : filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                     Nenhum cliente encontrado.
                   </TableCell>
                 </TableRow>
@@ -141,6 +142,37 @@ export default function Customers() {
                     <TableCell>{customer.document}</TableCell>
                     <TableCell>{customer.phone}</TableCell>
                     <TableCell className="text-muted-foreground">{customer.email}</TableCell>
+                    <TableCell>
+                      {customer.documento_url && customer.documento_url.length > 0 ? (
+                        <div className="flex flex-col gap-1.5">
+                          {customer.documento_url.map((doc: any, idx: number) => (
+                            <div key={idx} className="flex items-center gap-2 text-xs">
+                              <span
+                                className="truncate max-w-[100px] sm:max-w-[150px]"
+                                title={doc.name}
+                              >
+                                {doc.name}
+                              </span>
+                              <span className="text-muted-foreground text-[10px] hidden sm:inline-block">
+                                {new Date(doc.date).toLocaleDateString()}
+                              </span>
+                              <a
+                                href={doc.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                download={doc.name}
+                                className="text-primary hover:underline font-medium ml-auto flex items-center gap-1"
+                              >
+                                <Download className="w-3 h-3" />
+                                <span className="hidden sm:inline-block">Baixar</span>
+                              </a>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Nenhum</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         {can('customers:write') && (
