@@ -43,6 +43,7 @@ export default function PublicCustomerForm() {
     deliveryAddress: { ...emptyAddress },
     observations: '',
     attachment: '',
+    attachmentName: '',
   })
 
   const [docError, setDocError] = useState('')
@@ -79,18 +80,39 @@ export default function PublicCustomerForm() {
             if (ctx) {
               ctx.drawImage(img, 0, 0, width, height)
               const dataUrl = canvas.toDataURL('image/jpeg', 0.6)
-              setFormData((f) => ({ ...f, attachment: dataUrl }))
+              setFormData((f) => ({ ...f, attachment: dataUrl, attachmentName: file.name }))
             } else {
-              setFormData((f) => ({ ...f, attachment: reader.result as string }))
+              setFormData((f) => ({
+                ...f,
+                attachment: reader.result as string,
+                attachmentName: file.name,
+              }))
             }
           }
           img.src = reader.result as string
         } else {
-          setFormData((f) => ({ ...f, attachment: reader.result as string }))
+          setFormData((f) => ({
+            ...f,
+            attachment: reader.result as string,
+            attachmentName: file.name,
+          }))
         }
       }
       reader.readAsDataURL(file)
     }
+  }
+
+  const dataURLtoFile = (dataurl: string, filename: string) => {
+    const arr = dataurl.split(',')
+    const mimeMatch = arr[0].match(/:(.*?);/)
+    const mime = mimeMatch ? mimeMatch[1] : 'application/octet-stream'
+    const bstr = atob(arr[1])
+    let n = bstr.length
+    const u8arr = new Uint8Array(n)
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n)
+    }
+    return new File([u8arr], filename, { type: mime })
   }
 
   const validateDocument = (doc: string) => {
@@ -177,9 +199,23 @@ export default function PublicCustomerForm() {
 
       const payload: any = { ...formData, matricula: 'AUTO' }
       delete payload.phone
+      delete payload.attachmentName
       payload.phone_cell = formData.phoneCell || formData.phoneRes || formData.phoneCom
 
-      await customerService.createCustomer(payload)
+      const newCustomer = await customerService.createCustomer(payload)
+
+      if (formData.attachment && formData.attachmentName) {
+        try {
+          const fileToUpload = dataURLtoFile(formData.attachment, formData.attachmentName)
+          const documentInfo = await customerService.uploadDocument(newCustomer.id, fileToUpload)
+          const currentDocs = newCustomer.documento_url || []
+          await customerService.updateCustomer(newCustomer.id, {
+            documento_url: [...currentDocs, documentInfo],
+          })
+        } catch (uploadError) {
+          console.error('Failed to upload attachment', uploadError)
+        }
+      }
 
       setSubmitted(true)
     } catch (error) {
@@ -413,7 +449,9 @@ export default function PublicCustomerForm() {
                           variant="destructive"
                           size="icon"
                           className="absolute top-0 right-0 h-6 w-6 rounded-none opacity-80 hover:opacity-100"
-                          onClick={() => setFormData((f) => ({ ...f, attachment: '' }))}
+                          onClick={() =>
+                            setFormData((f) => ({ ...f, attachment: '', attachmentName: '' }))
+                          }
                         >
                           <span className="sr-only">Remover</span>
                           &times;

@@ -16,6 +16,7 @@ export type Database = {
           created_at: string
           delivery_address: Json | null
           document: string
+          documento_url: Json | null
           email: string | null
           has_different_delivery_address: boolean | null
           id: string
@@ -33,6 +34,7 @@ export type Database = {
           created_at?: string
           delivery_address?: Json | null
           document: string
+          documento_url?: Json | null
           email?: string | null
           has_different_delivery_address?: boolean | null
           id?: string
@@ -50,6 +52,7 @@ export type Database = {
           created_at?: string
           delivery_address?: Json | null
           document?: string
+          documento_url?: Json | null
           email?: string | null
           has_different_delivery_address?: boolean | null
           id?: string
@@ -483,6 +486,7 @@ export const Constants = {
 //   created_at: timestamp with time zone (not null, default: now())
 //   updated_at: timestamp with time zone (not null, default: now())
 //   attachment: text (nullable)
+//   documento_url: jsonb (nullable, default: '[]'::jsonb)
 // Table: inventory
 //   id: uuid (not null, default: gen_random_uuid())
 //   code: text (not null)
