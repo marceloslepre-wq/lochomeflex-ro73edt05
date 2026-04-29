@@ -1,6 +1,9 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import useMainStore, { InventoryItem } from '@/stores/main'
+import { useAuth } from '@/hooks/use-auth'
 import { Card, CardContent } from '@/components/ui/card'
+import { Navigate } from 'react-router-dom'
+import { Loader2 } from 'lucide-react'
 import {
   Table,
   TableBody,
@@ -43,6 +46,7 @@ export type Patrimonio = {
 }
 
 export default function Assets() {
+  const { user, loading } = useAuth()
   const { toast } = useToast()
   const { inventory, updateInventoryItem, settings } = useMainStore()
   const locations = settings?.locations || []
@@ -341,6 +345,18 @@ export default function Assets() {
     }
     return matchesModel
   })
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <Navigate to="/" replace />
+  }
 
   return (
     <div className="space-y-6">

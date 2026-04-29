@@ -2,18 +2,17 @@ import { useMemo } from 'react'
 import useMainStore from '@/stores/main'
 import { useAuth } from '@/hooks/use-auth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Package, Clock, AlertTriangle, CheckCircle, ArrowRight } from 'lucide-react'
+import { Package, Clock, AlertTriangle, CheckCircle, ArrowRight, Loader2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 
 export default function Dashboard() {
+  const { user, loading, profile } = useAuth()
   const store = useMainStore()
   const inventory = store?.inventory || []
   const rentals = store?.rentals || []
   const customers = store?.customers || []
   const globalSearch = store?.globalSearch || ''
-
-  const { profile } = useAuth()
 
   const stats = useMemo(() => {
     const totalItems = inventory.reduce((acc, curr) => acc + (curr?.totalQty || 0), 0)
@@ -43,6 +42,18 @@ export default function Dashboard() {
       })
       .slice(0, 5)
   }, [rentals, customers, globalSearch])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <Navigate to="/" replace />
+  }
 
   return (
     <div className="space-y-6">

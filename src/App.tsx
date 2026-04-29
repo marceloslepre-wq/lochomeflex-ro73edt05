@@ -21,9 +21,9 @@ import PublicCustomerForm from './pages/PublicCustomerForm'
 import PublicAssetForm from './pages/PublicAssetForm'
 
 const App = () => (
-  <AuthProvider>
-    <StoreProvider>
-      <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>
+  <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>
+    <AuthProvider>
+      <StoreProvider>
         <TooltipProvider>
           <Toaster />
           <Sonner />
@@ -47,9 +47,9 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </TooltipProvider>
-      </BrowserRouter>
-    </StoreProvider>
-  </AuthProvider>
+      </StoreProvider>
+    </AuthProvider>
+  </BrowserRouter>
 )
 
 export default App
