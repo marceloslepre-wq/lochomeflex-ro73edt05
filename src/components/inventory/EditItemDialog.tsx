@@ -129,6 +129,17 @@ export function EditItemDialog({ item }: { item: InventoryItem }) {
       return
     }
 
+    const galpaoLoc = locs.find((l) => l.location_id === 'Galpão')
+    if (!galpaoLoc || galpaoLoc.quantity <= 0) {
+      toast({
+        title: 'Erro',
+        description:
+          'O estoque deve ser primeiramente recebido e mantido no Galpão antes de distribuição.',
+        variant: 'destructive',
+      })
+      return
+    }
+
     const diff = totalSum - item.totalQty
     const newAvailable = Math.max(0, item.availableQty + diff)
 

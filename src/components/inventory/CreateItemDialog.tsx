@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/select'
 import { Plus } from 'lucide-react'
 import useMainStore, { InventoryItem } from '@/stores/main'
+import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 import { usePermissions } from '@/hooks/use-permissions'
 
@@ -53,13 +54,15 @@ export function CreateItemDialog() {
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const qty = parseInt(formData.qty, 10)
     if (!formData.name || !formData.code || isNaN(qty)) return
 
-    addInventoryItem({
-      id: Math.random().toString(),
+    const newItemId = crypto.randomUUID()
+
+    await addInventoryItem({
+      id: newItemId,
       name: formData.name,
       code: formData.code,
       category: formData.category || 'Geral',
@@ -75,7 +78,21 @@ export function CreateItemDialog() {
       dailyPrice: parseFloat(formData.dailyPrice) || 0,
     })
 
-    toast({ title: 'Item Cadastrado', description: `${formData.name} adicionado ao estoque.` })
+    // Aguarda a inserção no banco de dados para evitar erro de Foreign Key
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    await supabase.from('inventory_locations').insert({
+      inventory_id: newItemId,
+      location_id: 'Galpão',
+      quantity: qty,
+      available_qty: qty,
+      rented_qty: 0,
+    })
+
+    toast({
+      title: 'Item Cadastrado',
+      description: `${formData.name} adicionado ao estoque do Galpão.`,
+    })
     setOpen(false)
     setFormData({
       name: '',

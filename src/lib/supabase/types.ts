@@ -117,6 +117,44 @@ export type Database = {
         }
         Relationships: []
       }
+      inventory_locations: {
+        Row: {
+          available_qty: number
+          id: string
+          inventory_id: string
+          location_id: string
+          quantity: number
+          rented_qty: number
+          updated_at: string
+        }
+        Insert: {
+          available_qty?: number
+          id?: string
+          inventory_id: string
+          location_id: string
+          quantity?: number
+          rented_qty?: number
+          updated_at?: string
+        }
+        Update: {
+          available_qty?: number
+          id?: string
+          inventory_id?: string
+          location_id?: string
+          quantity?: number
+          rented_qty?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'inventory_locations_inventory_id_fkey'
+            columns: ['inventory_id']
+            isOneToOne: false
+            referencedRelation: 'inventory'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       patrimonio: {
         Row: {
           created_at: string
@@ -502,6 +540,14 @@ export const Constants = {
 //   monthly_price: numeric (nullable, default: 0)
 //   daily_price: numeric (nullable, default: 0)
 //   assets: jsonb (nullable, default: '[]'::jsonb)
+// Table: inventory_locations
+//   id: uuid (not null, default: gen_random_uuid())
+//   inventory_id: uuid (not null)
+//   location_id: text (not null)
+//   quantity: integer (not null, default: 0)
+//   rented_qty: integer (not null, default: 0)
+//   available_qty: integer (not null, default: 0)
+//   updated_at: timestamp with time zone (not null, default: now())
 // Table: patrimonio
 //   id: uuid (not null, default: gen_random_uuid())
 //   inventory_id: uuid (not null)
@@ -560,6 +606,10 @@ export const Constants = {
 //   PRIMARY KEY customers_pkey: PRIMARY KEY (id)
 // Table: inventory
 //   PRIMARY KEY inventory_pkey: PRIMARY KEY (id)
+// Table: inventory_locations
+//   FOREIGN KEY inventory_locations_inventory_id_fkey: FOREIGN KEY (inventory_id) REFERENCES inventory(id) ON DELETE CASCADE
+//   UNIQUE inventory_locations_inventory_id_location_id_key: UNIQUE (inventory_id, location_id)
+//   PRIMARY KEY inventory_locations_pkey: PRIMARY KEY (id)
 // Table: patrimonio
 //   CHECK patrimonio_estado_check: CHECK ((estado = ANY (ARRAY['novo'::text, 'bom'::text, 'regular'::text, 'ruim'::text])))
 //   FOREIGN KEY patrimonio_inventory_id_fkey: FOREIGN KEY (inventory_id) REFERENCES inventory(id) ON DELETE CASCADE
@@ -598,6 +648,12 @@ export const Constants = {
 //   Policy "anon_update" (UPDATE, PERMISSIVE) roles={anon}
 //     USING: true
 //     WITH CHECK: true
+//   Policy "authenticated_all" (ALL, PERMISSIVE) roles={authenticated}
+//     USING: true
+//     WITH CHECK: true
+// Table: inventory_locations
+//   Policy "anon_select" (SELECT, PERMISSIVE) roles={anon}
+//     USING: true
 //   Policy "authenticated_all" (ALL, PERMISSIVE) roles={authenticated}
 //     USING: true
 //     WITH CHECK: true
@@ -780,5 +836,7 @@ export const Constants = {
 //   trg_set_contract_number: CREATE TRIGGER trg_set_contract_number BEFORE INSERT ON public.rentals FOR EACH ROW EXECUTE FUNCTION set_contract_number()
 
 // --- INDEXES ---
+// Table: inventory_locations
+//   CREATE UNIQUE INDEX inventory_locations_inventory_id_location_id_key ON public.inventory_locations USING btree (inventory_id, location_id)
 // Table: patrimonio
 //   CREATE UNIQUE INDEX patrimonio_numero_patrimonio_key ON public.patrimonio USING btree (numero_patrimonio)
