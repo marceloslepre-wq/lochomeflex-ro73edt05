@@ -41,6 +41,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { CreateItemDialog } from '@/components/inventory/CreateItemDialog'
 import { EditItemDialog } from '@/components/inventory/EditItemDialog'
+import { TransferInventoryDialog } from '@/components/inventory/TransferInventoryDialog'
 import { handleExport } from '@/lib/export'
 import { usePermissions } from '@/hooks/use-permissions'
 import { useToast } from '@/hooks/use-toast'
@@ -64,11 +65,12 @@ export default function Inventory() {
   const [locationFilter, setLocationFilter] = useState('TODOS')
   const [locationsStock, setLocationsStock] = useState<any[]>([])
 
+  const fetchLocations = async () => {
+    const { data } = await supabase.from('inventory_locations').select('*')
+    if (data) setLocationsStock(data)
+  }
+
   useEffect(() => {
-    const fetchLocations = async () => {
-      const { data } = await supabase.from('inventory_locations').select('*')
-      if (data) setLocationsStock(data)
-    }
     fetchLocations()
   }, [])
 
@@ -206,6 +208,7 @@ export default function Inventory() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          <TransferInventoryDialog onSuccess={fetchLocations} />
           <CreateItemDialog />
         </div>
       </div>
