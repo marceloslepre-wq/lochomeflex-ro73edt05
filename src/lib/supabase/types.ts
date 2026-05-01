@@ -155,6 +155,44 @@ export type Database = {
           },
         ]
       }
+      inventory_transfers: {
+        Row: {
+          created_at: string
+          destination_location_id: string
+          id: string
+          inventory_id: string
+          origin_location_id: string
+          quantity: number
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          destination_location_id: string
+          id?: string
+          inventory_id: string
+          origin_location_id: string
+          quantity: number
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          destination_location_id?: string
+          id?: string
+          inventory_id?: string
+          origin_location_id?: string
+          quantity?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'inventory_transfers_inventory_id_fkey'
+            columns: ['inventory_id']
+            isOneToOne: false
+            referencedRelation: 'inventory'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       patrimonio: {
         Row: {
           created_at: string
@@ -367,6 +405,15 @@ export type Database = {
         Args: { p_asset: Json; p_item_id: string }
         Returns: undefined
       }
+      transfer_inventory: {
+        Args: {
+          p_destination_location_id: string
+          p_inventory_id: string
+          p_origin_location_id: string
+          p_quantity: number
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
@@ -548,6 +595,14 @@ export const Constants = {
 //   rented_qty: integer (not null, default: 0)
 //   available_qty: integer (not null, default: 0)
 //   updated_at: timestamp with time zone (not null, default: now())
+// Table: inventory_transfers
+//   id: uuid (not null, default: gen_random_uuid())
+//   inventory_id: uuid (not null)
+//   origin_location_id: text (not null)
+//   destination_location_id: text (not null)
+//   quantity: integer (not null)
+//   status: text (not null, default: 'completed'::text)
+//   created_at: timestamp with time zone (not null, default: now())
 // Table: patrimonio
 //   id: uuid (not null, default: gen_random_uuid())
 //   inventory_id: uuid (not null)
@@ -610,6 +665,10 @@ export const Constants = {
 //   FOREIGN KEY inventory_locations_inventory_id_fkey: FOREIGN KEY (inventory_id) REFERENCES inventory(id) ON DELETE CASCADE
 //   UNIQUE inventory_locations_inventory_id_location_id_key: UNIQUE (inventory_id, location_id)
 //   PRIMARY KEY inventory_locations_pkey: PRIMARY KEY (id)
+// Table: inventory_transfers
+//   FOREIGN KEY inventory_transfers_inventory_id_fkey: FOREIGN KEY (inventory_id) REFERENCES inventory(id) ON DELETE CASCADE
+//   PRIMARY KEY inventory_transfers_pkey: PRIMARY KEY (id)
+//   CHECK inventory_transfers_quantity_check: CHECK ((quantity > 0))
 // Table: patrimonio
 //   CHECK patrimonio_estado_check: CHECK ((estado = ANY (ARRAY['novo'::text, 'bom'::text, 'regular'::text, 'ruim'::text])))
 //   FOREIGN KEY patrimonio_inventory_id_fkey: FOREIGN KEY (inventory_id) REFERENCES inventory(id) ON DELETE CASCADE
@@ -653,6 +712,12 @@ export const Constants = {
 //     WITH CHECK: true
 // Table: inventory_locations
 //   Policy "anon_select" (SELECT, PERMISSIVE) roles={anon}
+//     USING: true
+//   Policy "authenticated_all" (ALL, PERMISSIVE) roles={authenticated}
+//     USING: true
+//     WITH CHECK: true
+// Table: inventory_transfers
+//   Policy "anon_select" (SELECT, PERMISSIVE) roles={public}
 //     USING: true
 //   Policy "authenticated_all" (ALL, PERMISSIVE) roles={authenticated}
 //     USING: true
@@ -785,6 +850,47 @@ export const Constants = {
 //       END IF;
 //     END IF;
 //     RETURN NEW;
+//   END;
+//   $function$
+//
+// FUNCTION transfer_inventory(uuid, text, text, integer)
+//   CREATE OR REPLACE FUNCTION public.transfer_inventory(p_inventory_id uuid, p_origin_location_id text, p_destination_location_id text, p_quantity integer)
+//    RETURNS void
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//   AS $function$
+//   DECLARE
+//     v_origin_qty INTEGER;
+//   BEGIN
+//     -- Check origin qty
+//     SELECT available_qty INTO v_origin_qty
+//     FROM public.inventory_locations
+//     WHERE inventory_id = p_inventory_id AND location_id = p_origin_location_id;
+//
+//     IF v_origin_qty IS NULL OR v_origin_qty < p_quantity THEN
+//       RAISE EXCEPTION 'Quantidade indisponível no local de origem.';
+//     END IF;
+//
+//     -- Update origin
+//     UPDATE public.inventory_locations
+//     SET available_qty = available_qty - p_quantity,
+//         quantity = quantity - p_quantity
+//     WHERE inventory_id = p_inventory_id AND location_id = p_origin_location_id;
+//
+//     -- Update destination
+//     IF EXISTS (SELECT 1 FROM public.inventory_locations WHERE inventory_id = p_inventory_id AND location_id = p_destination_location_id) THEN
+//       UPDATE public.inventory_locations
+//       SET available_qty = available_qty + p_quantity,
+//           quantity = quantity + p_quantity
+//       WHERE inventory_id = p_inventory_id AND location_id = p_destination_location_id;
+//     ELSE
+//       INSERT INTO public.inventory_locations (inventory_id, location_id, quantity, available_qty, rented_qty)
+//       VALUES (p_inventory_id, p_destination_location_id, p_quantity, p_quantity, 0);
+//     END IF;
+//
+//     -- Insert transfer log
+//     INSERT INTO public.inventory_transfers (inventory_id, origin_location_id, destination_location_id, quantity, status)
+//     VALUES (p_inventory_id, p_origin_location_id, p_destination_location_id, p_quantity, 'completed');
 //   END;
 //   $function$
 //

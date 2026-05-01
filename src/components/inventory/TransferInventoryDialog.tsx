@@ -21,7 +21,7 @@ import {
 import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase/client'
 import useMainStore from '@/stores/main'
-import { ArrowRightLeft } from 'lucide-react'
+import { ArrowRightLeft, Plus, Trash2 } from 'lucide-react'
 
 const LOCATIONS = [
   'Galpão',
@@ -32,6 +32,12 @@ const LOCATIONS = [
   'Matriz',
 ]
 
+interface TransferItem {
+  id: string
+  productId: string
+  quantity: number
+}
+
 interface TransferInventoryDialogProps {
   onSuccess?: () => void
 }
@@ -41,71 +47,71 @@ export function TransferInventoryDialog({ onSuccess }: TransferInventoryDialogPr
   const { inventory } = useMainStore()
   const { toast } = useToast()
 
-  const [productId, setProductId] = useState<string>('')
   const [origin, setOrigin] = useState<string>('')
   const [destination, setDestination] = useState<string>('')
-  const [quantity, setQuantity] = useState<number>(1)
+  const [items, setItems] = useState<TransferItem[]>([])
+  const [stockMap, setStockMap] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(false)
-  const [originLocations, setOriginLocations] = useState<any[]>([])
 
   useEffect(() => {
     if (!open) {
-      setProductId('')
       setOrigin('')
       setDestination('')
-      setQuantity(1)
-      setOriginLocations([])
+      setItems([])
+      setStockMap({})
     }
   }, [open])
 
   useEffect(() => {
-    if (productId) {
-      const fetchOriginLocations = async () => {
-        const { data } = await supabase
-          .from('inventory_locations')
-          .select('location_id, available_qty')
-          .eq('inventory_id', productId)
-          .gt('available_qty', 0)
-
-        if (data) {
-          setOriginLocations(data)
-        } else {
-          setOriginLocations([])
-        }
-      }
-      fetchOriginLocations()
-      setOrigin('')
-      setDestination('')
-      setQuantity(1)
+    if (origin) {
+      supabase
+        .from('inventory_locations')
+        .select('inventory_id, available_qty')
+        .eq('location_id', origin)
+        .gt('available_qty', 0)
+        .then(({ data }) => {
+          if (data) {
+            setStockMap(
+              data.reduce(
+                (acc: any, curr) => ({ ...acc, [curr.inventory_id]: curr.available_qty }),
+                {},
+              ),
+            )
+          }
+        })
+      setItems([])
+    } else {
+      setStockMap({})
+      setItems([])
     }
-  }, [productId])
+  }, [origin])
 
-  const maxQty = originLocations.find((l) => l.location_id === origin)?.available_qty || 0
+  const handleUpdate = (id: string, field: keyof TransferItem, value: any) => {
+    setItems(items.map((i) => (i.id === id ? { ...i, [field]: value } : i)))
+  }
+
+  const isValid = () => {
+    if (!origin || !destination || origin === destination || items.length === 0) return false
+    const uniqueProducts = new Set(items.map((i) => i.productId))
+    if (uniqueProducts.size !== items.length) return false
+    return items.every(
+      (i) => i.productId && i.quantity > 0 && i.quantity <= (stockMap[i.productId] || 0),
+    )
+  }
 
   const handleTransfer = async () => {
-    if (!productId || !origin || !destination || !quantity) {
-      toast({ title: 'Erro', description: 'Preencha todos os campos.', variant: 'destructive' })
-      return
-    }
-    if (origin === destination) {
-      toast({
-        title: 'Erro',
-        description: 'O local de destino deve ser diferente do local de origem.',
-        variant: 'destructive',
-      })
-      return
-    }
-    if (quantity <= 0 || quantity > maxQty) {
-      toast({ title: 'Erro', description: 'Quantidade inválida.', variant: 'destructive' })
-      return
-    }
-
+    if (!isValid()) return
     setLoading(true)
-    const { error } = await (supabase.rpc as any)('transfer_inventory', {
-      p_inventory_id: productId,
+
+    const payload = items.map((i) => ({
+      inventory_id: i.productId,
+      quantity: i.quantity,
+    }))
+
+    const { error } = await (supabase.rpc as any)('transfer_inventory_batch', {
       p_origin_location_id: origin,
       p_destination_location_id: destination,
-      p_quantity: quantity,
+      p_items: payload,
     })
 
     setLoading(false)
@@ -114,11 +120,16 @@ export function TransferInventoryDialog({ onSuccess }: TransferInventoryDialogPr
       console.error(error)
       toast({ title: 'Erro na transferência', description: error.message, variant: 'destructive' })
     } else {
-      toast({ title: 'Transferência Concluída', description: 'Estoque transferido com sucesso.' })
+      toast({
+        title: 'Sucesso',
+        description: `${items.length} transferência(s) realizada(s) com sucesso.`,
+      })
       setOpen(false)
-      if (onSuccess) onSuccess()
+      onSuccess?.()
     }
   }
+
+  const availableProducts = inventory.filter((p) => stockMap[p.id] > 0)
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -127,90 +138,147 @@ export function TransferInventoryDialog({ onSuccess }: TransferInventoryDialogPr
           <ArrowRightLeft className="w-4 h-4 mr-2" /> Transferir Estoque
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Transferir Estoque</DialogTitle>
-          <DialogDescription>Mova produtos entre os locais disponíveis.</DialogDescription>
+          <DialogTitle>Transferir Estoque em Lote</DialogTitle>
+          <DialogDescription>
+            Mova múltiplos produtos entre os locais disponíveis.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label>Produto</Label>
-            <Select value={productId} onValueChange={setProductId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o produto" />
-              </SelectTrigger>
-              <SelectContent>
-                {inventory.map((item) => (
-                  <SelectItem key={item.id} value={item.id}>
-                    {item.name} ({item.code})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Local de Origem</Label>
+              <Select value={origin} onValueChange={setOrigin}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a origem" />
+                </SelectTrigger>
+                <SelectContent>
+                  {LOCATIONS.map((loc) => (
+                    <SelectItem key={loc} value={loc}>
+                      {loc}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Local de Destino</Label>
+              <Select value={destination} onValueChange={setDestination} disabled={!origin}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o destino" />
+                </SelectTrigger>
+                <SelectContent>
+                  {LOCATIONS.filter((l) => l !== origin).map((loc) => (
+                    <SelectItem key={loc} value={loc}>
+                      {loc}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Local de Origem</Label>
-            <Select value={origin} onValueChange={setOrigin} disabled={!productId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o local de origem" />
-              </SelectTrigger>
-              <SelectContent>
-                {originLocations.map((loc) => (
-                  <SelectItem key={loc.location_id} value={loc.location_id}>
-                    {loc.location_id} (Disponível: {loc.available_qty})
-                  </SelectItem>
-                ))}
-                {originLocations.length === 0 && productId && (
-                  <SelectItem value="none" disabled>
-                    Nenhum local com estoque disponível
-                  </SelectItem>
+          {origin && destination && (
+            <div className="space-y-4 mt-4">
+              <Label>Produtos a Transferir</Label>
+
+              <div className="space-y-3 max-h-[40vh] overflow-y-auto p-1">
+                {items.length > 0 && (
+                  <div className="grid grid-cols-[1fr_100px_100px_40px] gap-2 mb-2 text-sm font-medium text-muted-foreground px-1">
+                    <div>Produto</div>
+                    <div className="text-center">Disponível</div>
+                    <div className="text-center">Quantidade</div>
+                    <div></div>
+                  </div>
                 )}
-              </SelectContent>
-            </Select>
-          </div>
 
-          <div className="space-y-2">
-            <Label>Local de Destino</Label>
-            <Select value={destination} onValueChange={setDestination} disabled={!origin}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o local de destino" />
-              </SelectTrigger>
-              <SelectContent>
-                {LOCATIONS.filter((l) => l !== origin).map((loc) => (
-                  <SelectItem key={loc} value={loc}>
-                    {loc}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+                {items.map((item) => {
+                  const maxQty = stockMap[item.productId] || 0
+                  return (
+                    <div
+                      key={item.id}
+                      className="grid grid-cols-[1fr_100px_100px_40px] gap-2 items-center"
+                    >
+                      <Select
+                        value={item.productId}
+                        onValueChange={(val) => handleUpdate(item.id, 'productId', val)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o produto" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableProducts.map((p) => (
+                            <SelectItem
+                              key={p.id}
+                              value={p.id}
+                              disabled={items.some((i) => i.productId === p.id && i.id !== item.id)}
+                            >
+                              {p.name} ({p.code})
+                            </SelectItem>
+                          ))}
+                          {availableProducts.length === 0 && (
+                            <SelectItem value="none" disabled>
+                              Sem produtos no local
+                            </SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
 
-          <div className="space-y-2">
-            <Label>Quantidade (Máx: {maxQty})</Label>
-            <Input
-              type="number"
-              min={1}
-              max={maxQty}
-              value={quantity}
-              onChange={(e) => setQuantity(Number(e.target.value))}
-              disabled={!origin}
-            />
-          </div>
+                      <div className="flex items-center justify-center bg-muted/50 rounded-md h-10 px-3 text-sm">
+                        {maxQty}
+                      </div>
+
+                      <Input
+                        type="number"
+                        min={1}
+                        max={maxQty}
+                        value={item.quantity || ''}
+                        onChange={(e) =>
+                          handleUpdate(
+                            item.id,
+                            'quantity',
+                            e.target.value ? Number(e.target.value) : 0,
+                          )
+                        }
+                        disabled={!item.productId}
+                        className="text-center"
+                      />
+
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive hover:bg-destructive/10"
+                        onClick={() => setItems(items.filter((i) => i.id !== item.id))}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )
+                })}
+              </div>
+
+              <Button
+                variant="outline"
+                className="w-full mt-2 border-dashed"
+                onClick={() =>
+                  setItems([...items, { id: crypto.randomUUID(), productId: '', quantity: 1 }])
+                }
+              >
+                <Plus className="w-4 h-4 mr-2" /> Adicionar Produto
+              </Button>
+            </div>
+          )}
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)} disabled={loading}>
             Cancelar
           </Button>
-          <Button
-            onClick={handleTransfer}
-            disabled={
-              loading || !productId || !origin || !destination || quantity <= 0 || quantity > maxQty
-            }
-          >
-            Confirmar Transferência
+          <Button onClick={handleTransfer} disabled={loading || !isValid()}>
+            {loading ? 'Transferindo...' : 'Confirmar Transferência em Lote'}
           </Button>
         </DialogFooter>
       </DialogContent>
