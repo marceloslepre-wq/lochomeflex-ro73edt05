@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { supabase } from '@/lib/supabase/client'
 import {
   Dialog,
   DialogContent,
@@ -18,11 +19,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Edit } from 'lucide-react'
+import { Edit, Trash2 } from 'lucide-react'
 import useMainStore, { InventoryItem } from '@/stores/main'
 import { useToast } from '@/hooks/use-toast'
 import { usePermissions } from '@/hooks/use-permissions'
 import { ScrollArea } from '@/components/ui/scroll-area'
+
+const LOCATIONS = [
+  'Galpão',
+  'Loja Vitória',
+  'Loja Cariacica',
+  'Loja Vila Velha',
+  'Loja Serra',
+  'Matriz',
+]
 
 export function EditItemDialog({ item }: { item: InventoryItem }) {
   const { updateInventoryItem, settings } = useMainStore()
@@ -41,6 +51,31 @@ export function EditItemDialog({ item }: { item: InventoryItem }) {
     dailyPrice: item.dailyPrice?.toString() || '',
   })
 
+  const [locs, setLocs] = useState<any[]>([])
+
+  useEffect(() => {
+    if (open) {
+      supabase
+        .from('inventory_locations')
+        .select('*')
+        .eq('inventory_id', item.id)
+        .then(({ data }) => {
+          if (data && data.length > 0) {
+            setLocs(data)
+          } else {
+            setLocs([
+              {
+                location_id: 'Galpão',
+                quantity: item.totalQty,
+                rented_qty: item.rentedQty,
+                available_qty: item.availableQty,
+              },
+            ])
+          }
+        })
+    }
+  }, [open, item.id, item.totalQty, item.rentedQty, item.availableQty])
+
   if (!can('items:write')) return null
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -54,12 +89,47 @@ export function EditItemDialog({ item }: { item: InventoryItem }) {
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    const qty = parseInt(formData.qty, 10)
-    if (!formData.name || !formData.code || isNaN(qty)) return
+  const addLoc = () => {
+    setLocs([...locs, { location_id: LOCATIONS[0], quantity: 1, rented_qty: 0, available_qty: 1 }])
+  }
 
-    const diff = qty - item.totalQty
+  const removeLoc = (idx: number) => {
+    setLocs(locs.filter((_, i) => i !== idx))
+  }
+
+  const updateLoc = (idx: number, field: string, value: any) => {
+    const newLocs = [...locs]
+    newLocs[idx][field] = value
+    if (field === 'quantity') {
+      newLocs[idx].available_qty = Math.max(0, value - (newLocs[idx].rented_qty || 0))
+    }
+    setLocs(newLocs)
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    const totalSum = locs.reduce((acc, curr) => acc + curr.quantity, 0)
+    if (totalSum <= 0) {
+      toast({
+        title: 'Erro',
+        description: 'O total consolidado deve ser maior que 0.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    const locIds = locs.map((l) => l.location_id)
+    if (new Set(locIds).size !== locIds.length) {
+      toast({
+        title: 'Erro',
+        description: 'Existem locais duplicados. Agrupe as quantidades no mesmo local.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    const diff = totalSum - item.totalQty
     const newAvailable = Math.max(0, item.availableQty + diff)
 
     updateInventoryItem(item.id, {
@@ -67,13 +137,26 @@ export function EditItemDialog({ item }: { item: InventoryItem }) {
       code: formData.code,
       category: formData.category || 'Geral',
       description: formData.description,
-      totalQty: qty,
+      totalQty: totalSum,
       availableQty: newAvailable,
       image: formData.image || item.image,
       conditionStatus: formData.conditionStatus,
       monthlyPrice: parseFloat(formData.monthlyPrice) || 0,
       dailyPrice: parseFloat(formData.dailyPrice) || 0,
     })
+
+    await supabase.from('inventory_locations').delete().eq('inventory_id', item.id)
+    const toInsert = locs.map((l) => ({
+      inventory_id: item.id,
+      location_id: l.location_id,
+      quantity: l.quantity,
+      rented_qty: l.rented_qty || 0,
+      available_qty: l.quantity - (l.rented_qty || 0),
+    }))
+
+    if (toInsert.length > 0) {
+      await supabase.from('inventory_locations').insert(toInsert)
+    }
 
     toast({ title: 'Item Atualizado', description: `${formData.name} modificado com sucesso.` })
     setOpen(false)
@@ -159,43 +242,7 @@ export function EditItemDialog({ item }: { item: InventoryItem }) {
                 className="resize-none h-20"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label>Estoque Total</Label>
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    onClick={() =>
-                      setFormData((f) => ({
-                        ...f,
-                        qty: Math.max(item.rentedQty, parseInt(f.qty) - 1).toString(),
-                      }))
-                    }
-                  >
-                    -
-                  </Button>
-                  <Input
-                    type="number"
-                    min={item.rentedQty}
-                    value={formData.qty}
-                    onChange={(e) => setFormData((f) => ({ ...f, qty: e.target.value }))}
-                    required
-                    className="text-center"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    onClick={() =>
-                      setFormData((f) => ({ ...f, qty: (parseInt(f.qty) + 1).toString() }))
-                    }
-                  >
-                    +
-                  </Button>
-                </div>
-              </div>
+            <div className="grid gap-4">
               <div className="grid gap-2">
                 <Label>Status Geral</Label>
                 <Select
@@ -212,6 +259,62 @@ export function EditItemDialog({ item }: { item: InventoryItem }) {
                     <SelectItem value="Esgotado">Esgotado</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="grid gap-2 p-3 bg-muted/30 rounded-md border">
+                <div className="flex items-center justify-between">
+                  <Label className="text-base font-semibold">Distribuição de Estoque</Label>
+                  <Button type="button" variant="outline" size="sm" onClick={addLoc}>
+                    + Adicionar Local
+                  </Button>
+                </div>
+                {locs.map((l, idx) => (
+                  <div key={idx} className="flex items-end gap-2 mt-2">
+                    <div className="flex-1">
+                      <Label className="text-xs">Local</Label>
+                      <Select
+                        value={l.location_id}
+                        onValueChange={(v) => updateLoc(idx, 'location_id', v)}
+                      >
+                        <SelectTrigger className="bg-background">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {LOCATIONS.map((loc) => (
+                            <SelectItem key={loc} value={loc}>
+                              {loc}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="w-24">
+                      <Label className="text-xs">Qtd</Label>
+                      <Input
+                        type="number"
+                        className="bg-background"
+                        value={l.quantity}
+                        onChange={(e) => updateLoc(idx, 'quantity', parseInt(e.target.value) || 0)}
+                        min={l.rented_qty || 0}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="text-destructive mb-0.5 hover:bg-destructive/10"
+                      onClick={() => removeLoc(idx)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+                <div className="flex justify-between items-center bg-background p-2 rounded border mt-2">
+                  <span className="text-sm font-medium">Total Consolidado</span>
+                  <span className="font-bold text-lg">
+                    {locs.reduce((a, b) => a + b.quantity, 0)}
+                  </span>
+                </div>
               </div>
             </div>
             <div className="grid gap-2">
