@@ -14,7 +14,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Search, Download, ExternalLink, Trash2 } from 'lucide-react'
+import { Search, Download, ExternalLink, Trash2, Share2 } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -160,6 +160,15 @@ export default function Inventory() {
     toast({ title: 'Excluído', description: 'O item foi removido permanentemente.' })
   }
 
+  const copyPublicLink = () => {
+    const url = `${window.location.origin}/public/transfer`
+    navigator.clipboard.writeText(url)
+    toast({
+      title: 'Link copiado!',
+      description: 'O link de transferência pública foi copiado para a área de transferência.',
+    })
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 print:hidden">
@@ -167,7 +176,14 @@ export default function Inventory() {
           <h1 className="text-3xl font-bold tracking-tight">Gestão de Estoque</h1>
           <p className="text-muted-foreground mt-1">Controle seus modelos e disponibilidades.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            className="bg-yellow-400 hover:bg-yellow-500 text-black border-none whitespace-nowrap"
+            onClick={copyPublicLink}
+          >
+            <Share2 className="w-4 h-4 mr-2" /> Gerar Link de Transferência
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline">
