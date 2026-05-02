@@ -41,11 +41,21 @@ export function TransferInventoryForm({ onSuccess }: { onSuccess?: () => void })
   }, [])
 
   const fetchData = async () => {
-    const { data: invData } = await supabase.from('inventory').select('*')
-    if (invData) setInventory(invData)
+    try {
+      const { data: invData, error: invError } = await supabase
+        .from('inventory')
+        .select('id, name, code')
+      if (invError) console.error('Erro ao buscar produtos:', invError)
+      if (invData) setInventory(invData)
 
-    const { data: locData } = await supabase.from('inventory_locations').select('*')
-    if (locData) setLocationsStock(locData)
+      const { data: locData, error: locError } = await supabase
+        .from('inventory_locations')
+        .select('inventory_id, location_id, available_qty')
+      if (locError) console.error('Erro ao buscar locais:', locError)
+      if (locData) setLocationsStock(locData)
+    } catch (e) {
+      console.error('Falha na comunicação:', e)
+    }
   }
 
   const getAvailableQty = (inventoryId: string, locationId: string) => {
@@ -218,11 +228,27 @@ export function TransferInventoryForm({ onSuccess }: { onSuccess?: () => void })
                           <SelectValue placeholder="Selecione o produto" />
                         </SelectTrigger>
                         <SelectContent>
-                          {inventory.map((inv) => (
-                            <SelectItem key={inv.id} value={inv.id}>
-                              {inv.name} (Ref: {inv.code})
+                          {inventory.filter(
+                            (inv) =>
+                              getAvailableQty(inv.id, origin) > 0 || item.inventory_id === inv.id,
+                          ).length === 0 ? (
+                            <SelectItem value="empty" disabled>
+                              Nenhum produto com estoque aqui
                             </SelectItem>
-                          ))}
+                          ) : (
+                            inventory
+                              .filter(
+                                (inv) =>
+                                  getAvailableQty(inv.id, origin) > 0 ||
+                                  item.inventory_id === inv.id,
+                              )
+                              .map((inv) => (
+                                <SelectItem key={inv.id} value={inv.id}>
+                                  {inv.name} (Ref: {inv.code}) - {getAvailableQty(inv.id, origin)}{' '}
+                                  disp.
+                                </SelectItem>
+                              ))
+                          )}
                         </SelectContent>
                       </Select>
                     </div>

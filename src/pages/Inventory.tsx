@@ -42,6 +42,8 @@ import {
 import { CreateItemDialog } from '@/components/inventory/CreateItemDialog'
 import { EditItemDialog } from '@/components/inventory/EditItemDialog'
 import { TransferInventoryDialog } from '@/components/inventory/TransferInventoryDialog'
+import { ShareTransferLinkDialog } from '@/components/inventory/ShareTransferLinkDialog'
+import { TransferHistoryDialog } from '@/components/inventory/TransferHistoryDialog'
 import { handleExport } from '@/lib/export'
 import { usePermissions } from '@/hooks/use-permissions'
 import { useToast } from '@/hooks/use-toast'
@@ -160,15 +162,6 @@ export default function Inventory() {
     toast({ title: 'Excluído', description: 'O item foi removido permanentemente.' })
   }
 
-  const copyPublicLink = () => {
-    const url = `${window.location.origin}/public/transfer`
-    navigator.clipboard.writeText(url)
-    toast({
-      title: 'Link copiado!',
-      description: 'O link de transferência pública foi copiado para a área de transferência.',
-    })
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 print:hidden">
@@ -177,13 +170,8 @@ export default function Inventory() {
           <p className="text-muted-foreground mt-1">Controle seus modelos e disponibilidades.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            className="bg-yellow-400 hover:bg-yellow-500 text-black border-none whitespace-nowrap"
-            onClick={copyPublicLink}
-          >
-            <Share2 className="w-4 h-4 mr-2" /> Gerar Link de Transferência
-          </Button>
+          <TransferHistoryDialog />
+          <ShareTransferLinkDialog />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline">
