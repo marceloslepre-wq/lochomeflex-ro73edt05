@@ -19,6 +19,7 @@ import Guide from './pages/Guide'
 import NotFound from './pages/NotFound'
 import PublicCustomerForm from './pages/PublicCustomerForm'
 import PublicAssetForm from './pages/PublicAssetForm'
+import PublicTransfer from './pages/PublicTransfer'
 
 const App = () => (
   <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/public/customer/new" element={<PublicCustomerForm />} />
             <Route path="/public/asset/new" element={<PublicAssetForm />} />
+            <Route path="/public/transfer" element={<PublicTransfer />} />
             <Route element={<ProtectedRoute />}>
               <Route element={<Layout />}>
                 <Route path="/dashboard" element={<Dashboard />} />
