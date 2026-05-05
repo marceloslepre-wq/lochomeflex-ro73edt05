@@ -72,16 +72,32 @@ export default function Rentals() {
   })
 
   const exportData = () => {
-    const headers = ['ID', 'Cliente', 'Retirada', 'Previsão', 'Status', 'Total']
+    const headers = ['Contrato', 'Cliente', 'Telefone', 'Retirada', 'Previsão', 'Status', 'Total']
     const data = filtered.map((r) => {
       const c = customers.find((cust) => cust.id === r.customerId)
+
+      let formattedPhone = ''
+      if (c) {
+        const rawPhone =
+          c.phone_cell || (c as any).phoneCell || c.phone_res || (c as any).phoneRes || ''
+        const cleaned = rawPhone.replace(/\D/g, '')
+        if (cleaned.length === 11) {
+          formattedPhone = `(${cleaned.substring(0, 2)}) ${cleaned.substring(2, 7)}-${cleaned.substring(7, 11)}`
+        } else if (cleaned.length === 10) {
+          formattedPhone = `(${cleaned.substring(0, 2)}) ${cleaned.substring(2, 6)}-${cleaned.substring(6, 10)}`
+        } else {
+          formattedPhone = rawPhone
+        }
+      }
+
       return [
-        r.id,
+        r.contractNumber || r.id.split('-')[0].toUpperCase(),
         c?.name || '-',
+        formattedPhone,
         new Date(r.startDate).toLocaleDateString('pt-BR'),
         new Date(r.expectedReturnDate).toLocaleDateString('pt-BR'),
         r.status,
-        r.total.toFixed(2),
+        `R$ ${r.total.toFixed(2)}`,
       ]
     })
     return { headers, data }
