@@ -24,8 +24,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { FileBarChart, Download } from 'lucide-react'
+import { FileBarChart, Download, ChevronDown } from 'lucide-react'
 import useMainStore from '@/stores/main'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { handleExport } from '@/lib/export'
 import { ScrollArea } from '@/components/ui/scroll-area'
 
@@ -57,26 +63,46 @@ export function RentalsReportDialog() {
 
   const totalValue = filteredRentals.reduce((sum, r) => sum + r.total, 0)
 
-  const handleExportPdf = () => {
-    const headers = ['Data', 'Contrato', 'Cliente', 'Operador', 'Local Retirada', 'Valor (R$)']
+  const handleExportData = (format: 'pdf' | 'csv' | 'excel') => {
+    const headers = ['Contrato', 'Cliente', 'Telefone', 'Retirada', 'Previsão', 'Status', 'Total']
     const data = filteredRentals.map((r) => {
       const c = customers.find((cust) => cust.id === r.customerId)
-      const u = users.find((user) => user.id === r.userId)
-      const loc = settings.locations?.find((l) => l.id === r.pickupLocationId)
+
+      const phone = c?.phone_cell || c?.phone_res || c?.phone_com || ''
+      let formattedPhone = phone
+      const justNumbers = phone.replace(/\D/g, '')
+      if (justNumbers.length === 11) {
+        formattedPhone = `(${justNumbers.slice(0, 2)}) ${justNumbers.slice(2, 7)}-${justNumbers.slice(7)}`
+      } else if (justNumbers.length === 10) {
+        formattedPhone = `(${justNumbers.slice(0, 2)}) ${justNumbers.slice(2, 6)}-${justNumbers.slice(6)}`
+      }
+
       return [
-        new Date(r.startDate).toLocaleDateString('pt-BR'),
-        r.id,
+        (r as any).contractNumber ||
+          (r as any).contract_number ||
+          r.id.substring(0, 8).toUpperCase(),
         c?.name || '-',
-        u?.name || '-',
-        loc?.name || '-',
-        r.total.toFixed(2),
+        formattedPhone,
+        new Date(r.startDate).toLocaleDateString('pt-BR'),
+        (r as any).expectedReturnDate
+          ? new Date((r as any).expectedReturnDate).toLocaleDateString('pt-BR')
+          : '-',
+        r.status || 'Ativo',
+        `R$ ${r.total.toFixed(2)}`,
       ]
     })
 
     // Add total row
-    data.push(['', '', '', '', 'TOTAL', totalValue.toFixed(2)])
+    data.push(['', '', '', '', '', 'TOTAL', `R$ ${totalValue.toFixed(2)}`])
 
-    handleExport('pdf', 'relatorio_locacoes', headers, data, settings.companyName, settings.logoUrl)
+    handleExport(
+      format,
+      'relatorio_locacoes',
+      headers,
+      data,
+      settings.companyName,
+      settings.logoUrl,
+    )
   }
 
   return (
@@ -171,9 +197,25 @@ export function RentalsReportDialog() {
           <p className="text-sm text-muted-foreground">
             Mostrando {filteredRentals.length} registros.
           </p>
-          <Button variant="outline" size="sm" onClick={handleExportPdf}>
-            <Download className="w-4 h-4 mr-2" /> Exportar PDF
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Download className="w-4 h-4 mr-2" /> Exportar{' '}
+                <ChevronDown className="w-4 h-4 ml-2" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleExportData('pdf')}>
+                Exportar PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExportData('csv')}>
+                Exportar CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExportData('excel')}>
+                Exportar Excel
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         <ScrollArea className="flex-1 border rounded-md">
@@ -203,8 +245,27 @@ export function RentalsReportDialog() {
                   return (
                     <TableRow key={r.id}>
                       <TableCell>{new Date(r.startDate).toLocaleDateString('pt-BR')}</TableCell>
-                      <TableCell className="font-medium">{r.id}</TableCell>
-                      <TableCell>{c?.name || '-'}</TableCell>
+                      <TableCell className="font-medium">
+                        {(r as any).contractNumber ||
+                          (r as any).contract_number ||
+                          r.id.substring(0, 8).toUpperCase()}
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-bold">{c?.name || '-'}</div>
+                        {c && (c.phone_cell || c.phone_res || c.phone_com) && (
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            {(() => {
+                              const p = c.phone_cell || c.phone_res || c.phone_com || ''
+                              const n = p.replace(/\D/g, '')
+                              if (n.length === 11)
+                                return `(${n.slice(0, 2)}) ${n.slice(2, 7)}-${n.slice(7)}`
+                              if (n.length === 10)
+                                return `(${n.slice(0, 2)}) ${n.slice(2, 6)}-${n.slice(6)}`
+                              return p
+                            })()}
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell>{u?.name || '-'}</TableCell>
                       <TableCell>{loc?.name || '-'}</TableCell>
                       <TableCell className="text-right font-medium">
