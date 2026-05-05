@@ -20,6 +20,8 @@ import NotFound from './pages/NotFound'
 import PublicCustomerForm from './pages/PublicCustomerForm'
 import PublicAssetForm from './pages/PublicAssetForm'
 import PublicTransfer from './pages/PublicTransfer'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 
 const App = () => (
   <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>
@@ -33,6 +35,8 @@ const App = () => (
             <Route path="/public/customer/new" element={<PublicCustomerForm />} />
             <Route path="/public/asset/new" element={<PublicAssetForm />} />
             <Route path="/public/transfer" element={<PublicTransfer />} />
+            <Route path="/public/forgot-password" element={<ForgotPassword />} />
+            <Route path="/public/reset-password" element={<ResetPassword />} />
             <Route element={<ProtectedRoute />}>
               <Route element={<Layout />}>
                 <Route path="/dashboard" element={<Dashboard />} />

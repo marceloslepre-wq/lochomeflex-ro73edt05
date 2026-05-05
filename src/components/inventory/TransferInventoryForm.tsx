@@ -244,7 +244,7 @@ export function TransferInventoryForm({ onSuccess }: { onSuccess?: () => void })
                               )
                               .map((inv) => (
                                 <SelectItem key={inv.id} value={inv.id}>
-                                  {inv.name} (Ref: {inv.code}) - {getAvailableQty(inv.id, origin)}{' '}
+                                  [{inv.code}] - {inv.name} - {getAvailableQty(inv.id, origin)}{' '}
                                   disp.
                                 </SelectItem>
                               ))
