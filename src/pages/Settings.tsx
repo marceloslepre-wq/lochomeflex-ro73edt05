@@ -247,6 +247,10 @@ export default function Settings() {
   const handleSaveUser = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
+      if (userForm.password && userForm.password.length < 8) {
+        throw new Error('A senha deve ter no mínimo 8 caracteres.')
+      }
+
       if (editingUser) {
         updateUser(editingUser.id, {
           name: userForm.name,
@@ -530,6 +534,7 @@ export default function Settings() {
                       <Input
                         type="password"
                         required={!editingUser}
+                        minLength={8}
                         value={userForm.password}
                         onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
                       />
