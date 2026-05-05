@@ -126,16 +126,7 @@ export default function Index() {
                   />
                 </div>
                 <div className="space-y-2 text-left">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="password">Senha</Label>
-                    <Link
-                      to="/public/forgot-password"
-                      className="text-xs text-primary hover:underline"
-                      tabIndex={-1}
-                    >
-                      Esqueceu a senha?
-                    </Link>
-                  </div>
+                  <Label htmlFor="password">Senha</Label>
                   <Input
                     id="password"
                     type="password"
@@ -145,14 +136,20 @@ export default function Index() {
                     required
                   />
                 </div>
-                <Button
-                  type="submit"
-                  className="w-full text-base h-11 mt-2"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : null}
-                  Entrar no Sistema
-                </Button>
+                <div className="pt-2 flex flex-col gap-3">
+                  <Button type="submit" className="w-full text-base h-11" disabled={isSubmitting}>
+                    {isSubmitting ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : null}
+                    Entrar no Sistema
+                  </Button>
+                  <div className="text-center mt-1">
+                    <Link
+                      to="/public/forgot-password"
+                      className="text-sm text-primary hover:underline font-medium"
+                    >
+                      Esqueceu a senha?
+                    </Link>
+                  </div>
+                </div>
               </form>
             </TabsContent>
 

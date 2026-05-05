@@ -255,8 +255,10 @@ export default function Settings() {
           permissions: userForm.role === 'Administrador' ? [] : userForm.permissions,
         })
 
+        let hasPasswordError = false
+
         if (userForm.password) {
-          await supabase.functions.invoke('manage-users', {
+          const res = await supabase.functions.invoke('manage-users', {
             body: {
               action: 'update',
               user: {
@@ -265,8 +267,20 @@ export default function Settings() {
               },
             },
           })
+
+          if (res.error) {
+            hasPasswordError = true
+            throw new Error(res.error.message || 'Erro ao atualizar a senha do usuário')
+          }
+          if (res.data?.error) {
+            hasPasswordError = true
+            throw new Error(res.data.error)
+          }
         }
-        toast({ title: 'Usuário Atualizado', description: 'Dados salvos.' })
+
+        if (!hasPasswordError) {
+          toast({ title: 'Usuário Atualizado', description: 'Dados salvos com sucesso.' })
+        }
       } else {
         const res = await supabase.functions.invoke('manage-users', {
           body: { action: 'create', user: userForm },

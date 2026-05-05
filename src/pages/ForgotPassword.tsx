@@ -74,7 +74,7 @@ export default function ForgotPassword() {
               {isSubmitting ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : null}
               Enviar Email de Recuperação
             </Button>
-            <Link to="/" className="text-sm text-primary hover:underline flex items-center">
+            <Link to="/" className="text-sm text-primary hover:underline flex items-center mt-2">
               <ArrowLeft className="w-4 h-4 mr-2" /> Voltar para o login
             </Link>
           </CardFooter>
