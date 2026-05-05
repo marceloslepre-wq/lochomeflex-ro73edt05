@@ -213,12 +213,39 @@ export default function Rentals() {
               ) : (
                 filtered.map((rental) => {
                   const customer = customers.find((c) => c.id === rental.customerId)
+
+                  let formattedPhone = null
+                  if (customer) {
+                    const rawPhone =
+                      customer.phone_cell ||
+                      (customer as any).phoneCell ||
+                      customer.phone_res ||
+                      (customer as any).phoneRes
+                    if (rawPhone) {
+                      const cleaned = rawPhone.replace(/\D/g, '')
+                      if (cleaned.length === 11) {
+                        formattedPhone = `(${cleaned.substring(0, 2)}) ${cleaned.substring(2, 7)}-${cleaned.substring(7, 11)}`
+                      } else if (cleaned.length === 10) {
+                        formattedPhone = `(${cleaned.substring(0, 2)}) ${cleaned.substring(2, 6)}-${cleaned.substring(6, 10)}`
+                      } else {
+                        formattedPhone = rawPhone
+                      }
+                    }
+                  }
+
                   return (
                     <TableRow key={rental.id} className="group hover:bg-muted/30">
                       <TableCell className="font-medium">
                         {rental.contractNumber || rental.id.split('-')[0]}
                       </TableCell>
-                      <TableCell>{customer?.name}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          <span className="font-medium">{customer?.name}</span>
+                          {formattedPhone && (
+                            <span className="text-xs text-muted-foreground">{formattedPhone}</span>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell className="text-muted-foreground">
                         {new Date(rental.startDate).toLocaleDateString('pt-BR')}
                       </TableCell>

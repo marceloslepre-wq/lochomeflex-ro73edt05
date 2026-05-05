@@ -21,6 +21,23 @@ export default function RentalDetail() {
   const rental = rentals.find((r) => r.id === id)
   const customer = customers.find((c) => c?.id === rental?.customerId)
 
+  const customerPhone = useMemo(() => {
+    if (!customer) return null
+    const rawPhone =
+      customer.phone_cell ||
+      (customer as any).phoneCell ||
+      customer.phone_res ||
+      (customer as any).phoneRes
+    if (!rawPhone) return null
+    const cleaned = rawPhone.replace(/\D/g, '')
+    if (cleaned.length === 11) {
+      return `(${cleaned.substring(0, 2)}) ${cleaned.substring(2, 7)}-${cleaned.substring(7, 11)}`
+    } else if (cleaned.length === 10) {
+      return `(${cleaned.substring(0, 2)}) ${cleaned.substring(2, 6)}-${cleaned.substring(6, 10)}`
+    }
+    return rawPhone
+  }, [customer])
+
   const defaultContractText = useMemo(() => {
     if (!rental || !customer) return ''
 
@@ -471,7 +488,10 @@ export default function RentalDetail() {
           </Button>
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Locação {rental.id}</h1>
-            <p className="text-muted-foreground mt-1">Cliente: {customer?.name}</p>
+            <p className="text-muted-foreground mt-1">
+              Cliente: {customer?.name}
+              {customerPhone && ` - ${customerPhone}`}
+            </p>
           </div>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
