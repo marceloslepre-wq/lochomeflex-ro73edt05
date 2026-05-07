@@ -51,21 +51,15 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
 
   const applyDuration = (days: number) => {
     setDefaultDuration(days)
-    const start = new Date(todayStr)
-    const end = new Date(todayStr)
-    end.setDate(end.getDate() + days)
-    const endStr = end.toISOString().split('T')[0]
-
     setItems((prev) =>
       prev.map((p) => {
         const dailyPrice = p.dailyPrice || 0
-        const diffTime = end.getTime() - start.getTime()
-        let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-        if (diffDays <= 0) diffDays = 1
+        const startStr = p.startDate || todayStr
+        const endStr = addDaysToDateString(startStr, days)
+        const diffDays = days <= 0 ? 1 : days
 
         return {
           ...p,
-          startDate: todayStr,
           endDate: endStr,
           totalPrice: dailyPrice * p.qty * diffDays,
         }
@@ -75,13 +69,50 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
 
   const availableItems = useMemo(
     () =>
-      inventory
-        .filter((i) => i.availableQty > 0 && i.conditionStatus === 'Disponível')
+      (inventory || [])
+        .filter((i) => i?.availableQty > 0 && i?.conditionStatus === 'Disponível')
         .sort((a, b) => (a.code || '').localeCompare(b.code || '')),
     [inventory],
   )
 
-  const todayStr = new Date().toISOString().split('T')[0]
+  const getLocalTodayStr = () => {
+    const now = new Date()
+    const y = now.getFullYear()
+    const m = String(now.getMonth() + 1).padStart(2, '0')
+    const d = String(now.getDate()).padStart(2, '0')
+    return `${y}-${m}-${d}`
+  }
+  const todayStr = getLocalTodayStr()
+
+  const addDaysToDateString = (dateStr: string, days: number) => {
+    if (!dateStr) return dateStr
+    const [y, m, d] = dateStr.split('-').map(Number)
+    const date = new Date(y, m - 1, d, 12, 0, 0)
+    date.setDate(date.getDate() + days)
+    const ny = date.getFullYear()
+    const nm = String(date.getMonth() + 1).padStart(2, '0')
+    const nd = String(date.getDate()).padStart(2, '0')
+    return `${ny}-${nm}-${nd}`
+  }
+
+  const getDiffDays = (startStr: string, endStr: string) => {
+    if (!startStr || !endStr) return 1
+    const [sy, sm, sd] = startStr.split('-').map(Number)
+    const [ey, em, ed] = endStr.split('-').map(Number)
+    const start = new Date(sy, sm - 1, sd, 12, 0, 0)
+    const end = new Date(ey, em - 1, ed, 12, 0, 0)
+    const diffTime = end.getTime() - start.getTime()
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    return diffDays <= 0 ? 1 : diffDays
+  }
+
+  const formatDateStr = (dateStr?: string) => {
+    if (!dateStr) return '-'
+    const parts = dateStr.split('T')[0].split('-')
+    if (parts.length !== 3) return dateStr
+    const [y, m, d] = parts
+    return `${d}/${m}/${y}`
+  }
 
   const finalTotal = useMemo(() => {
     const rawTotal = items.reduce((acc, curr) => acc + (curr.totalPrice || 0), 0)
@@ -105,15 +136,9 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
       return
     }
 
-    const start = new Date(todayStr)
-    const end = new Date(todayStr)
-    if (defaultDuration) {
-      end.setDate(end.getDate() + defaultDuration)
-    }
-    const endStr = end.toISOString().split('T')[0]
-    const diffTime = end.getTime() - start.getTime()
-    let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-    if (diffDays <= 0) diffDays = 1
+    const startStr = todayStr
+    const endStr = defaultDuration ? addDaysToDateString(startStr, defaultDuration) : startStr
+    const diffDays = getDiffDays(startStr, endStr)
 
     setItems((prev) => {
       const newItemId = Math.random().toString()
@@ -123,7 +148,7 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
           id: newItemId,
           itemId: selectedItemId,
           qty: numQty,
-          startDate: todayStr,
+          startDate: startStr,
           endDate: endStr,
           dailyPrice: item.dailyPrice || 0,
           totalPrice: (item.dailyPrice || 0) * numQty * diffDays,
@@ -146,11 +171,9 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
           field === 'dailyPrice' ||
           field === 'qty'
         ) {
-          const start = new Date(updated.startDate || todayStr)
-          const end = new Date(updated.endDate || todayStr)
-          const diffTime = end.getTime() - start.getTime()
-          let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-          if (diffDays <= 0) diffDays = 1
+          const startStr = updated.startDate || todayStr
+          const endStr = updated.endDate || todayStr
+          const diffDays = getDiffDays(startStr, endStr)
 
           updated.totalPrice = (updated.dailyPrice || 0) * updated.qty * diffDays
         }
@@ -162,64 +185,64 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
   const handleRemoveItem = (id: string) => setItems((prev) => prev.filter((p) => p.id !== id))
 
   const generateContractHtml = (total: number) => {
-    const customer = customers.find((c) => c.id === customerId)
-    if (!customer) return ''
+    try {
+      const customer = customers.find((c) => c.id === customerId)
+      if (!customer) return ''
 
-    let html = settings.contractTemplateHtml || ''
-    if (!html) return ''
+      let html = settings?.contractTemplateHtml || ''
+      if (!html) return ''
 
-    const cAddr = (customer.address as any) || {}
-    const addressStr = cAddr.street
-      ? `${cAddr.street}, ${cAddr.number || 'S/N'}${cAddr.complement ? ' - ' + cAddr.complement : ''} - ${cAddr.neighborhood || ''} - ${cAddr.city || ''}/${cAddr.state || ''} - CEP: ${cAddr.zipCode || ''}`
-      : 'Não informado'
-    const phoneStr =
-      [customer?.phone_cell, customer?.phone_res, customer?.phone_com]
-        .filter(Boolean)
-        .join(' / ') || 'Não informado'
+      const cAddr =
+        typeof customer.address === 'object' && customer.address !== null ? customer.address : {}
+      const addressStr = (cAddr as any).street
+        ? `${(cAddr as any).street}, ${(cAddr as any).number || 'S/N'}${(cAddr as any).complement ? ' - ' + (cAddr as any).complement : ''} - ${(cAddr as any).neighborhood || ''} - ${(cAddr as any).city || ''}/${(cAddr as any).state || ''} - CEP: ${(cAddr as any).zipCode || ''}`
+        : 'Não informado'
+      const phoneStr =
+        [customer?.phone_cell, customer?.phone_res, customer?.phone_com]
+          .filter(Boolean)
+          .join(' / ') || 'Não informado'
 
-    let locationName = 'Não informado'
-    if (pickupLocationId === 'delivery') locationName = 'Entrega no Endereço do Cliente'
-    else if (pickupLocationId) {
-      const loc = (settings.locations as any[])?.find((l: any) => l.id === pickupLocationId)
-      if (loc) {
-        locationName = `${loc.name} - ${loc.address || ''}`
+      let locationName = 'Não informado'
+      const locationsList = Array.isArray(settings?.locations) ? settings.locations : []
+      if (pickupLocationId === 'delivery') locationName = 'Entrega no Endereço do Cliente'
+      else if (pickupLocationId) {
+        const loc = locationsList.find((l: any) => l.id === pickupLocationId)
+        if (loc) {
+          locationName = `${(loc as any).name} - ${(loc as any).address || ''}`
+        }
       }
-    }
-    locationName = locationName
-      .replace(/ - CEP: Sem CEP/gi, '')
-      .replace(/CEP: Sem CEP/gi, '')
-      .trim()
+      locationName = locationName
+        .replace(/ - CEP: Sem CEP/gi, '')
+        .replace(/CEP: Sem CEP/gi, '')
+        .trim()
 
-    const startDates = items.map((i) => i.startDate || todayStr).sort()
+      const startDates = items.map((i) => i.startDate || todayStr).sort()
 
-    html = html.replace(/{{rentalId}}/g, 'Gerado ao salvar')
-    html = html.replace(/{{companyName}}/g, settings.companyName || 'Lojas Hospital Home')
-    html = html.replace(/{{companyDocument}}/g, settings.companyDocument || '10.893.738/0006-93')
-    html = html.replace(
-      /{{companyAddress}}/g,
-      settings.companyAddress ||
-        'rua Manoel Vivacqua, n. 616, Jabuor, Vitória – ES. CEP: 29072-045',
-    )
+      html = html.replace(/{{rentalId}}/g, 'Gerado ao salvar')
+      html = html.replace(/{{companyName}}/g, settings?.companyName || 'Lojas Hospital Home')
+      html = html.replace(/{{companyDocument}}/g, settings?.companyDocument || '10.893.738/0006-93')
+      html = html.replace(
+        /{{companyAddress}}/g,
+        settings?.companyAddress ||
+          'rua Manoel Vivacqua, n. 616, Jabuor, Vitória – ES. CEP: 29072-045',
+      )
 
-    html = html.replace(/{{customerName}}/g, customer?.name || '')
-    html = html.replace(/{{customerDocument}}/g, customer?.document || '')
-    html = html.replace(/{{customerAddress}}/g, addressStr)
-    html = html.replace(/{{customerRg}}/g, (customer as any)?.rg || 'Não informado')
-    html = html.replace(/{{customerPhone}}/g, phoneStr)
-    html = html.replace(/{{pickupLocation}}/g, locationName)
-    html = html.replace(
-      /{{currentDate}}/g,
-      new Date(startDates[0] || todayStr).toLocaleDateString('pt-BR'),
-    )
+      html = html.replace(/{{customerName}}/g, customer?.name || '')
+      html = html.replace(/{{customerDocument}}/g, customer?.document || '')
+      html = html.replace(/{{customerAddress}}/g, addressStr)
+      html = html.replace(/{{customerRg}}/g, (customer as any)?.rg || 'Não informado')
+      html = html.replace(/{{customerPhone}}/g, phoneStr)
+      html = html.replace(/{{pickupLocation}}/g, locationName)
+      html = html.replace(/{{currentDate}}/g, formatDateStr(startDates[0] || todayStr))
 
-    let itemsHtml = items
-      .map((ri) => {
-        const item = inventory.find((i) => i.id === ri.itemId)
-        const start = new Date(ri.startDate || todayStr).toLocaleDateString('pt-BR')
-        const end = new Date(ri.endDate || todayStr).toLocaleDateString('pt-BR')
-        const totalValue = (ri.totalPrice || 0).toFixed(2)
+      let itemsHtml = items
+        .map((ri) => {
+          const item = inventory.find((i) => i.id === ri.itemId)
+          const start = formatDateStr(ri.startDate || todayStr)
+          const end = formatDateStr(ri.endDate || todayStr)
+          const totalValue = (ri.totalPrice || 0).toFixed(2)
 
-        return `<tr>
+          return `<tr>
         <td style="border: 1px solid #000; padding: 8px; text-align: center;">${ri.qty}</td>
         <td style="border: 1px solid #000; padding: 8px;">${item?.name || 'Item Removido'}</td>
         <td style="border: 1px solid #000; padding: 8px;">${item?.code || '-'}</td>
@@ -227,18 +250,22 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
         <td style="border: 1px solid #000; padding: 8px; text-align: center;">${end}</td>
         <td style="border: 1px solid #000; padding: 8px; text-align: right;">${totalValue}</td>
       </tr>`
-      })
-      .join('')
+        })
+        .join('')
 
-    if (freight > 0) {
-      itemsHtml += `<tr>
-        <td colspan="5" style="border: 1px solid #000; padding: 8px; text-align: right; font-weight: bold;">Frete</td>
-        <td style="border: 1px solid #000; padding: 8px; text-align: right;">${freight.toFixed(2)}</td>
-      </tr>`
+      if (freight > 0) {
+        itemsHtml += `<tr>
+          <td colspan="5" style="border: 1px solid #000; padding: 8px; text-align: right; font-weight: bold;">Frete</td>
+          <td style="border: 1px solid #000; padding: 8px; text-align: right;">${freight.toFixed(2)}</td>
+        </tr>`
+      }
+
+      html = html.replace(/{{itemsList}}/g, itemsHtml)
+      return html
+    } catch (err) {
+      console.error('Error generating contract HTML:', err)
+      return ''
     }
-
-    html = html.replace(/{{itemsList}}/g, itemsHtml)
-    return html
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -369,7 +396,7 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
                 <SelectValue placeholder="Selecione o local..." />
               </SelectTrigger>
               <SelectContent>
-                {(settings.locations as any[])?.map((loc) => (
+                {(Array.isArray(settings?.locations) ? settings.locations : []).map((loc: any) => (
                   <SelectItem key={loc.id} value={loc.id}>
                     {loc.name}
                   </SelectItem>

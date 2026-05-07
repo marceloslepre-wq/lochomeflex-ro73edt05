@@ -50,6 +50,14 @@ export default function Rentals() {
   const [receiptType, setReceiptType] = useState<'new' | 'renewal'>('new')
   const [receiptRenewalInfo, setReceiptRenewalInfo] = useState<any>(null)
 
+  const formatDateStr = (dateStr?: string) => {
+    if (!dateStr) return '-'
+    const parts = dateStr.split('T')[0].split('-')
+    if (parts.length !== 3) return dateStr
+    const [y, m, d] = parts
+    return `${d}/${m}/${y}`
+  }
+
   const filtered = rentals.filter((r) => {
     const c = customers.find((cust) => cust.id === r.customerId)
     const term = search || globalSearch
@@ -93,9 +101,9 @@ export default function Rentals() {
       return [
         r.contractNumber || r.id.split('-')[0].toUpperCase(),
         c?.name || '-',
-        formattedPhone,
-        new Date(r.startDate).toLocaleDateString('pt-BR'),
-        new Date(r.expectedReturnDate).toLocaleDateString('pt-BR'),
+        formattedPhone || '-',
+        formatDateStr(r.startDate),
+        formatDateStr(r.expectedReturnDate),
         r.status,
         `R$ ${r.total.toFixed(2)}`,
       ]
@@ -263,10 +271,10 @@ export default function Rentals() {
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {new Date(rental.startDate).toLocaleDateString('pt-BR')}
+                        {formatDateStr(rental.startDate)}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {new Date(rental.expectedReturnDate).toLocaleDateString('pt-BR')}
+                        {formatDateStr(rental.expectedReturnDate)}
                       </TableCell>
                       <TableCell>
                         <Badge

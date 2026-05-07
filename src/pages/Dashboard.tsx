@@ -19,9 +19,14 @@ export default function Dashboard() {
     const activeRentals = rentals.filter((r) => r?.status === 'Ativo').length
     const overdueRentals = rentals.filter((r) => r?.status === 'Atrasado').length
 
-    const today = new Date().toISOString().split('T')[0]
+    const now = new Date()
+    const y = now.getFullYear()
+    const m = String(now.getMonth() + 1).padStart(2, '0')
+    const d = String(now.getDate()).padStart(2, '0')
+    const today = `${y}-${m}-${d}`
+
     const dueToday = rentals.filter(
-      (r) => r?.status === 'Ativo' && r?.expectedReturnDate === today,
+      (r) => r?.status === 'Ativo' && r?.expectedReturnDate?.split('T')[0] === today,
     ).length
 
     return { totalItems, activeRentals, dueToday, overdueRentals }
