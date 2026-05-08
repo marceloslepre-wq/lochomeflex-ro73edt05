@@ -2,24 +2,33 @@ import { useParams, useNavigate } from 'react-router-dom'
 import useMainStore from '@/stores/main'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Save, Edit2, Printer, Link as LinkIcon } from 'lucide-react'
-import { useState, useMemo } from 'react'
+import { ArrowLeft, Save, Edit2, Printer, Link as LinkIcon, History } from 'lucide-react'
+import { useState, useMemo, useEffect } from 'react'
 import { useToast } from '@/hooks/use-toast'
 import { usePermissions } from '@/hooks/use-permissions'
 import logoImg from '@/assets/logo_hospital_home_final-f2434.jpg'
+import { supabase } from '@/lib/supabase/client'
 
 export default function RentalDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { rentals, customers, inventory, settings, updateRental } = useMainStore()
   const { toast } = useToast()
-  const { can } = usePermissions()
+  const { can, currentUser } = usePermissions()
+
   const [isEditing, setIsEditing] = useState(false)
-  const [docType, setDocType] = useState<'contract' | 'delivery' | 'return'>('contract')
+  const [docType, setDocType] = useState<'contract' | 'delivery' | 'return' | 'history'>('contract')
+  const [audits, setAudits] = useState<any[]>([])
 
   const rental = rentals.find((r) => r.id === id)
   const customer = customers.find((c) => c?.id === rental?.customerId)
+
+  const [editStartDate, setEditStartDate] = useState('')
+  const [editReturnDate, setEditReturnDate] = useState('')
+  const [contractText, setContractText] = useState('')
 
   const customerPhone = useMemo(() => {
     if (!customer) return null
@@ -141,9 +150,29 @@ export default function RentalDetail() {
     return text
   }, [rental, customer, inventory, settings])
 
-  const [contractText, setContractText] = useState(
-    rental?.customContractText || defaultContractText,
-  )
+  useEffect(() => {
+    if (rental) {
+      setEditStartDate(rental.startDate)
+      setEditReturnDate(rental.expectedReturnDate)
+      setContractText(rental.customContractText || defaultContractText)
+    }
+  }, [rental, defaultContractText])
+
+  const fetchAudits = async () => {
+    if (!rental) return
+    const { data } = await supabase
+      .from('auditoria_contratos')
+      .select('*, profiles(name)')
+      .eq('rental_id', rental.id)
+      .order('created_at', { ascending: false })
+    if (data) setAudits(data)
+  }
+
+  useEffect(() => {
+    if (docType === 'history') {
+      fetchAudits()
+    }
+  }, [docType, rental?.id])
 
   const generateContractHtml = () => {
     if (!rental) return null
@@ -441,12 +470,105 @@ export default function RentalDetail() {
 
   if (!rental) return <div className="p-6">Locação não encontrada no sistema.</div>
 
-  const handleSave = () => {
-    updateRental(rental.id, { customContractText: contractText })
+  const handleSave = async () => {
+    if (!rental || !currentUser) return
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const startD = new Date(editStartDate + 'T00:00:00')
+    const returnD = new Date(editReturnDate + 'T00:00:00')
+
+    if (!editStartDate || isNaN(startD.getTime())) {
+      toast({
+        title: 'Erro de Validação',
+        description: 'Data de início inválida.',
+        variant: 'destructive',
+      })
+      return
+    }
+    if (!editReturnDate || isNaN(returnD.getTime())) {
+      toast({
+        title: 'Erro de Validação',
+        description: 'Data de devolução inválida.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    const oneYearFromNow = new Date(today)
+    oneYearFromNow.setFullYear(today.getFullYear() + 1)
+
+    const fiveYearsFromNow = new Date(today)
+    fiveYearsFromNow.setFullYear(today.getFullYear() + 5)
+
+    if (editStartDate !== rental.startDate && startD < today) {
+      toast({
+        title: 'Erro de Validação',
+        description: 'A nova data de início não pode ser retroativa (menor que hoje).',
+        variant: 'destructive',
+      })
+      return
+    }
+    if (editStartDate !== rental.startDate && startD > oneYearFromNow) {
+      toast({
+        title: 'Erro de Validação',
+        description: 'A nova data de início não pode ser maior que 1 ano.',
+        variant: 'destructive',
+      })
+      return
+    }
+    if (returnD <= startD) {
+      toast({
+        title: 'Erro de Validação',
+        description: 'A data de fim deve ser maior que a data de início.',
+        variant: 'destructive',
+      })
+      return
+    }
+    if (editReturnDate !== rental.expectedReturnDate && returnD > fiveYearsFromNow) {
+      toast({
+        title: 'Erro de Validação',
+        description: 'A nova data de fim não pode ser maior que 5 anos.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    const { error: rpcError } = await supabase.rpc('update_rental_secure', {
+      p_rental_id: rental.id,
+      p_start_date: editStartDate,
+      p_expected_return_date: editReturnDate,
+      p_custom_text: contractText,
+      p_user_id: currentUser.id,
+    })
+
+    if (rpcError) {
+      if (rpcError.message.includes('Rate limit exceeded')) {
+        toast({
+          title: 'Acesso Negado',
+          description: 'Muitas edições recentes (max 5/min). Aguarde um momento.',
+          variant: 'destructive',
+        })
+      } else {
+        toast({
+          title: 'Erro',
+          description: 'Falha ao salvar: ' + rpcError.message,
+          variant: 'destructive',
+        })
+      }
+      return
+    }
+
+    updateRental(rental.id, {
+      startDate: editStartDate,
+      expectedReturnDate: editReturnDate,
+      customContractText: contractText,
+    })
+
     setIsEditing(false)
     toast({
       title: 'Contrato Atualizado',
-      description: 'O texto do contrato foi salvo para esta locação.',
+      description: 'O contrato foi salvo e a alteração registrada na auditoria.',
     })
   }
 
@@ -479,6 +601,12 @@ export default function RentalDetail() {
         >
           Recibo Devolução
         </Button>
+        <Button
+          variant={docType === 'history' ? 'default' : 'outline'}
+          onClick={() => setDocType('history')}
+        >
+          <History className="w-4 h-4 mr-2" /> Histórico
+        </Button>
       </div>
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 print:hidden">
@@ -506,7 +634,7 @@ export default function RentalDetail() {
           >
             {rental.status}
           </Badge>
-          {!isEditing ? (
+          {!isEditing && docType !== 'history' ? (
             <>
               <Button variant="outline" size="sm" onClick={handleCopyLink}>
                 <LinkIcon className="w-4 h-4 mr-2" /> Copiar Link
@@ -514,13 +642,13 @@ export default function RentalDetail() {
               <Button size="sm" onClick={() => window.print()}>
                 <Printer className="w-4 h-4 mr-2" /> Imprimir
               </Button>
-              {can('rentals:manage') && docType === 'contract' && (
+              {(can('rentals:manage') || can('editar_contratos')) && docType === 'contract' && (
                 <Button variant="secondary" size="sm" onClick={() => setIsEditing(true)}>
                   <Edit2 className="w-4 h-4 mr-2" /> Editar
                 </Button>
               )}
             </>
-          ) : (
+          ) : isEditing ? (
             <>
               <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)}>
                 Cancelar
@@ -529,17 +657,39 @@ export default function RentalDetail() {
                 <Save className="w-4 h-4 mr-2" /> Salvar
               </Button>
             </>
-          )}
+          ) : null}
         </div>
       </div>
 
       {docType === 'contract' && isEditing ? (
-        <div className="print:hidden">
+        <div className="print:hidden space-y-4">
+          <div className="p-4 bg-muted rounded-md space-y-4">
+            <h3 className="font-semibold text-lg">Configurações do Contrato</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Data de Retirada</Label>
+                <Input
+                  type="date"
+                  value={editStartDate}
+                  onChange={(e) => setEditStartDate(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Previsão de Devolução</Label>
+                <Input
+                  type="date"
+                  value={editReturnDate}
+                  onChange={(e) => setEditReturnDate(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
           {finalHtml && (
-            <div className="mb-4 p-4 bg-amber-50 text-amber-800 rounded-md text-sm">
+            <div className="p-4 bg-amber-50 text-amber-800 rounded-md text-sm">
               <strong>Aviso:</strong> Este contrato está usando um template de alta fidelidade
               configurado nas configurações. A edição de texto simples abaixo pode não refletir na
-              impressão se o template estiver ativo.
+              impressão se o template estiver ativo. No entanto, as datas atualizadas acima serão
+              salvas e usadas pelo template.
             </div>
           )}
           <Textarea
@@ -547,6 +697,49 @@ export default function RentalDetail() {
             value={contractText}
             onChange={(e) => setContractText(e.target.value)}
           />
+        </div>
+      ) : docType === 'history' ? (
+        <div className="space-y-6 print:hidden">
+          <h2 className="text-2xl font-bold tracking-tight">Histórico de Alterações</h2>
+          <div className="bg-white rounded-md border p-6 shadow-sm">
+            {audits.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">
+                Nenhuma alteração registrada para este contrato.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {audits.map((audit) => (
+                  <div key={audit.id} className="border rounded-lg p-4 bg-slate-50">
+                    <div className="flex items-center justify-between mb-3 border-b pb-3">
+                      <div>
+                        <p className="font-semibold text-sm">
+                          Usuário: {audit.profiles?.name || audit.usuario_id || 'Sistema'}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(audit.created_at).toLocaleString('pt-BR')}
+                        </p>
+                      </div>
+                      <Badge variant="outline">{audit.acao}</Badge>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono">
+                      <div className="bg-red-50/50 p-3 rounded border border-red-100 max-h-[300px] overflow-y-auto">
+                        <span className="font-bold text-red-800 block mb-2">Antes:</span>
+                        <pre className="whitespace-pre-wrap break-words text-red-900">
+                          {JSON.stringify(audit.campos_antigos, null, 2)}
+                        </pre>
+                      </div>
+                      <div className="bg-green-50/50 p-3 rounded border border-green-100 max-h-[300px] overflow-y-auto">
+                        <span className="font-bold text-green-800 block mb-2">Depois:</span>
+                        <pre className="whitespace-pre-wrap break-words text-green-900">
+                          {JSON.stringify(audit.campos_novos, null, 2)}
+                        </pre>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       ) : (
         <div

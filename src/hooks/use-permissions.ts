@@ -8,6 +8,7 @@ export type PermissionKey =
   | 'rentals:manage'
   | 'users:manage'
   | 'reports:view'
+  | 'editar_contratos'
 
 export function usePermissions() {
   const { currentUser } = useMainStore()
