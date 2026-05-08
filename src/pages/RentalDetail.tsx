@@ -29,6 +29,15 @@ export default function RentalDetail() {
   const [editStartDate, setEditStartDate] = useState('')
   const [editReturnDate, setEditReturnDate] = useState('')
   const [contractText, setContractText] = useState('')
+  const [justification, setJustification] = useState('')
+
+  const isRetroactive = useMemo(() => {
+    if (!editStartDate) return false
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const startD = new Date(editStartDate + 'T00:00:00')
+    return startD < today
+  }, [editStartDate])
 
   const customerPhone = useMemo(() => {
     if (!customer) return null
@@ -481,7 +490,7 @@ export default function RentalDetail() {
     if (!editStartDate || isNaN(startD.getTime())) {
       toast({
         title: 'Erro de Validação',
-        description: 'Data de início inválida.',
+        description: 'Data de retirada inválida.',
         variant: 'destructive',
       })
       return
@@ -501,45 +510,49 @@ export default function RentalDetail() {
     const fiveYearsFromNow = new Date(today)
     fiveYearsFromNow.setFullYear(today.getFullYear() + 5)
 
-    if (editStartDate !== rental.startDate && startD < today) {
+    if (startD > oneYearFromNow) {
       toast({
         title: 'Erro de Validação',
-        description: 'A nova data de início não pode ser retroativa (menor que hoje).',
-        variant: 'destructive',
-      })
-      return
-    }
-    if (editStartDate !== rental.startDate && startD > oneYearFromNow) {
-      toast({
-        title: 'Erro de Validação',
-        description: 'A nova data de início não pode ser maior que 1 ano.',
-        variant: 'destructive',
-      })
-      return
-    }
-    if (returnD <= startD) {
-      toast({
-        title: 'Erro de Validação',
-        description: 'A data de fim deve ser maior que a data de início.',
-        variant: 'destructive',
-      })
-      return
-    }
-    if (editReturnDate !== rental.expectedReturnDate && returnD > fiveYearsFromNow) {
-      toast({
-        title: 'Erro de Validação',
-        description: 'A nova data de fim não pode ser maior que 5 anos.',
+        description: 'A data de retirada não pode exceder 1 ano a partir de hoje.',
         variant: 'destructive',
       })
       return
     }
 
-    const { error: rpcError } = await supabase.rpc('update_rental_secure', {
+    if (isRetroactive && !justification.trim()) {
+      toast({
+        title: 'Erro de Validação',
+        description: 'Para datas retroativas, é obrigatório informar uma justificativa.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    if (returnD <= startD) {
+      toast({
+        title: 'Erro de Validação',
+        description: 'A data de devolução deve ser posterior à data de retirada.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    if (returnD > fiveYearsFromNow) {
+      toast({
+        title: 'Erro de Validação',
+        description: 'A data de devolução não pode exceder 5 anos a partir de hoje.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    const { error: rpcError } = await (supabase.rpc as any)('update_rental_secure', {
       p_rental_id: rental.id,
       p_start_date: editStartDate,
       p_expected_return_date: editReturnDate,
       p_custom_text: contractText,
       p_user_id: currentUser.id,
+      p_justificativa: justification.trim() || null,
     })
 
     if (rpcError) {
@@ -682,6 +695,19 @@ export default function RentalDetail() {
                   onChange={(e) => setEditReturnDate(e.target.value)}
                 />
               </div>
+              {isRetroactive && (
+                <div className="col-span-1 sm:col-span-2 space-y-2">
+                  <Label className="text-red-600">
+                    Justificativa para Data Retroativa <span className="text-red-600">*</span>
+                  </Label>
+                  <Input
+                    placeholder="Informe o motivo da data de retirada ser anterior a hoje..."
+                    value={justification}
+                    onChange={(e) => setJustification(e.target.value)}
+                    className="border-red-200 focus-visible:ring-red-500"
+                  />
+                </div>
+              )}
             </div>
           </div>
           {finalHtml && (
@@ -721,19 +747,73 @@ export default function RentalDetail() {
                       </div>
                       <Badge variant="outline">{audit.acao}</Badge>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono">
-                      <div className="bg-red-50/50 p-3 rounded border border-red-100 max-h-[300px] overflow-y-auto">
-                        <span className="font-bold text-red-800 block mb-2">Antes:</span>
-                        <pre className="whitespace-pre-wrap break-words text-red-900">
-                          {JSON.stringify(audit.campos_antigos, null, 2)}
-                        </pre>
-                      </div>
-                      <div className="bg-green-50/50 p-3 rounded border border-green-100 max-h-[300px] overflow-y-auto">
-                        <span className="font-bold text-green-800 block mb-2">Depois:</span>
-                        <pre className="whitespace-pre-wrap break-words text-green-900">
-                          {JSON.stringify(audit.campos_novos, null, 2)}
-                        </pre>
-                      </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                      {['start_date', 'expected_return_date', 'justificativa'].map((field) => {
+                        const oldV = audit.campos_antigos?.[field]
+                        const newV = audit.campos_novos?.[field]
+                        if (oldV === newV && field !== 'justificativa') return null
+                        if (field === 'justificativa' && !newV) return null
+
+                        const labels: Record<string, string> = {
+                          start_date: 'Data de Retirada',
+                          expected_return_date: 'Previsão de Devolução',
+                          justificativa: 'Justificativa (Retroativa)',
+                        }
+
+                        let displayOld = oldV
+                        let displayNew = newV
+
+                        if (field === 'start_date' || field === 'expected_return_date') {
+                          displayOld = oldV
+                            ? new Date(oldV + 'T00:00:00').toLocaleDateString('pt-BR')
+                            : '-'
+                          displayNew = newV
+                            ? new Date(newV + 'T00:00:00').toLocaleDateString('pt-BR')
+                            : '-'
+                        }
+
+                        if (field === 'justificativa') {
+                          return (
+                            <div key={field} className="col-span-full border rounded p-3 bg-white">
+                              <span className="font-semibold text-xs text-muted-foreground block mb-1">
+                                {labels[field]}
+                              </span>
+                              <div className="text-gray-800">{displayNew}</div>
+                            </div>
+                          )
+                        }
+
+                        return (
+                          <div
+                            key={field}
+                            className="col-span-full sm:col-span-1 border rounded p-3 bg-white"
+                          >
+                            <span className="font-semibold text-xs text-muted-foreground block mb-1">
+                              {labels[field]}
+                            </span>
+                            <div className="flex items-center gap-3">
+                              <span className="line-through text-red-500 font-mono">
+                                {displayOld}
+                              </span>
+                              <span className="text-gray-400">→</span>
+                              <span className="text-green-600 font-medium font-mono">
+                                {displayNew}
+                              </span>
+                            </div>
+                          </div>
+                        )
+                      })}
+                      {audit.campos_antigos?.custom_contract_text !==
+                        audit.campos_novos?.custom_contract_text && (
+                        <div className="col-span-full border rounded p-3 bg-white">
+                          <span className="font-semibold text-xs text-muted-foreground block mb-1">
+                            Texto do Contrato
+                          </span>
+                          <div className="text-xs bg-slate-50 p-2 rounded text-slate-600">
+                            Conteúdo do contrato foi modificado.
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}

@@ -9,6 +9,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      auditoria_contratos: {
+        Row: {
+          acao: string
+          campos_antigos: Json | null
+          campos_novos: Json | null
+          created_at: string
+          id: string
+          ip_usuario: string | null
+          rental_id: string | null
+          usuario_id: string | null
+        }
+        Insert: {
+          acao: string
+          campos_antigos?: Json | null
+          campos_novos?: Json | null
+          created_at?: string
+          id?: string
+          ip_usuario?: string | null
+          rental_id?: string | null
+          usuario_id?: string | null
+        }
+        Update: {
+          acao?: string
+          campos_antigos?: Json | null
+          campos_novos?: Json | null
+          created_at?: string
+          id?: string
+          ip_usuario?: string | null
+          rental_id?: string | null
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'auditoria_contratos_rental_id_fkey'
+            columns: ['rental_id']
+            isOneToOne: false
+            referencedRelation: 'rentals'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'auditoria_contratos_usuario_id_fkey'
+            columns: ['usuario_id']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       customers: {
         Row: {
           address: Json | null
@@ -422,6 +470,16 @@ export type Database = {
         }
         Returns: undefined
       }
+      update_rental_secure: {
+        Args: {
+          p_custom_text: string
+          p_expected_return_date: string
+          p_rental_id: string
+          p_start_date: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
@@ -563,6 +621,15 @@ export const Constants = {
 // --- COLUMN TYPES (actual PostgreSQL types) ---
 // Use this to know the real database type when writing migrations.
 // "string" in TypeScript types above may be uuid, text, varchar, timestamptz, etc.
+// Table: auditoria_contratos
+//   id: uuid (not null, default: gen_random_uuid())
+//   rental_id: uuid (nullable)
+//   usuario_id: uuid (nullable)
+//   acao: text (not null)
+//   campos_antigos: jsonb (nullable)
+//   campos_novos: jsonb (nullable)
+//   ip_usuario: text (nullable)
+//   created_at: timestamp with time zone (not null, default: now())
 // Table: customers
 //   id: uuid (not null, default: gen_random_uuid())
 //   matricula: text (not null)
@@ -665,6 +732,10 @@ export const Constants = {
 //   updated_at: timestamp with time zone (not null, default: now())
 
 // --- CONSTRAINTS ---
+// Table: auditoria_contratos
+//   PRIMARY KEY auditoria_contratos_pkey: PRIMARY KEY (id)
+//   FOREIGN KEY auditoria_contratos_rental_id_fkey: FOREIGN KEY (rental_id) REFERENCES rentals(id) ON DELETE CASCADE
+//   FOREIGN KEY auditoria_contratos_usuario_id_fkey: FOREIGN KEY (usuario_id) REFERENCES profiles(id) ON DELETE SET NULL
 // Table: customers
 //   PRIMARY KEY customers_pkey: PRIMARY KEY (id)
 // Table: inventory
@@ -693,6 +764,11 @@ export const Constants = {
 //   PRIMARY KEY settings_pkey: PRIMARY KEY (id)
 
 // --- ROW LEVEL SECURITY POLICIES ---
+// Table: auditoria_contratos
+//   Policy "authenticated_insert_auditoria" (INSERT, PERMISSIVE) roles={authenticated}
+//     WITH CHECK: true
+//   Policy "authenticated_select_auditoria" (SELECT, PERMISSIVE) roles={authenticated}
+//     USING: true
 // Table: customers
 //   Policy "anon_insert" (INSERT, PERMISSIVE) roles={anon}
 //     WITH CHECK: true
@@ -945,6 +1021,54 @@ export const Constants = {
 //   BEGIN
 //       NEW.updated_at = NOW();
 //       RETURN NEW;
+//   END;
+//   $function$
+//
+// FUNCTION update_rental_secure(uuid, date, date, text, uuid)
+//   CREATE OR REPLACE FUNCTION public.update_rental_secure(p_rental_id uuid, p_start_date date, p_expected_return_date date, p_custom_text text, p_user_id uuid)
+//    RETURNS void
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//   AS $function$
+//   DECLARE
+//     v_count int;
+//     v_old_start date;
+//     v_old_return date;
+//     v_old_text text;
+//   BEGIN
+//     -- Rate limit check
+//     SELECT count(*) INTO v_count
+//     FROM public.auditoria_contratos
+//     WHERE usuario_id = p_user_id
+//       AND created_at >= NOW() - INTERVAL '1 minute';
+//
+//     IF v_count >= 5 THEN
+//       RAISE EXCEPTION 'Rate limit exceeded: max 5 edits per minute.';
+//     END IF;
+//
+//     -- Get old values
+//     SELECT start_date, expected_return_date, custom_contract_text
+//     INTO v_old_start, v_old_return, v_old_text
+//     FROM public.rentals
+//     WHERE id = p_rental_id;
+//
+//     -- Update
+//     UPDATE public.rentals
+//     SET start_date = p_start_date,
+//         expected_return_date = p_expected_return_date,
+//         custom_contract_text = p_custom_text
+//     WHERE id = p_rental_id;
+//
+//     -- Audit
+//     INSERT INTO public.auditoria_contratos (rental_id, usuario_id, acao, campos_antigos, campos_novos, ip_usuario)
+//     VALUES (
+//       p_rental_id,
+//       p_user_id,
+//       'EDIT',
+//       jsonb_build_object('start_date', v_old_start, 'expected_return_date', v_old_return, 'custom_contract_text', v_old_text),
+//       jsonb_build_object('start_date', p_start_date, 'expected_return_date', p_expected_return_date, 'custom_contract_text', p_custom_text),
+//       'rpc-call'
+//     );
 //   END;
 //   $function$
 //
