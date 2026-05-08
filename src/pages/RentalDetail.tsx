@@ -101,10 +101,19 @@ export default function RentalDetail() {
     const regularItems = rental.items.filter((ri) => ri.itemId !== 'freight')
     const freightItem = rental.items.find((ri) => ri.itemId === 'freight')
 
+    // FIX: Preserva data local sem timezone shift
+    const formatDateLocal = (dateStr?: string | null) => {
+      if (!dateStr) return ''
+      const cleanStr = dateStr.split('T')[0]
+      const [y, m, d] = cleanStr.split('-')
+      if (!y || !m || !d) return dateStr
+      return `${d}/${m}/${y}`
+    }
+
     text += `2 - PREÇO E PRAZO DE LOCAÇÃO:\n`
     regularItems.forEach((ri) => {
       const item = inventory.find((i) => i.id === ri.itemId)
-      text += `   • ${ri.qty}x - ${item?.name} (Código: ${item?.code || '-'}) (Retirada: ${new Date(ri.startDate || rental.startDate).toLocaleDateString('pt-BR')} | Devolução: ${new Date(ri.endDate || rental.expectedReturnDate).toLocaleDateString('pt-BR')} | Valor: R$ ${(ri.totalPrice || 0).toFixed(2)})\n`
+      text += `   • ${ri.qty}x - ${item?.name} (Código: ${item?.code || '-'}) (Retirada: ${formatDateLocal(ri.startDate || rental.startDate)} | Devolução: ${formatDateLocal(ri.endDate || rental.expectedReturnDate)} | Valor: R$ ${(ri.totalPrice || 0).toFixed(2)})\n`
     })
 
     if (freightItem && freightItem.totalPrice) {
@@ -153,7 +162,9 @@ export default function RentalDetail() {
       'novembro',
       'dezembro',
     ]
-    const date = new Date(rental.startDate)
+    const startStr = rental.startDate.split('T')[0]
+    const [ry, rm, rd] = startStr.split('-').map(Number)
+    const date = new Date(ry, rm - 1, rd, 12, 0, 0)
     text += `Vitória - ES, ${date.getDate().toString().padStart(2, '0')} de ${months[date.getMonth()]} de ${date.getFullYear()}\n`
 
     return text
@@ -236,13 +247,20 @@ export default function RentalDetail() {
       return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val)
     }
 
-    const formatDate = (dateStr: string) => {
+    // FIX: Preserva data local sem timezone shift
+    const formatDateLocal = (dateStr?: string | null) => {
       if (!dateStr) return ''
-      return new Date(dateStr).toLocaleDateString('pt-BR')
+      const cleanStr = dateStr.split('T')[0]
+      const [y, m, d] = cleanStr.split('-')
+      if (!y || !m || !d) return dateStr
+      return `${d}/${m}/${y}`
     }
 
-    const regularItems = rental.items.filter((ri) => ri.itemId !== 'freight')
-    const freightItem = rental.items.find((ri) => ri.itemId === 'freight')
+    const formatDate = (dateStr: string) => {
+      return formatDateLocal(dateStr)
+    }
+
+    const regularItems = rental.items.filter((ri) => ri.itemId !== 'freight')    const freightItem = rental.items.find((ri) => ri.itemId === 'freight')
 
     let itemsHtml = regularItems
       .map((ri) => {
@@ -382,7 +400,7 @@ export default function RentalDetail() {
           <p><strong>LOCADOR:</strong> ${settings.companyName || 'Lojas Hospital Home'}</p>
           <p><strong>LOCATÁRIO:</strong> ${customer?.name}</p>
           <p><strong>CPF/CNPJ:</strong> ${customer?.document}</p>
-          <p><strong>Data de Devolução:</strong> ${rental?.actualReturnDate ? new Date(rental.actualReturnDate).toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR')}</p>
+          <p><strong>Data de Devolução:</strong> ${rental?.actualReturnDate ? rental.actualReturnDate.split('T')[0].split('-').reverse().join('/') : new Date().toLocaleDateString('pt-BR')}</p>
         </div>
 
         <p>Declaramos para os devidos fins que recebemos em devolução os equipamentos abaixo descritos, referentes ao contrato supracitado:</p>
@@ -437,7 +455,7 @@ export default function RentalDetail() {
           <p><strong>LOCADOR:</strong> ${settings.companyName || 'Lojas Hospital Home'}</p>
           <p><strong>LOCATÁRIO:</strong> ${customer?.name}</p>
           <p><strong>CPF/CNPJ:</strong> ${customer?.document}</p>
-          <p><strong>Data de Retirada:</strong> ${rental?.startDate ? new Date(rental.startDate).toLocaleDateString('pt-BR') : new Date().toLocaleDateString('pt-BR')}</p>
+          <p><strong>Data de Retirada:</strong> ${rental?.startDate ? rental.startDate.split('T')[0].split('-').reverse().join('/') : new Date().toLocaleDateString('pt-BR')}</p>
         </div>
 
         <p>Declaramos para os devidos fins que o locatário retirou/recebeu os equipamentos abaixo descritos, em perfeitas condições de uso:</p>
@@ -765,10 +783,10 @@ export default function RentalDetail() {
 
                         if (field === 'start_date' || field === 'expected_return_date') {
                           displayOld = oldV
-                            ? new Date(oldV + 'T00:00:00').toLocaleDateString('pt-BR')
+                            ? String(oldV).split('T')[0].split('-').reverse().join('/')
                             : '-'
                           displayNew = newV
-                            ? new Date(newV + 'T00:00:00').toLocaleDateString('pt-BR')
+                            ? String(newV).split('T')[0].split('-').reverse().join('/')
                             : '-'
                         }
 

@@ -51,12 +51,14 @@ export function RenewDialog({ rental, open, onOpenChange, onRenewed }: RenewDial
   const handleSave = () => {
     if (!rental) return
 
-    const [year, month, day] = endDate.split('-').map(Number)
-    const newExpectedReturn = new Date(year, month - 1, day, 12, 0, 0).toISOString()
+    // FIX: Preserva data local sem timezone shift
+    // Salva como STRING pura (sem timezone)
+    const newExpectedReturn = endDate
 
     // Calculate added value
+    const [year, month, day] = endDate.split('-').map(Number)
     const start = parseISO(startDate)
-    const end = new Date(year, month - 1, day)
+    const end = new Date(year, month - 1, day, 12, 0, 0)
     let diffDays = differenceInDays(end, start)
     if (diffDays <= 0) diffDays = 1
 
@@ -79,7 +81,7 @@ export function RenewDialog({ rental, open, onOpenChange, onRenewed }: RenewDial
 
     toast({
       title: 'Locação renovada com sucesso',
-      description: `O contrato ${rental.contractNumber || rental.id} foi estendido até ${format(new Date(year, month - 1, day), 'dd/MM/yyyy')}.`,
+      description: `O contrato ${rental.contractNumber || rental.id} foi estendido até ${day.toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}/${year}.`,
     })
 
     if (onRenewed) {
