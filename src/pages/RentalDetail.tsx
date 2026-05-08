@@ -260,7 +260,8 @@ export default function RentalDetail() {
       return formatDateLocal(dateStr)
     }
 
-    const regularItems = rental.items.filter((ri) => ri.itemId !== 'freight')    const freightItem = rental.items.find((ri) => ri.itemId === 'freight')
+    const regularItems = rental.items.filter((ri) => ri.itemId !== 'freight')
+    const freightItem = rental.items.find((ri) => ri.itemId === 'freight')
 
     let itemsHtml = regularItems
       .map((ri) => {
