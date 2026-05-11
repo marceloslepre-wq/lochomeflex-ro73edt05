@@ -4,6 +4,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogTrigger,
   DialogFooter,
 } from '@/components/ui/dialog'
@@ -337,9 +338,15 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
           <Plus className="w-4 h-4 mr-2" /> Nova Locação
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+      <DialogContent
+        className="max-w-5xl max-h-[90vh] overflow-y-auto"
+        aria-describedby="create-rental-dialog-desc"
+      >
         <DialogHeader>
           <DialogTitle>Criar Nova Locação</DialogTitle>
+          <DialogDescription id="create-rental-dialog-desc" className="sr-only">
+            Preencha os detalhes para criar uma nova locação
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-6 pt-4">
           <div className="grid gap-2">
@@ -352,9 +359,11 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
                   aria-expanded={customerOpen}
                   className="w-full justify-between"
                 >
-                  {customerId
-                    ? customers.find((c) => c.id === customerId)?.name
-                    : 'Selecione o cliente...'}
+                  <span className="truncate">
+                    {customerId
+                      ? customers.find((c) => c.id === customerId)?.name || 'Selecione o cliente...'
+                      : 'Selecione o cliente...'}
+                  </span>
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
@@ -370,7 +379,8 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
                           value={`${c.name} ${c.document}`}
                           onSelect={() => {
                             setCustomerId(c.id)
-                            setCustomerOpen(false)
+                            // Evita NotFoundError / removeChild crash no React ao fechar popover sincronamente
+                            setTimeout(() => setCustomerOpen(false), 0)
                           }}
                         >
                           <Check
@@ -438,14 +448,16 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
                       aria-expanded={itemOpen}
                       className="w-full justify-between"
                     >
-                      {selectedItemId
-                        ? (() => {
-                            const item = inventory.find((i) => i.id === selectedItemId)
-                            return item
-                              ? `${item.code ? `[${item.code}] - ` : ''}${item.name}`
-                              : 'Selecione o modelo...'
-                          })()
-                        : 'Selecione o modelo...'}
+                      <span className="truncate">
+                        {selectedItemId
+                          ? (() => {
+                              const item = inventory.find((i) => i.id === selectedItemId)
+                              return item
+                                ? `${item.code ? `[${item.code}] - ` : ''}${item.name}`
+                                : 'Selecione o modelo...'
+                            })()
+                          : 'Selecione o modelo...'}
+                      </span>
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
@@ -461,7 +473,8 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
                               value={`${i.code} ${i.name}`}
                               onSelect={() => {
                                 setSelectedItemId(i.id)
-                                setItemOpen(false)
+                                // Evita NotFoundError / removeChild crash no React ao fechar popover sincronamente
+                                setTimeout(() => setItemOpen(false), 0)
                               }}
                             >
                               <Check
