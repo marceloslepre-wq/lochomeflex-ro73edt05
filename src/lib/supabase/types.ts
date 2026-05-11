@@ -393,6 +393,57 @@ export type Database = {
           },
         ]
       }
+      rentals_backup_dates: {
+        Row: {
+          actual_return_date: string | null
+          contract_number: string | null
+          created_at: string | null
+          custom_contract_html: string | null
+          custom_contract_text: string | null
+          customer_id: string | null
+          expected_return_date: string | null
+          id: string | null
+          items: Json | null
+          pickup_location_id: string | null
+          start_date: string | null
+          status: string | null
+          total: number | null
+          user_id: string | null
+        }
+        Insert: {
+          actual_return_date?: string | null
+          contract_number?: string | null
+          created_at?: string | null
+          custom_contract_html?: string | null
+          custom_contract_text?: string | null
+          customer_id?: string | null
+          expected_return_date?: string | null
+          id?: string | null
+          items?: Json | null
+          pickup_location_id?: string | null
+          start_date?: string | null
+          status?: string | null
+          total?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          actual_return_date?: string | null
+          contract_number?: string | null
+          created_at?: string | null
+          custom_contract_html?: string | null
+          custom_contract_text?: string | null
+          customer_id?: string | null
+          expected_return_date?: string | null
+          id?: string | null
+          items?: Json | null
+          pickup_location_id?: string | null
+          start_date?: string | null
+          status?: string | null
+          total?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       settings: {
         Row: {
           categories: Json | null
@@ -726,6 +777,21 @@ export const Constants = {
 //   pickup_location_id: text (nullable)
 //   items: jsonb (not null, default: '[]'::jsonb)
 //   created_at: timestamp with time zone (not null, default: now())
+//   contract_number: text (nullable)
+// Table: rentals_backup_dates
+//   id: uuid (nullable)
+//   customer_id: uuid (nullable)
+//   start_date: date (nullable)
+//   expected_return_date: date (nullable)
+//   actual_return_date: date (nullable)
+//   status: text (nullable)
+//   total: numeric (nullable)
+//   custom_contract_text: text (nullable)
+//   custom_contract_html: text (nullable)
+//   user_id: uuid (nullable)
+//   pickup_location_id: text (nullable)
+//   items: jsonb (nullable)
+//   created_at: timestamp with time zone (nullable)
 //   contract_number: text (nullable)
 // Table: settings
 //   id: uuid (not null, default: gen_random_uuid())

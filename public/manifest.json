@@ -7,14 +7,19 @@
   "theme_color": "#1e40af",
   "icons": [
     {
-      "src": "https://img.usecurling.com/i?q=app%20icon&shape=fill&color=blue",
-      "sizes": "192x192",
-      "type": "image/png"
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
     },
     {
-      "src": "https://img.usecurling.com/i?q=app%20icon&shape=fill&color=blue",
-      "sizes": "512x512",
-      "type": "image/png"
+      "src": "/logo192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/logo512.png",
+      "type": "image/png",
+      "sizes": "512x512"
     }
   ]
 }
