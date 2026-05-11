@@ -76,7 +76,7 @@ export function RentalsReportDialog() {
       'Retirada',
       'Previsão',
       'Status',
-      'Pagamento',
+      'Forma de Pagamento',
       'Total',
     ]
     const data = filteredRentals.map((r) => {
@@ -209,10 +209,10 @@ export function RentalsReportDialog() {
             </Select>
           </div>
           <div className="space-y-1">
-            <Label>Pagamento</Label>
+            <Label>Forma de Pagamento</Label>
             <Select value={paymentMethod} onValueChange={setPaymentMethod}>
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue placeholder="Todas as formas" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
@@ -258,7 +258,7 @@ export function RentalsReportDialog() {
                 <TableHead>Cliente</TableHead>
                 <TableHead>Operador</TableHead>
                 <TableHead>Local Retirada</TableHead>
-                <TableHead>Pagamento</TableHead>
+                <TableHead>Forma de Pagamento</TableHead>
                 <TableHead className="text-right">Valor</TableHead>
               </TableRow>
             </TableHeader>
