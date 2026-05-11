@@ -13,7 +13,16 @@ import {
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Search, Eye, ArrowDownToLine, Download, RefreshCw, Receipt, Trash2 } from 'lucide-react'
+import {
+  Search,
+  Eye,
+  ArrowDownToLine,
+  Download,
+  RefreshCw,
+  Receipt,
+  Trash2,
+  ArrowLeftRight,
+} from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -33,6 +42,7 @@ import { ReturnDialog } from '@/components/rentals/ReturnDialog'
 import { RentalsReportDialog } from '@/components/rentals/RentalsReportDialog'
 import { RenewDialog } from '@/components/rentals/RenewDialog'
 import { ReceiptDialog } from '@/components/rentals/ReceiptDialog'
+import { ExchangeDialog } from '@/components/rentals/ExchangeDialog'
 
 export default function Rentals() {
   const { rentals, customers, globalSearch, settings, deleteRental } = useMainStore()
@@ -44,6 +54,7 @@ export default function Rentals() {
   const [selectedRental, setSelectedRental] = useState<Rental | null>(null)
   const [returnOpen, setReturnOpen] = useState(false)
   const [renewOpen, setRenewOpen] = useState(false)
+  const [exchangeOpen, setExchangeOpen] = useState(false)
 
   const [receiptOpen, setReceiptOpen] = useState(false)
   const [receiptRental, setReceiptRental] = useState<Rental | null>(null)
@@ -321,6 +332,20 @@ export default function Rentals() {
                           </Button>
                           {rental.status !== 'Devolvido' && (
                             <>
+                              {rental.status === 'Ativo' && (
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="h-8 w-8 border-purple-500 text-purple-600 hover:bg-purple-50"
+                                  onClick={() => {
+                                    setSelectedRental(rental)
+                                    setExchangeOpen(true)
+                                  }}
+                                  title="Trocar Produto"
+                                >
+                                  <ArrowLeftRight className="h-4 w-4" />
+                                </Button>
+                              )}
                               <Button
                                 variant="outline"
                                 size="icon"
@@ -397,6 +422,7 @@ export default function Rentals() {
           setReceiptOpen(true)
         }}
       />
+      <ExchangeDialog rental={selectedRental} open={exchangeOpen} onOpenChange={setExchangeOpen} />
       <ReceiptDialog
         rental={receiptRental}
         open={receiptOpen}
