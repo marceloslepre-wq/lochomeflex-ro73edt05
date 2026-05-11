@@ -46,6 +46,7 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
   const [pickupLocationId, setPickupLocationId] = useState('')
   const [defaultDuration, setDefaultDuration] = useState<number | null>(null)
   const [freight, setFreight] = useState<number>(0)
+  const [paymentMethod, setPaymentMethod] = useState('PIX')
 
   const [customerOpen, setCustomerOpen] = useState(false)
   const [itemOpen, setItemOpen] = useState(false)
@@ -280,6 +281,15 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
       return
     }
 
+    if (!paymentMethod) {
+      toast({
+        title: 'Erro',
+        description: 'Forma de Pagamento é obrigatória para gerar o contrato.',
+        variant: 'destructive',
+      })
+      return
+    }
+
     const startDates = items.map((i) => i.startDate || todayStr).sort()
     const endDates = items.map((i) => i.endDate || todayStr).sort()
 
@@ -314,6 +324,7 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
       status: 'Ativo',
       total: finalTotal,
       customContractHtml: customHtml,
+      paymentMethod,
     } as any)
 
     if (createdRental) {
@@ -399,21 +410,41 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
             </Popover>
           </div>
 
-          <div className="grid gap-2">
-            <Label>Local de Retirada / Entrega</Label>
-            <Select value={pickupLocationId} onValueChange={setPickupLocationId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o local..." />
-              </SelectTrigger>
-              <SelectContent>
-                {(Array.isArray(settings?.locations) ? settings.locations : []).map((loc: any) => (
-                  <SelectItem key={loc.id} value={loc.id}>
-                    {loc.name}
-                  </SelectItem>
-                ))}
-                <SelectItem value="delivery">Entrega no Endereço do Cliente</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid gap-2">
+              <Label>Local de Retirada / Entrega</Label>
+              <Select value={pickupLocationId} onValueChange={setPickupLocationId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o local..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {(Array.isArray(settings?.locations) ? settings.locations : []).map(
+                    (loc: any) => (
+                      <SelectItem key={loc.id} value={loc.id}>
+                        {loc.name}
+                      </SelectItem>
+                    ),
+                  )}
+                  <SelectItem value="delivery">Entrega no Endereço do Cliente</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label>
+                Forma de Pagamento <span className="text-red-500">*</span>
+              </Label>
+              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a forma de pagamento" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PIX">PIX</SelectItem>
+                  <SelectItem value="Débito">Débito</SelectItem>
+                  <SelectItem value="Crédito">Crédito</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="border rounded-md p-4 bg-muted/30 space-y-4">

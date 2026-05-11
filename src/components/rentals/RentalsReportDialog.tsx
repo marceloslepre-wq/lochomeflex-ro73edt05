@@ -45,6 +45,7 @@ export function RentalsReportDialog() {
   const [productId, setProductId] = useState('all')
   const [customerId, setCustomerId] = useState('all')
   const [locationId, setLocationId] = useState('all')
+  const [paymentMethod, setPaymentMethod] = useState('all')
 
   const filteredRentals = useMemo(() => {
     return rentals.filter((r) => {
@@ -53,18 +54,31 @@ export function RentalsReportDialog() {
       if (userId !== 'all' && r.userId !== userId) return false
       if (customerId !== 'all' && r.customerId !== customerId) return false
       if (locationId !== 'all' && r.pickupLocationId !== locationId) return false
+      if (paymentMethod !== 'all') {
+        const rPayment = (r as any).paymentMethod || (r as any).payment_method || 'PIX'
+        if (rPayment !== paymentMethod) return false
+      }
       if (productId !== 'all') {
         const hasProduct = r.items.some((i) => i.itemId === productId)
         if (!hasProduct) return false
       }
       return true
     })
-  }, [rentals, startDate, endDate, userId, customerId, locationId, productId])
+  }, [rentals, startDate, endDate, userId, customerId, locationId, productId, paymentMethod])
 
   const totalValue = filteredRentals.reduce((sum, r) => sum + r.total, 0)
 
   const handleExportData = (format: 'pdf' | 'csv' | 'excel') => {
-    const headers = ['Contrato', 'Cliente', 'Telefone', 'Retirada', 'Previsão', 'Status', 'Total']
+    const headers = [
+      'Contrato',
+      'Cliente',
+      'Telefone',
+      'Retirada',
+      'Previsão',
+      'Status',
+      'Pagamento',
+      'Total',
+    ]
     const data = filteredRentals.map((r) => {
       const c = customers.find((cust) => cust.id === r.customerId)
 
@@ -77,6 +91,8 @@ export function RentalsReportDialog() {
         formattedPhone = `(${justNumbers.slice(0, 2)}) ${justNumbers.slice(2, 6)}-${justNumbers.slice(6)}`
       }
 
+      const rPayment = (r as any).paymentMethod || (r as any).payment_method || 'PIX'
+
       return [
         (r as any).contractNumber ||
           (r as any).contract_number ||
@@ -88,12 +104,13 @@ export function RentalsReportDialog() {
           ? new Date((r as any).expectedReturnDate).toLocaleDateString('pt-BR')
           : '-',
         r.status || 'Ativo',
+        rPayment,
         `R$ ${r.total.toFixed(2)}`,
       ]
     })
 
     // Add total row
-    data.push(['', '', '', '', '', 'TOTAL', `R$ ${totalValue.toFixed(2)}`])
+    data.push(['', '', '', '', '', '', 'TOTAL', `R$ ${totalValue.toFixed(2)}`])
 
     handleExport(
       format,
@@ -118,7 +135,7 @@ export function RentalsReportDialog() {
           <DialogTitle>Relatório Financeiro de Locações</DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 py-4 border-b">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4 py-4 border-b">
           <div className="space-y-1">
             <Label>Data Inicial</Label>
             <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
@@ -191,6 +208,20 @@ export function RentalsReportDialog() {
               </SelectContent>
             </Select>
           </div>
+          <div className="space-y-1">
+            <Label>Pagamento</Label>
+            <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="PIX">PIX</SelectItem>
+                <SelectItem value="Débito">Débito</SelectItem>
+                <SelectItem value="Crédito">Crédito</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <div className="flex justify-between items-center py-2">
@@ -227,13 +258,14 @@ export function RentalsReportDialog() {
                 <TableHead>Cliente</TableHead>
                 <TableHead>Operador</TableHead>
                 <TableHead>Local Retirada</TableHead>
+                <TableHead>Pagamento</TableHead>
                 <TableHead className="text-right">Valor</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredRentals.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     Nenhuma locação encontrada com os filtros atuais.
                   </TableCell>
                 </TableRow>
@@ -268,6 +300,9 @@ export function RentalsReportDialog() {
                       </TableCell>
                       <TableCell>{u?.name || '-'}</TableCell>
                       <TableCell>{loc?.name || '-'}</TableCell>
+                      <TableCell>
+                        {(r as any).paymentMethod || (r as any).payment_method || 'PIX'}
+                      </TableCell>
                       <TableCell className="text-right font-medium">
                         R$ {r.total.toFixed(2)}
                       </TableCell>

@@ -114,6 +114,73 @@ export type Database = {
         }
         Relationships: []
       }
+      exchange_history: {
+        Row: {
+          available_credit: number
+          created_at: string
+          days_remaining: number
+          days_used: number
+          difference_to_pay: number
+          exchange_date: string
+          extra_days: number
+          id: string
+          new_cost: number
+          new_inventory_id: string | null
+          old_inventory_id: string | null
+          rental_id: string | null
+        }
+        Insert: {
+          available_credit: number
+          created_at?: string
+          days_remaining: number
+          days_used: number
+          difference_to_pay: number
+          exchange_date?: string
+          extra_days: number
+          id?: string
+          new_cost: number
+          new_inventory_id?: string | null
+          old_inventory_id?: string | null
+          rental_id?: string | null
+        }
+        Update: {
+          available_credit?: number
+          created_at?: string
+          days_remaining?: number
+          days_used?: number
+          difference_to_pay?: number
+          exchange_date?: string
+          extra_days?: number
+          id?: string
+          new_cost?: number
+          new_inventory_id?: string | null
+          old_inventory_id?: string | null
+          rental_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'exchange_history_new_inventory_id_fkey'
+            columns: ['new_inventory_id']
+            isOneToOne: false
+            referencedRelation: 'inventory'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'exchange_history_old_inventory_id_fkey'
+            columns: ['old_inventory_id']
+            isOneToOne: false
+            referencedRelation: 'inventory'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'exchange_history_rental_id_fkey'
+            columns: ['rental_id']
+            isOneToOne: false
+            referencedRelation: 'rentals'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       inventory: {
         Row: {
           assets: Json | null
@@ -338,6 +405,7 @@ export type Database = {
           expected_return_date: string
           id: string
           items: Json
+          payment_method: string
           pickup_location_id: string | null
           start_date: string
           status: string
@@ -354,6 +422,7 @@ export type Database = {
           expected_return_date: string
           id?: string
           items?: Json
+          payment_method?: string
           pickup_location_id?: string | null
           start_date: string
           status?: string
@@ -370,6 +439,7 @@ export type Database = {
           expected_return_date?: string
           id?: string
           items?: Json
+          payment_method?: string
           pickup_location_id?: string | null
           start_date?: string
           status?: string
@@ -404,6 +474,7 @@ export type Database = {
           expected_return_date: string | null
           id: string | null
           items: Json | null
+          payment_method: string | null
           pickup_location_id: string | null
           start_date: string | null
           status: string | null
@@ -420,6 +491,7 @@ export type Database = {
           expected_return_date?: string | null
           id?: string | null
           items?: Json | null
+          payment_method?: string | null
           pickup_location_id?: string | null
           start_date?: string | null
           status?: string | null
@@ -436,6 +508,7 @@ export type Database = {
           expected_return_date?: string | null
           id?: string | null
           items?: Json | null
+          payment_method?: string | null
           pickup_location_id?: string | null
           start_date?: string | null
           status?: string | null
@@ -500,6 +573,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      exchange_rental_item: {
+        Args: {
+          p_difference_to_pay: number
+          p_exchange_history_data: Json
+          p_new_expected_return_date: string
+          p_new_inventory_id: string
+          p_old_inventory_id: string
+          p_quantity: number
+          p_rental_id: string
+        }
+        Returns: undefined
+      }
       public_add_asset: {
         Args: { p_asset: Json; p_item_id: string }
         Returns: undefined
@@ -710,6 +795,19 @@ export const Constants = {
 //   updated_at: timestamp with time zone (not null, default: now())
 //   attachment: text (nullable)
 //   documento_url: jsonb (nullable, default: '[]'::jsonb)
+// Table: exchange_history
+//   id: uuid (not null, default: gen_random_uuid())
+//   rental_id: uuid (nullable)
+//   old_inventory_id: uuid (nullable)
+//   new_inventory_id: uuid (nullable)
+//   exchange_date: timestamp with time zone (not null, default: now())
+//   days_used: integer (not null)
+//   days_remaining: integer (not null)
+//   available_credit: numeric (not null)
+//   new_cost: numeric (not null)
+//   difference_to_pay: numeric (not null)
+//   extra_days: integer (not null)
+//   created_at: timestamp with time zone (not null, default: now())
 // Table: inventory
 //   id: uuid (not null, default: gen_random_uuid())
 //   code: text (not null)
@@ -778,6 +876,7 @@ export const Constants = {
 //   items: jsonb (not null, default: '[]'::jsonb)
 //   created_at: timestamp with time zone (not null, default: now())
 //   contract_number: text (nullable)
+//   payment_method: character varying (not null, default: 'PIX'::character varying)
 // Table: rentals_backup_dates
 //   id: uuid (nullable)
 //   customer_id: uuid (nullable)
@@ -793,6 +892,7 @@ export const Constants = {
 //   items: jsonb (nullable)
 //   created_at: timestamp with time zone (nullable)
 //   contract_number: text (nullable)
+//   payment_method: character varying (nullable)
 // Table: settings
 //   id: uuid (not null, default: gen_random_uuid())
 //   primary_color: text (nullable, default: '#1e40af'::text)
@@ -816,6 +916,11 @@ export const Constants = {
 //   FOREIGN KEY auditoria_contratos_usuario_id_fkey: FOREIGN KEY (usuario_id) REFERENCES profiles(id) ON DELETE SET NULL
 // Table: customers
 //   PRIMARY KEY customers_pkey: PRIMARY KEY (id)
+// Table: exchange_history
+//   FOREIGN KEY exchange_history_new_inventory_id_fkey: FOREIGN KEY (new_inventory_id) REFERENCES inventory(id) ON DELETE SET NULL
+//   FOREIGN KEY exchange_history_old_inventory_id_fkey: FOREIGN KEY (old_inventory_id) REFERENCES inventory(id) ON DELETE SET NULL
+//   PRIMARY KEY exchange_history_pkey: PRIMARY KEY (id)
+//   FOREIGN KEY exchange_history_rental_id_fkey: FOREIGN KEY (rental_id) REFERENCES rentals(id) ON DELETE CASCADE
 // Table: inventory
 //   PRIMARY KEY inventory_pkey: PRIMARY KEY (id)
 // Table: inventory_locations
@@ -859,6 +964,12 @@ export const Constants = {
 //   Policy "authenticated_select" (SELECT, PERMISSIVE) roles={authenticated}
 //     USING: true
 //   Policy "authenticated_update" (UPDATE, PERMISSIVE) roles={authenticated}
+//     USING: true
+//     WITH CHECK: true
+// Table: exchange_history
+//   Policy "anon_select_exchange" (SELECT, PERMISSIVE) roles={anon}
+//     USING: true
+//   Policy "authenticated_all_exchange" (ALL, PERMISSIVE) roles={authenticated}
 //     USING: true
 //     WITH CHECK: true
 // Table: inventory
@@ -908,6 +1019,112 @@ export const Constants = {
 //     WITH CHECK: true
 
 // --- DATABASE FUNCTIONS ---
+// FUNCTION exchange_rental_item(uuid, uuid, uuid, integer, date, numeric, jsonb)
+//   CREATE OR REPLACE FUNCTION public.exchange_rental_item(p_rental_id uuid, p_old_inventory_id uuid, p_new_inventory_id uuid, p_quantity integer, p_new_expected_return_date date, p_difference_to_pay numeric, p_exchange_history_data jsonb)
+//    RETURNS void
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//   AS $function$
+//   DECLARE
+//     v_rental record;
+//     v_items jsonb;
+//     v_new_items jsonb;
+//     v_item jsonb;
+//     v_found boolean := false;
+//     v_new_inventory record;
+//     v_location_id text;
+//   BEGIN
+//     -- 1. Get Rental
+//     SELECT * INTO v_rental FROM public.rentals WHERE id = p_rental_id FOR UPDATE;
+//     IF NOT FOUND THEN RAISE EXCEPTION 'Locação não encontrada'; END IF;
+//
+//     v_location_id := v_rental.pickup_location_id;
+//
+//     -- 2. Update Inventory (Old)
+//     UPDATE public.inventory
+//     SET available_qty = available_qty + p_quantity,
+//         rented_qty = GREATEST(0, rented_qty - p_quantity)
+//     WHERE id = p_old_inventory_id;
+//
+//     IF v_location_id IS NOT NULL THEN
+//       UPDATE public.inventory_locations
+//       SET available_qty = available_qty + p_quantity,
+//           rented_qty = GREATEST(0, rented_qty - p_quantity)
+//       WHERE inventory_id = p_old_inventory_id AND location_id = v_location_id;
+//     END IF;
+//
+//     -- 3. Update Inventory (New)
+//     SELECT * INTO v_new_inventory FROM public.inventory WHERE id = p_new_inventory_id FOR UPDATE;
+//     IF v_new_inventory.available_qty < p_quantity THEN
+//       RAISE EXCEPTION 'Quantidade indisponível para o novo produto';
+//     END IF;
+//
+//     UPDATE public.inventory
+//     SET available_qty = GREATEST(0, available_qty - p_quantity),
+//         rented_qty = rented_qty + p_quantity
+//     WHERE id = p_new_inventory_id;
+//
+//     IF v_location_id IS NOT NULL THEN
+//       UPDATE public.inventory_locations
+//       SET available_qty = GREATEST(0, available_qty - p_quantity),
+//           rented_qty = rented_qty + p_quantity
+//       WHERE inventory_id = p_new_inventory_id AND location_id = v_location_id;
+//     END IF;
+//
+//     -- 4. Update items JSON in rental
+//     v_items := v_rental.items;
+//     v_new_items := '[]'::jsonb;
+//
+//     FOR v_item IN SELECT * FROM jsonb_array_elements(v_items)
+//     LOOP
+//       IF ((v_item->>'inventoryId' IS NOT NULL AND (v_item->>'inventoryId')::uuid = p_old_inventory_id)
+//           OR
+//           (v_item->>'inventory_id' IS NOT NULL AND (v_item->>'inventory_id')::uuid = p_old_inventory_id)
+//           OR
+//           (v_item->>'id' IS NOT NULL AND (v_item->>'id')::uuid = p_old_inventory_id))
+//          AND NOT v_found THEN
+//
+//         v_item := jsonb_build_object(
+//           'inventoryId', p_new_inventory_id,
+//           'inventory_id', p_new_inventory_id,
+//           'id', p_new_inventory_id,
+//           'name', v_new_inventory.name,
+//           'quantity', p_quantity,
+//           'dailyPrice', v_new_inventory.daily_price,
+//           'monthlyPrice', v_new_inventory.monthly_price
+//         );
+//         v_found := true;
+//       END IF;
+//       v_new_items := v_new_items || v_item;
+//     END LOOP;
+//
+//     IF NOT v_found THEN RAISE EXCEPTION 'Produto antigo não encontrado na locação'; END IF;
+//
+//     -- 5. Update Rental
+//     UPDATE public.rentals
+//     SET items = v_new_items,
+//         expected_return_date = p_new_expected_return_date,
+//         total = total + p_difference_to_pay
+//     WHERE id = p_rental_id;
+//
+//     -- 6. Insert History
+//     INSERT INTO public.exchange_history (
+//       rental_id, old_inventory_id, new_inventory_id,
+//       exchange_date, days_used, days_remaining,
+//       available_credit, new_cost, difference_to_pay, extra_days
+//     ) VALUES (
+//       p_rental_id, p_old_inventory_id, p_new_inventory_id,
+//       NOW(),
+//       (p_exchange_history_data->>'days_used')::int,
+//       (p_exchange_history_data->>'days_remaining')::int,
+//       (p_exchange_history_data->>'available_credit')::numeric,
+//       (p_exchange_history_data->>'new_cost')::numeric,
+//       p_difference_to_pay,
+//       (p_exchange_history_data->>'extra_days')::int
+//     );
+//   END;
+//   $function$
+//
 // FUNCTION handle_new_user()
 //   CREATE OR REPLACE FUNCTION public.handle_new_user()
 //    RETURNS trigger
