@@ -210,7 +210,7 @@ export function RentalsReportDialog() {
           </div>
           <div className="space-y-1">
             <Label>Forma de Pagamento</Label>
-            <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+            <Select value={paymentMethod} onValueChange={(val) => setPaymentMethod(val)}>
               <SelectTrigger>
                 <SelectValue placeholder="Todas as formas" />
               </SelectTrigger>
@@ -219,6 +219,7 @@ export function RentalsReportDialog() {
                 <SelectItem value="PIX">PIX</SelectItem>
                 <SelectItem value="Débito">Débito</SelectItem>
                 <SelectItem value="Crédito">Crédito</SelectItem>
+                <SelectItem value="Dinheiro">Dinheiro</SelectItem>
               </SelectContent>
             </Select>
           </div>

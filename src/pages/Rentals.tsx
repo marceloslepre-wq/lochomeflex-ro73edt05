@@ -275,10 +275,10 @@ export default function Rentals() {
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-1">
-                          <span className="font-medium">{customer?.name}</span>
-                          {formattedPhone && (
+                          <span className="font-medium">{customer?.name || '-'}</span>
+                          {formattedPhone ? (
                             <span className="text-xs text-muted-foreground">{formattedPhone}</span>
-                          )}
+                          ) : null}
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
@@ -324,7 +324,7 @@ export default function Rentals() {
                               setReceiptRental(rental)
                               setReceiptType(rental.status === 'Devolvido' ? 'return' : 'new')
                               setReceiptRenewalInfo(null)
-                              setReceiptOpen(true)
+                              setTimeout(() => setReceiptOpen(true), 0)
                             }}
                             title={rental.status === 'Devolvido' ? 'Recibo de Devolução' : 'Recibo'}
                           >
@@ -339,7 +339,7 @@ export default function Rentals() {
                                   className="h-8 w-8 border-purple-500 text-purple-600 hover:bg-purple-50"
                                   onClick={() => {
                                     setSelectedRental(rental)
-                                    setExchangeOpen(true)
+                                    setTimeout(() => setExchangeOpen(true), 0)
                                   }}
                                   title="Trocar Produto"
                                 >
@@ -352,7 +352,7 @@ export default function Rentals() {
                                 className="h-8 w-8 border-blue-500 text-blue-600 hover:bg-blue-50"
                                 onClick={() => {
                                   setSelectedRental(rental)
-                                  setRenewOpen(true)
+                                  setTimeout(() => setRenewOpen(true), 0)
                                 }}
                                 title="Renovar"
                               >
@@ -364,7 +364,7 @@ export default function Rentals() {
                                 className="h-8 w-8 border-emerald-500 text-emerald-600 hover:bg-emerald-50"
                                 onClick={() => {
                                   setSelectedRental(rental)
-                                  setReturnOpen(true)
+                                  setTimeout(() => setReturnOpen(true), 0)
                                 }}
                                 title="Devolver"
                               >

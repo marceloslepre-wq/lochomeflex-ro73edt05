@@ -270,7 +270,10 @@ export function ExchangeDialog({ rental, open, onOpenChange }: ExchangeDialogPro
             <div className="space-y-4">
               <h4 className="font-semibold text-sm">Novo Produto</h4>
               <div className="grid gap-2">
-                <Select value={selectedNewItemId} onValueChange={setSelectedNewItemId}>
+                <Select
+                  value={selectedNewItemId}
+                  onValueChange={(value) => setSelectedNewItemId(value)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o novo produto..." />
                   </SelectTrigger>

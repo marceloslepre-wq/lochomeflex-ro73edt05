@@ -181,6 +181,79 @@ export type Database = {
           },
         ]
       }
+      historico_trocas: {
+        Row: {
+          contrato_id: string
+          created_at: string | null
+          credito_disponivel: number | null
+          custo_novo: number | null
+          data_troca: string | null
+          dias_extras: number | null
+          dias_restantes: number | null
+          dias_usados: number | null
+          diferenca_pagar: number | null
+          id: string
+          produto_antigo_id: string
+          produto_novo_id: string
+          valor_diario_novo: number | null
+          valor_diario_original: number | null
+        }
+        Insert: {
+          contrato_id: string
+          created_at?: string | null
+          credito_disponivel?: number | null
+          custo_novo?: number | null
+          data_troca?: string | null
+          dias_extras?: number | null
+          dias_restantes?: number | null
+          dias_usados?: number | null
+          diferenca_pagar?: number | null
+          id?: string
+          produto_antigo_id: string
+          produto_novo_id: string
+          valor_diario_novo?: number | null
+          valor_diario_original?: number | null
+        }
+        Update: {
+          contrato_id?: string
+          created_at?: string | null
+          credito_disponivel?: number | null
+          custo_novo?: number | null
+          data_troca?: string | null
+          dias_extras?: number | null
+          dias_restantes?: number | null
+          dias_usados?: number | null
+          diferenca_pagar?: number | null
+          id?: string
+          produto_antigo_id?: string
+          produto_novo_id?: string
+          valor_diario_novo?: number | null
+          valor_diario_original?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'historico_trocas_contrato_id_fkey'
+            columns: ['contrato_id']
+            isOneToOne: false
+            referencedRelation: 'rentals'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'historico_trocas_produto_antigo_id_fkey'
+            columns: ['produto_antigo_id']
+            isOneToOne: false
+            referencedRelation: 'inventory'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'historico_trocas_produto_novo_id_fkey'
+            columns: ['produto_novo_id']
+            isOneToOne: false
+            referencedRelation: 'inventory'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       inventory: {
         Row: {
           assets: Json | null
@@ -808,6 +881,21 @@ export const Constants = {
 //   difference_to_pay: numeric (not null)
 //   extra_days: integer (not null)
 //   created_at: timestamp with time zone (not null, default: now())
+// Table: historico_trocas
+//   id: uuid (not null, default: gen_random_uuid())
+//   contrato_id: uuid (not null)
+//   produto_antigo_id: uuid (not null)
+//   produto_novo_id: uuid (not null)
+//   data_troca: timestamp without time zone (nullable, default: now())
+//   dias_usados: integer (nullable)
+//   dias_restantes: integer (nullable)
+//   credito_disponivel: numeric (nullable)
+//   valor_diario_original: numeric (nullable)
+//   valor_diario_novo: numeric (nullable)
+//   custo_novo: numeric (nullable)
+//   diferenca_pagar: numeric (nullable)
+//   dias_extras: integer (nullable)
+//   created_at: timestamp without time zone (nullable, default: now())
 // Table: inventory
 //   id: uuid (not null, default: gen_random_uuid())
 //   code: text (not null)
@@ -921,6 +1009,11 @@ export const Constants = {
 //   FOREIGN KEY exchange_history_old_inventory_id_fkey: FOREIGN KEY (old_inventory_id) REFERENCES inventory(id) ON DELETE SET NULL
 //   PRIMARY KEY exchange_history_pkey: PRIMARY KEY (id)
 //   FOREIGN KEY exchange_history_rental_id_fkey: FOREIGN KEY (rental_id) REFERENCES rentals(id) ON DELETE CASCADE
+// Table: historico_trocas
+//   FOREIGN KEY historico_trocas_contrato_id_fkey: FOREIGN KEY (contrato_id) REFERENCES rentals(id) ON DELETE CASCADE
+//   PRIMARY KEY historico_trocas_pkey: PRIMARY KEY (id)
+//   FOREIGN KEY historico_trocas_produto_antigo_id_fkey: FOREIGN KEY (produto_antigo_id) REFERENCES inventory(id) ON DELETE CASCADE
+//   FOREIGN KEY historico_trocas_produto_novo_id_fkey: FOREIGN KEY (produto_novo_id) REFERENCES inventory(id) ON DELETE CASCADE
 // Table: inventory
 //   PRIMARY KEY inventory_pkey: PRIMARY KEY (id)
 // Table: inventory_locations
@@ -970,6 +1063,10 @@ export const Constants = {
 //   Policy "anon_select_exchange" (SELECT, PERMISSIVE) roles={anon}
 //     USING: true
 //   Policy "authenticated_all_exchange" (ALL, PERMISSIVE) roles={authenticated}
+//     USING: true
+//     WITH CHECK: true
+// Table: historico_trocas
+//   Policy "authenticated_all" (ALL, PERMISSIVE) roles={authenticated}
 //     USING: true
 //     WITH CHECK: true
 // Table: inventory
@@ -1188,6 +1285,34 @@ export const Constants = {
 //         NEW.matricula := LPAD((next_val + 1)::text, 4, '0');
 //       END IF;
 //     END IF;
+//     RETURN NEW;
+//   END;
+//   $function$
+//
+// FUNCTION sync_historico_trocas()
+//   CREATE OR REPLACE FUNCTION public.sync_historico_trocas()
+//    RETURNS trigger
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//   AS $function$
+//   DECLARE
+//     v_original DECIMAL(10,2);
+//     v_novo DECIMAL(10,2);
+//   BEGIN
+//     SELECT daily_price INTO v_original FROM public.inventory WHERE id = NEW.old_inventory_id;
+//     SELECT daily_price INTO v_novo FROM public.inventory WHERE id = NEW.new_inventory_id;
+//
+//     INSERT INTO public.historico_trocas (
+//       contrato_id, produto_antigo_id, produto_novo_id, data_troca,
+//       dias_usados, dias_restantes, credito_disponivel,
+//       valor_diario_original, valor_diario_novo,
+//       custo_novo, diferenca_pagar, dias_extras
+//     ) VALUES (
+//       NEW.rental_id, NEW.old_inventory_id, NEW.new_inventory_id, NEW.exchange_date,
+//       NEW.days_used, NEW.days_remaining, NEW.available_credit,
+//       COALESCE(v_original, 0), COALESCE(v_novo, 0),
+//       NEW.new_cost, NEW.difference_to_pay, NEW.extra_days
+//     );
 //     RETURN NEW;
 //   END;
 //   $function$
@@ -1419,6 +1544,8 @@ export const Constants = {
 // --- TRIGGERS ---
 // Table: customers
 //   trg_set_customer_matricula: CREATE TRIGGER trg_set_customer_matricula BEFORE INSERT ON public.customers FOR EACH ROW EXECUTE FUNCTION set_customer_matricula()
+// Table: exchange_history
+//   on_exchange_history_inserted: CREATE TRIGGER on_exchange_history_inserted AFTER INSERT ON public.exchange_history FOR EACH ROW EXECUTE FUNCTION sync_historico_trocas()
 // Table: patrimonio
 //   trg_update_inventory_qty_on_patrimonio: CREATE TRIGGER trg_update_inventory_qty_on_patrimonio AFTER INSERT OR DELETE ON public.patrimonio FOR EACH ROW EXECUTE FUNCTION update_inventory_qty_on_patrimonio()
 //   update_patrimonio_updated_at: CREATE TRIGGER update_patrimonio_updated_at BEFORE UPDATE ON public.patrimonio FOR EACH ROW EXECUTE FUNCTION update_patrimonio_updated_at()

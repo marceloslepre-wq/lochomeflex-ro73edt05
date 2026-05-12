@@ -236,6 +236,8 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
       html = html.replace(/{{customerPhone}}/g, phoneStr)
       html = html.replace(/{{pickupLocation}}/g, locationName)
       html = html.replace(/{{currentDate}}/g, formatDateStr(startDates[0] || todayStr))
+      html = html.replace(/{{forma_pagamento}}/g, paymentMethod)
+      html = html.replace(/{{paymentMethod}}/g, paymentMethod)
 
       let itemsHtml = items
         .map((ri) => {
@@ -390,7 +392,6 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
                           value={`${c.name} ${c.document}`}
                           onSelect={() => {
                             setCustomerId(c.id)
-                            // Evita NotFoundError / removeChild crash no React ao fechar popover sincronamente
                             setTimeout(() => setCustomerOpen(false), 0)
                           }}
                         >
@@ -400,7 +401,9 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
                               customerId === c.id ? 'opacity-100' : 'opacity-0',
                             )}
                           />
-                          {c.name} ({c.document})
+                          <span>
+                            {c.name} ({c.document})
+                          </span>
                         </CommandItem>
                       ))}
                     </CommandGroup>
@@ -434,7 +437,7 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
               <Label>
                 Forma de Pagamento <span className="text-red-500">*</span>
               </Label>
-              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+              <Select value={paymentMethod} onValueChange={(value) => setPaymentMethod(value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione a forma de pagamento" />
                 </SelectTrigger>
@@ -442,6 +445,7 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
                   <SelectItem value="PIX">PIX</SelectItem>
                   <SelectItem value="Débito">Débito</SelectItem>
                   <SelectItem value="Crédito">Crédito</SelectItem>
+                  <SelectItem value="Dinheiro">Dinheiro</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -504,7 +508,6 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
                               value={`${i.code} ${i.name}`}
                               onSelect={() => {
                                 setSelectedItemId(i.id)
-                                // Evita NotFoundError / removeChild crash no React ao fechar popover sincronamente
                                 setTimeout(() => setItemOpen(false), 0)
                               }}
                             >
@@ -514,8 +517,10 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
                                   selectedItemId === i.id ? 'opacity-100' : 'opacity-0',
                                 )}
                               />
-                              {i.code ? `[${i.code}] - ` : ''}
-                              {i.name} - Disp: {i.availableQty}
+                              <span>
+                                {i.code ? `[${i.code}] - ` : ''}
+                                {i.name} - Disp: {i.availableQty}
+                              </span>
                             </CommandItem>
                           ))}
                         </CommandGroup>
