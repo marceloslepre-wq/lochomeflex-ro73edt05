@@ -42,20 +42,23 @@ const mapFromDb = (row: any): Customer => ({
   documento_url: row.documento_url || [],
 })
 
-const mapToDb = (customer: Partial<Customer>) => ({
-  matricula: customer.matricula,
-  name: customer.name,
-  document: customer.document,
-  phone_res: customer.phoneRes,
-  phone_cell: customer.phoneCell,
-  phone_com: customer.phoneCom,
-  email: customer.email,
-  address: customer.address,
-  has_different_delivery_address: customer.hasDifferentDeliveryAddress,
-  delivery_address: customer.deliveryAddress,
-  observations: customer.observations,
-  documento_url: customer.documento_url,
-})
+const mapToDb = (customer: Partial<Customer>) => {
+  const db: any = {}
+  if (customer.matricula !== undefined) db.matricula = customer.matricula
+  if (customer.name !== undefined) db.name = customer.name
+  if (customer.document !== undefined) db.document = customer.document
+  if (customer.phoneRes !== undefined) db.phone_res = customer.phoneRes
+  if (customer.phoneCell !== undefined) db.phone_cell = customer.phoneCell
+  if (customer.phoneCom !== undefined) db.phone_com = customer.phoneCom
+  if (customer.email !== undefined) db.email = customer.email
+  if (customer.address !== undefined) db.address = customer.address
+  if (customer.hasDifferentDeliveryAddress !== undefined)
+    db.has_different_delivery_address = customer.hasDifferentDeliveryAddress
+  if (customer.deliveryAddress !== undefined) db.delivery_address = customer.deliveryAddress
+  if (customer.observations !== undefined) db.observations = customer.observations
+  if (customer.documento_url !== undefined) db.documento_url = customer.documento_url
+  return db
+}
 
 export const customerService = {
   async getCustomers() {

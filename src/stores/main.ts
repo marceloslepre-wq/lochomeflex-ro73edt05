@@ -292,6 +292,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
 
     loadData()
+
+    const customersSubscription = supabase
+      .channel('public:customers')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, () => {
+        refreshCustomers()
+      })
+      .subscribe()
+
+    return () => {
+      customersSubscription.unsubscribe()
+    }
   }, [user?.id])
 
   const addRental = async (rental: Rental): Promise<Rental | null> => {

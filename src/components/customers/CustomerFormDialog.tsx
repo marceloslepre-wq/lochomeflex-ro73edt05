@@ -23,7 +23,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Textarea } from '@/components/ui/textarea'
 import { Plus, Edit, Loader2, CloudUpload, Trash2, XCircle } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { Address } from '@/stores/main'
+import useMainStore, { Address } from '@/stores/main'
 import { customerService, Customer } from '@/services/customers'
 
 const emptyAddress: Address = {
@@ -58,6 +58,7 @@ export function CustomerFormDialog({
   onSuccess?: () => void
 }) {
   const { toast } = useToast()
+  const { refreshCustomers } = useMainStore()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [validationErrors, setValidationErrors] = useState<string[]>([])
@@ -272,6 +273,7 @@ export function CustomerFormDialog({
         }
       }
 
+      refreshCustomers()
       setOpen(false)
       if (onSuccess) onSuccess()
       if (!customer) {
