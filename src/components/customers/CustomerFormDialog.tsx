@@ -67,6 +67,9 @@ export function CustomerFormDialog({
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const [duplicateDocError, setDuplicateDocError] = useState(false)
+  const [checkingDoc, setCheckingDoc] = useState(false)
+
   const [formData, setFormData] = useState({
     matricula: customer?.matricula || '',
     name: customer?.name || '',
@@ -173,12 +176,22 @@ export function CustomerFormDialog({
     return false
   }
 
-  const handleDocBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    const isValid = validateDocument(e.target.value)
-    if (!isValid && e.target.value.length > 0) {
+  const handleDocBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
+    const docValue = e.target.value
+    const isValid = validateDocument(docValue)
+    if (!isValid && docValue.length > 0) {
       setDocError('CPF/CNPJ inválido')
+      setDuplicateDocError(false)
     } else {
       setDocError('')
+      if (docValue.length > 0) {
+        setCheckingDoc(true)
+        const exists = await customerService.checkDocumentExists(docValue, customer?.id)
+        setDuplicateDocError(exists)
+        setCheckingDoc(false)
+      } else {
+        setDuplicateDocError(false)
+      }
     }
   }
 
@@ -204,6 +217,10 @@ export function CustomerFormDialog({
     if (e) e.preventDefault()
 
     const errors: string[] = []
+
+    if (duplicateDocError) {
+      errors.push('CPF já cadastrado. Não é permitido duplicar cadastro')
+    }
 
     if (!formData.name?.trim()) errors.push('Nome Completo / Razão Social')
     if (!formData.document?.trim()) {
@@ -235,6 +252,14 @@ export function CustomerFormDialog({
 
     try {
       setLoading(true)
+
+      const exists = await customerService.checkDocumentExists(formData.document, customer?.id)
+      if (exists) {
+        setDuplicateDocError(true)
+        setLoading(false)
+        return
+      }
+
       const payload: any = { ...formData }
       delete payload.phone
       payload.phone_cell = formData.phoneCell
@@ -345,6 +370,8 @@ export function CustomerFormDialog({
       setExistingDocs(customer?.documento_url || [])
       setPendingFiles([])
       setDocError('')
+      setDuplicateDocError(false)
+      setCheckingDoc(false)
       setValidationErrors([])
     }
   }
@@ -401,12 +428,21 @@ export function CustomerFormDialog({
                       onChange={(e) => {
                         setFormData((f) => ({ ...f, document: e.target.value }))
                         setDocError('')
+                        setDuplicateDocError(false)
                       }}
                       onBlur={handleDocBlur}
                       placeholder="Digite o CPF ou CNPJ"
-                      className={docError ? 'border-destructive' : ''}
+                      className={docError || duplicateDocError ? 'border-destructive' : ''}
                     />
+                    {checkingDoc && (
+                      <p className="text-xs text-muted-foreground">Verificando documento...</p>
+                    )}
                     {docError && <p className="text-xs text-destructive">{docError}</p>}
+                    {duplicateDocError && (
+                      <p className="text-xs text-destructive font-medium">
+                        ❌ CPF já cadastrado. Não é permitido duplicar cadastro
+                      </p>
+                    )}
                   </div>
 
                   <div className="grid gap-2">
@@ -692,8 +728,12 @@ export function CustomerFormDialog({
             >
               Cancelar
             </Button>
-            <Button type="submit" form="customer-form" disabled={loading}>
-              {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+            <Button
+              type="submit"
+              form="customer-form"
+              disabled={loading || duplicateDocError || checkingDoc}
+            >
+              {loading || checkingDoc ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
               Salvar
             </Button>
           </DialogFooter>

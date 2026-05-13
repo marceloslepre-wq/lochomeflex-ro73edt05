@@ -61,6 +61,20 @@ const mapToDb = (customer: Partial<Customer>) => {
 }
 
 export const customerService = {
+  async checkDocumentExists(document: string, excludeId?: string) {
+    const cleanDoc = document.replace(/\D/g, '')
+    if (!cleanDoc) return false
+
+    let query = supabase.from('customers').select('id, document')
+    if (excludeId) {
+      query = query.neq('id', excludeId)
+    }
+    const { data, error } = await query
+    if (error) return false
+
+    return data.some((c) => c.document && c.document.replace(/\D/g, '') === cleanDoc)
+  },
+
   async getCustomers() {
     const { data, error } = await supabase
       .from('customers')
