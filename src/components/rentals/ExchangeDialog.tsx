@@ -38,10 +38,17 @@ export function ExchangeDialog({ rental, open, onOpenChange }: ExchangeDialogPro
 
   useEffect(() => {
     if (open && rental) {
-      const items = Array.isArray(rental.items) ? rental.items : []
+      const items = Array.isArray(rental.items)
+        ? rental.items.filter((i: any) => i.itemId !== 'freight')
+        : []
       if (items.length === 1) {
         const firstItem = items[0]
-        const id = firstItem?.inventoryId || firstItem?.inventory_id || firstItem?.id || ''
+        const id =
+          firstItem?.itemId ||
+          firstItem?.inventoryId ||
+          firstItem?.inventory_id ||
+          firstItem?.id ||
+          ''
         if (id) {
           setSelectedOldItemIds([id])
         } else {
@@ -60,6 +67,7 @@ export function ExchangeDialog({ rental, open, onOpenChange }: ExchangeDialogPro
     const items = Array.isArray(rental.items) ? rental.items : []
     const item = items.find(
       (i: any) =>
+        i.itemId === selectedOldItemId ||
         i.inventoryId === selectedOldItemId ||
         i.inventory_id === selectedOldItemId ||
         i.id === selectedOldItemId,
@@ -69,7 +77,7 @@ export function ExchangeDialog({ rental, open, onOpenChange }: ExchangeDialogPro
     const invItem = inventory.find((i) => i.id === selectedOldItemId)
     const dailyPrice =
       item.dailyPrice || item.daily_price || invItem?.dailyPrice || invItem?.daily_price || 0
-    const quantity = item.quantity || 1
+    const quantity = item.qty || item.quantity || 1
 
     return { ...item, dailyPrice, quantity, name: item.name || invItem?.name }
   }, [rental, selectedOldItemIds, inventory])
@@ -234,31 +242,38 @@ export function ExchangeDialog({ rental, open, onOpenChange }: ExchangeDialogPro
               <div className="grid gap-3">
                 <Label>Selecione o item para trocar</Label>
                 <div className="space-y-2">
-                  {rentalItems.map((item: any, idx: number) => {
-                    const id = String(item.inventoryId || item.inventory_id || item.id || idx)
-                    const isChecked = selectedOldItemIds.includes(id)
-                    return (
-                      <div key={id} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`chk-${id}`}
-                          checked={isChecked}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setSelectedOldItemIds((prev) => [...prev, id])
-                            } else {
-                              setSelectedOldItemIds((prev) => prev.filter((i) => i !== id))
-                            }
-                          }}
-                        />
-                        <Label
-                          htmlFor={`chk-${id}`}
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                        >
-                          {item.name} (Qtd: {item.quantity || 1})
-                        </Label>
-                      </div>
-                    )
-                  })}
+                  {rentalItems
+                    .filter((i: any) => i.itemId !== 'freight')
+                    .map((item: any, idx: number) => {
+                      const id = String(
+                        item.itemId || item.inventoryId || item.inventory_id || item.id || idx,
+                      )
+                      const isChecked = selectedOldItemIds.includes(id)
+                      const invItem = inventory.find((i) => i.id === id)
+                      const itemName = item.name || invItem?.name || 'Produto Desconhecido'
+                      const itemQty = item.qty || item.quantity || 1
+                      return (
+                        <div key={id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`chk-${id}`}
+                            checked={isChecked}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedOldItemIds((prev) => [...prev, id])
+                              } else {
+                                setSelectedOldItemIds((prev) => prev.filter((i) => i !== id))
+                              }
+                            }}
+                          />
+                          <Label
+                            htmlFor={`chk-${id}`}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          >
+                            {itemName} (Qtd: {itemQty})
+                          </Label>
+                        </div>
+                      )
+                    })}
                 </div>
                 {selectedOldItemIds.length > 1 && (
                   <p className="text-sm font-medium text-destructive">
