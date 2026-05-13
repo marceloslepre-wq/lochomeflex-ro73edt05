@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
 import { useToast } from '@/hooks/use-toast'
 import useMainStore, { Rental } from '@/stores/main'
 import { supabase } from '@/lib/supabase/client'
@@ -31,21 +32,31 @@ export function ExchangeDialog({ rental, open, onOpenChange }: ExchangeDialogPro
   const { inventory } = useMainStore()
   const { toast } = useToast()
 
-  const [selectedOldItemId, setSelectedOldItemId] = useState<string>('')
+  const [selectedOldItemIds, setSelectedOldItemIds] = useState<string[]>([])
   const [selectedNewItemId, setSelectedNewItemId] = useState<string>('')
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     if (open && rental) {
       const items = Array.isArray(rental.items) ? rental.items : []
-      const firstItem = items[0]
-      setSelectedOldItemId(firstItem?.inventoryId || firstItem?.inventory_id || firstItem?.id || '')
+      if (items.length === 1) {
+        const firstItem = items[0]
+        const id = firstItem?.inventoryId || firstItem?.inventory_id || firstItem?.id || ''
+        if (id) {
+          setSelectedOldItemIds([id])
+        } else {
+          setSelectedOldItemIds([])
+        }
+      } else {
+        setSelectedOldItemIds([])
+      }
       setSelectedNewItemId('')
     }
   }, [open, rental])
 
   const oldItemInfo = useMemo(() => {
-    if (!rental || !selectedOldItemId) return null
+    if (!rental || selectedOldItemIds.length !== 1) return null
+    const selectedOldItemId = selectedOldItemIds[0]
     const items = Array.isArray(rental.items) ? rental.items : []
     const item = items.find(
       (i: any) =>
@@ -61,7 +72,7 @@ export function ExchangeDialog({ rental, open, onOpenChange }: ExchangeDialogPro
     const quantity = item.quantity || 1
 
     return { ...item, dailyPrice, quantity, name: item.name || invItem?.name }
-  }, [rental, selectedOldItemId, inventory])
+  }, [rental, selectedOldItemIds, inventory])
 
   const newItemInfo = useMemo(() => {
     if (!selectedNewItemId) return null
@@ -154,7 +165,7 @@ export function ExchangeDialog({ rental, open, onOpenChange }: ExchangeDialogPro
 
       const { error } = await supabase.rpc('exchange_rental_item', {
         p_rental_id: rental.id,
-        p_old_inventory_id: selectedOldItemId,
+        p_old_inventory_id: selectedOldItemIds[0],
         p_new_inventory_id: selectedNewItemId,
         p_quantity: oldItemInfo.quantity,
         p_new_expected_return_date: format(calculation.newReturnDate, 'yyyy-MM-dd'),
@@ -193,10 +204,11 @@ export function ExchangeDialog({ rental, open, onOpenChange }: ExchangeDialogPro
   }
 
   const activeInventory = useMemo(() => {
+    const selectedOldItemId = selectedOldItemIds.length === 1 ? selectedOldItemIds[0] : null
     return inventory.filter(
       (i) => (i.availableQty ?? i.available_qty ?? 0) > 0 && i.id !== selectedOldItemId,
     )
-  }, [inventory, selectedOldItemId])
+  }, [inventory, selectedOldItemIds])
 
   const rentalItems = useMemo(() => {
     return Array.isArray(rental?.items) ? rental.items : []
@@ -219,26 +231,48 @@ export function ExchangeDialog({ rental, open, onOpenChange }: ExchangeDialogPro
             <div className="space-y-4 rounded-lg border p-4 bg-muted/20">
               <h4 className="font-semibold text-sm">Produto Atual</h4>
 
-              <div className="grid gap-2">
+              <div className="grid gap-3">
                 <Label>Selecione o item para trocar</Label>
-                <Select value={selectedOldItemId} onValueChange={setSelectedOldItemId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o item..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {rentalItems.map((item: any, idx: number) => {
-                      const id = item.inventoryId || item.inventory_id || item.id
-                      return (
-                        <SelectItem key={id || idx} value={id}>
+                <div className="space-y-2">
+                  {rentalItems.map((item: any, idx: number) => {
+                    const id = String(item.inventoryId || item.inventory_id || item.id || idx)
+                    const isChecked = selectedOldItemIds.includes(id)
+                    return (
+                      <div key={id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`chk-${id}`}
+                          checked={isChecked}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedOldItemIds((prev) => [...prev, id])
+                            } else {
+                              setSelectedOldItemIds((prev) => prev.filter((i) => i !== id))
+                            }
+                          }}
+                        />
+                        <Label
+                          htmlFor={`chk-${id}`}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                        >
                           {item.name} (Qtd: {item.quantity || 1})
-                        </SelectItem>
-                      )
-                    })}
-                  </SelectContent>
-                </Select>
+                        </Label>
+                      </div>
+                    )
+                  })}
+                </div>
+                {selectedOldItemIds.length > 1 && (
+                  <p className="text-sm font-medium text-destructive">
+                    Selecione exatamente 1 produto para trocar
+                  </p>
+                )}
+                {selectedOldItemIds.length === 0 && (
+                  <p className="text-sm font-medium text-destructive">
+                    Selecione 1 produto para trocar
+                  </p>
+                )}
               </div>
 
-              {oldItemInfo && (
+              {oldItemInfo && selectedOldItemIds.length === 1 && (
                 <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground mt-2">
                   <div>
                     <span className="block font-medium text-foreground">Retirada</span>
@@ -349,7 +383,7 @@ export function ExchangeDialog({ rental, open, onOpenChange }: ExchangeDialogPro
             disabled={
               loading ||
               !selectedNewItemId ||
-              !selectedOldItemId ||
+              selectedOldItemIds.length !== 1 ||
               (calculation?.daysRemaining || 0) <= 0
             }
           >
