@@ -132,8 +132,6 @@ export const customerService = {
     onProgress?: (progress: number) => void,
   ): Promise<CustomerDocument> {
     const fileExt = file.name.split('.').pop() || ''
-    const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`
-    const filePath = `clientes/${customerId}/${fileName}`
 
     let progress = 0
     const progressInterval = setInterval(() => {
@@ -147,7 +145,12 @@ export const customerService = {
 
     while (attempt < maxAttempts) {
       try {
-        const uploadPromise = supabase.storage.from('documentos_clientes').upload(filePath, file)
+        const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`
+        const filePath = `clientes/${customerId}/${fileName}`
+
+        const uploadPromise = supabase.storage
+          .from('documentos_clientes')
+          .upload(filePath, file, { upsert: true })
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Timeout')), 30000),
         )

@@ -283,18 +283,26 @@ export default function PublicCustomerForm() {
           }
         }
         if (newDocs.length > 0) {
-          await customerService.updateCustomer(targetCustomerId, {
-            documento_url: newDocs,
-          })
+          try {
+            await customerService.updateCustomer(targetCustomerId, {
+              documento_url: newDocs,
+            })
+          } catch (updateErr: any) {
+            setUploadError(
+              'Erro ao salvar os anexos no cadastro. Verifique sua conexão e tente novamente.',
+            )
+            setLoading(false)
+            return
+          }
         }
       }
 
       setSubmitted(true)
-    } catch (error) {
+    } catch (error: any) {
       if (!uploadError) {
         toast({
           title: 'Erro',
-          description: 'Não foi possível enviar o formulário.',
+          description: error.message || 'Não foi possível enviar o formulário.',
           variant: 'destructive',
         })
       }
