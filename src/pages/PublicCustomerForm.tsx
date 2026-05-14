@@ -568,30 +568,55 @@ export default function PublicCustomerForm() {
                         onChange={handleFileChange}
                       />
 
+                      {pendingFiles.length === 0 && (
+                        <p className="text-xs text-destructive font-medium mt-1">
+                          ❌ Obrigatório anexar pelo menos 1 documento
+                        </p>
+                      )}
+
                       {pendingFiles.length > 0 && (
                         <div className="flex flex-col gap-2 mt-2">
-                          {pendingFiles.map((file, idx) => (
-                            <div
-                              key={`pending-${idx}`}
-                              className="flex items-center justify-between bg-blue-50/50 p-2 rounded text-sm border border-blue-100"
-                            >
+                          {pendingFiles.map((file, idx) => {
+                            const isImage = file.type.startsWith('image/')
+                            const previewUrl = isImage ? URL.createObjectURL(file) : null
+
+                            return (
                               <div
-                                className="truncate max-w-[200px] sm:max-w-[300px]"
-                                title={file.name}
+                                key={`pending-${idx}`}
+                                className="flex items-center justify-between bg-blue-50/50 p-2 rounded text-sm border border-blue-100"
                               >
-                                {file.name}
+                                <div className="flex items-center gap-2 truncate">
+                                  {isImage && previewUrl ? (
+                                    <img
+                                      src={previewUrl}
+                                      alt={file.name}
+                                      className="w-8 h-8 object-cover rounded border bg-white"
+                                    />
+                                  ) : (
+                                    <div className="w-8 h-8 bg-white border flex items-center justify-center rounded text-[10px] font-bold text-muted-foreground">
+                                      PDF
+                                    </div>
+                                  )}
+                                  <div
+                                    className="truncate max-w-[150px] sm:max-w-[250px]"
+                                    title={file.name}
+                                  >
+                                    {file.name}
+                                  </div>
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                                  onClick={() => handleRemovePending(idx)}
+                                  title="Deletar"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
                               </div>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 text-destructive hover:bg-destructive/10"
-                                onClick={() => handleRemovePending(idx)}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          ))}
+                            )
+                          })}
                         </div>
                       )}
                     </div>
@@ -614,7 +639,7 @@ export default function PublicCustomerForm() {
                 type="submit"
                 form="public-customer-form"
                 className="w-full sm:w-auto"
-                disabled={loading || duplicateDocError || checkingDoc}
+                disabled={loading || duplicateDocError || checkingDoc || pendingFiles.length === 0}
               >
                 {loading || checkingDoc ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                 Enviar Cadastro

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -65,6 +65,12 @@ export function CustomerFormDialog({
 
   const [existingDocs, setExistingDocs] = useState<any[]>(customer?.documento_url || [])
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
+
+  useEffect(() => {
+    if (customer?.documento_url) {
+      setExistingDocs(customer.documento_url)
+    }
+  }, [customer?.documento_url])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [duplicateDocError, setDuplicateDocError] = useState(false)
@@ -124,8 +130,23 @@ export function CustomerFormDialog({
     if (e.target) e.target.value = ''
   }
 
-  const handleRemoveExisting = (idx: number) => {
-    setExistingDocs((prev) => prev.filter((_, i) => i !== idx))
+  const handleRemoveExisting = async (idx: number) => {
+    const docToRemove = existingDocs[idx]
+    const newDocs = existingDocs.filter((_, i) => i !== idx)
+    setExistingDocs(newDocs)
+
+    if (customer) {
+      try {
+        if (docToRemove.path) {
+          await customerService.deleteDocument(docToRemove.path)
+        }
+        await customerService.updateCustomer(customer.id, { documento_url: newDocs })
+        refreshCustomers()
+        toast({ title: 'Documento deletado', description: 'Arquivo removido com sucesso.' })
+      } catch (e) {
+        toast({ title: 'Erro', description: 'Erro ao remover documento.', variant: 'destructive' })
+      }
+    }
   }
 
   const handleRemovePending = (idx: number) => {
@@ -655,6 +676,12 @@ export function CustomerFormDialog({
                         onChange={handleFileChange}
                       />
 
+                      {existingDocs.length + pendingFiles.length === 0 && (
+                        <p className="text-xs text-destructive font-medium mt-1">
+                          ❌ Obrigatório anexar pelo menos 1 documento
+                        </p>
+                      )}
+
                       {(existingDocs.length > 0 || pendingFiles.length > 0) && (
                         <div className="flex flex-col gap-2 mt-2">
                           {existingDocs.map((doc, idx) => (
@@ -662,46 +689,86 @@ export function CustomerFormDialog({
                               key={`existing-${idx}`}
                               className="flex items-center justify-between bg-muted p-2 rounded text-sm border"
                             >
-                              <div
-                                className="truncate max-w-[200px] sm:max-w-[300px]"
-                                title={doc.name}
-                              >
-                                {doc.name}
+                              <div className="flex items-center gap-2 truncate">
+                                {doc.url?.match(/\.(jpeg|jpg|gif|png)$/i) ? (
+                                  <img
+                                    src={doc.url}
+                                    alt={doc.name}
+                                    className="w-8 h-8 object-cover rounded border bg-white"
+                                  />
+                                ) : (
+                                  <div className="w-8 h-8 bg-white border flex items-center justify-center rounded text-[10px] font-bold text-muted-foreground">
+                                    PDF
+                                  </div>
+                                )}
+                                <div
+                                  className="truncate max-w-[150px] sm:max-w-[250px]"
+                                  title={doc.name}
+                                >
+                                  <a
+                                    href={doc.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="hover:underline text-primary"
+                                  >
+                                    {doc.name}
+                                  </a>
+                                </div>
                               </div>
                               <Button
                                 type="button"
                                 variant="ghost"
                                 size="icon"
-                                className="h-6 w-6 text-destructive hover:bg-destructive/10"
+                                className="h-8 w-8 text-destructive hover:bg-destructive/10"
                                 onClick={() => handleRemoveExisting(idx)}
+                                title="Deletar"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </Button>
                             </div>
                           ))}
-                          {pendingFiles.map((file, idx) => (
-                            <div
-                              key={`pending-${idx}`}
-                              className="flex items-center justify-between bg-blue-50/50 p-2 rounded text-sm border border-blue-100"
-                            >
+                          {pendingFiles.map((file, idx) => {
+                            const isImage = file.type.startsWith('image/')
+                            const previewUrl = isImage ? URL.createObjectURL(file) : null
+
+                            return (
                               <div
-                                className="truncate max-w-[200px] sm:max-w-[300px]"
-                                title={file.name}
+                                key={`pending-${idx}`}
+                                className="flex items-center justify-between bg-blue-50/50 p-2 rounded text-sm border border-blue-100"
                               >
-                                {file.name}{' '}
-                                <span className="text-xs text-blue-500 ml-1">(Pendente)</span>
+                                <div className="flex items-center gap-2 truncate">
+                                  {isImage && previewUrl ? (
+                                    <img
+                                      src={previewUrl}
+                                      alt={file.name}
+                                      className="w-8 h-8 object-cover rounded border bg-white"
+                                    />
+                                  ) : (
+                                    <div className="w-8 h-8 bg-white border flex items-center justify-center rounded text-[10px] font-bold text-muted-foreground">
+                                      PDF
+                                    </div>
+                                  )}
+                                  <div
+                                    className="truncate max-w-[150px] sm:max-w-[250px]"
+                                    title={file.name}
+                                  >
+                                    {file.name}{' '}
+                                    <span className="text-xs text-blue-500 ml-1">(Pendente)</span>
+                                  </div>
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                                  onClick={() => handleRemovePending(idx)}
+                                  title="Deletar"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
                               </div>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 text-destructive hover:bg-destructive/10"
-                                onClick={() => handleRemovePending(idx)}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          ))}
+                            )
+                          })}
                         </div>
                       )}
                     </div>
@@ -731,7 +798,12 @@ export function CustomerFormDialog({
             <Button
               type="submit"
               form="customer-form"
-              disabled={loading || duplicateDocError || checkingDoc}
+              disabled={
+                loading ||
+                duplicateDocError ||
+                checkingDoc ||
+                existingDocs.length + pendingFiles.length === 0
+              }
             >
               {loading || checkingDoc ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
               Salvar

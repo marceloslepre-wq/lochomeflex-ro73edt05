@@ -129,13 +129,15 @@ export const customerService = {
   async uploadDocument(customerId: string, file: File): Promise<CustomerDocument> {
     const fileExt = file.name.split('.').pop() || ''
     const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`
-    const filePath = `${customerId}/${fileName}`
+    const filePath = `clientes/${customerId}/${fileName}`
 
-    const { error } = await supabase.storage.from('clientes').upload(filePath, file)
+    const { error } = await supabase.storage.from('documentos_clientes').upload(filePath, file)
 
     if (error) throw error
 
-    const { data: publicUrlData } = supabase.storage.from('clientes').getPublicUrl(filePath)
+    const { data: publicUrlData } = supabase.storage
+      .from('documentos_clientes')
+      .getPublicUrl(filePath)
 
     return {
       name: file.name,
@@ -143,5 +145,10 @@ export const customerService = {
       date: new Date().toISOString(),
       path: filePath,
     }
+  },
+
+  async deleteDocument(path: string) {
+    const { error } = await supabase.storage.from('documentos_clientes').remove([path])
+    if (error) throw error
   },
 }
