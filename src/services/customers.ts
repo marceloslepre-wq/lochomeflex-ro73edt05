@@ -126,25 +126,63 @@ export const customerService = {
     return '0001'
   },
 
-  async uploadDocument(customerId: string, file: File): Promise<CustomerDocument> {
+  async uploadDocument(
+    customerId: string,
+    file: File,
+    onProgress?: (progress: number) => void,
+  ): Promise<CustomerDocument> {
     const fileExt = file.name.split('.').pop() || ''
     const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`
     const filePath = `clientes/${customerId}/${fileName}`
 
-    const { error } = await supabase.storage.from('documentos_clientes').upload(filePath, file)
+    let progress = 0
+    const progressInterval = setInterval(() => {
+      progress += Math.random() * 15
+      if (progress > 90) progress = 90
+      if (onProgress) onProgress(Math.round(progress))
+    }, 500)
 
-    if (error) throw error
+    let attempt = 0
+    const maxAttempts = 3
 
-    const { data: publicUrlData } = supabase.storage
-      .from('documentos_clientes')
-      .getPublicUrl(filePath)
+    while (attempt < maxAttempts) {
+      try {
+        const uploadPromise = supabase.storage.from('documentos_clientes').upload(filePath, file)
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Timeout')), 30000),
+        )
 
-    return {
-      name: file.name,
-      url: publicUrlData.publicUrl,
-      date: new Date().toISOString(),
-      path: filePath,
+        const result: any = await Promise.race([uploadPromise, timeoutPromise])
+
+        if (result.error) throw result.error
+
+        clearInterval(progressInterval)
+        if (onProgress) onProgress(100)
+
+        const { data: publicUrlData } = supabase.storage
+          .from('documentos_clientes')
+          .getPublicUrl(filePath)
+
+        return {
+          name: file.name,
+          url: publicUrlData.publicUrl,
+          date: new Date().toISOString(),
+          path: filePath,
+        }
+      } catch (err) {
+        attempt++
+        if (attempt >= maxAttempts) {
+          clearInterval(progressInterval)
+          throw new Error(
+            'Não foi possível enviar o arquivo após 3 tentativas. Verifique sua conexão e tente novamente.',
+          )
+        }
+        await new Promise((res) => setTimeout(res, 2000))
+      }
     }
+
+    clearInterval(progressInterval)
+    throw new Error('Upload falhou')
   },
 
   async deleteDocument(path: string) {

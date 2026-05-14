@@ -25,6 +25,8 @@ import { Plus, Edit, Loader2, CloudUpload, Trash2, XCircle } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import useMainStore, { Address } from '@/stores/main'
 import { customerService, Customer } from '@/services/customers'
+import { compressImage } from '@/lib/utils'
+import { Progress } from '@/components/ui/progress'
 
 const emptyAddress: Address = {
   street: '',
@@ -75,6 +77,10 @@ export function CustomerFormDialog({
 
   const [duplicateDocError, setDuplicateDocError] = useState(false)
   const [checkingDoc, setCheckingDoc] = useState(false)
+
+  const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({})
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [createdCustomerId, setCreatedCustomerId] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
     matricula: customer?.matricula || '',
@@ -273,8 +279,10 @@ export function CustomerFormDialog({
 
     try {
       setLoading(true)
+      setUploadError(null)
 
-      const exists = await customerService.checkDocumentExists(formData.document, customer?.id)
+      const excludeId = customer?.id || createdCustomerId || undefined
+      const exists = await customerService.checkDocumentExists(formData.document, excludeId)
       if (exists) {
         setDuplicateDocError(true)
         setLoading(false)
@@ -291,10 +299,13 @@ export function CustomerFormDialog({
       if (customer) {
         savedCustomer = await customerService.updateCustomer(customer.id, payload)
         toast({ title: 'Cliente Atualizado', description: 'Dados salvos com sucesso.' })
+      } else if (createdCustomerId) {
+        savedCustomer = await customerService.updateCustomer(createdCustomerId, payload)
       } else {
         const nextMatricula = await customerService.getNextMatricula()
         payload.matricula = nextMatricula
         savedCustomer = await customerService.createCustomer(payload)
+        setCreatedCustomerId(savedCustomer.id)
         toast({ title: 'Cliente Cadastrado', description: `${formData.name} adicionado.` })
       }
 
@@ -302,20 +313,24 @@ export function CustomerFormDialog({
         const newDocs = []
         for (const file of pendingFiles) {
           try {
-            const doc = await customerService.uploadDocument(savedCustomer.id, file)
-            newDocs.push(doc)
-          } catch (err) {
-            toast({
-              title: 'Erro',
-              description: `Erro ao enviar ${file.name}`,
-              variant: 'destructive',
+            const compressed = await compressImage(file, 5)
+            setUploadProgress((prev) => ({ ...prev, [file.name]: 0 }))
+            const doc = await customerService.uploadDocument(savedCustomer.id, compressed, (p) => {
+              setUploadProgress((prev) => ({ ...prev, [file.name]: p }))
             })
+            newDocs.push(doc)
+          } catch (err: any) {
+            setUploadError(err.message || `Erro ao enviar ${file.name}`)
+            setLoading(false)
+            return // Stop execution, keep modal open
           }
         }
 
         if (newDocs.length > 0) {
           const finalDocs = [...existingDocs, ...newDocs]
           await customerService.updateCustomer(savedCustomer.id, { documento_url: finalDocs })
+          setExistingDocs(finalDocs)
+          setPendingFiles([])
         }
       }
 
@@ -339,11 +354,13 @@ export function CustomerFormDialog({
         setPendingFiles([])
       }
     } catch (error) {
-      toast({
-        title: 'Erro',
-        description: 'Ocorreu um erro ao salvar o cliente.',
-        variant: 'destructive',
-      })
+      if (!uploadError) {
+        toast({
+          title: 'Erro',
+          description: 'Ocorreu um erro ao salvar o cliente.',
+          variant: 'destructive',
+        })
+      }
     } finally {
       setLoading(false)
     }
@@ -394,6 +411,9 @@ export function CustomerFormDialog({
       setDuplicateDocError(false)
       setCheckingDoc(false)
       setValidationErrors([])
+      setUploadError(null)
+      setUploadProgress({})
+      setCreatedCustomerId(null)
     }
   }
 
@@ -782,6 +802,26 @@ export function CustomerFormDialog({
                       onChange={(e) => setFormData((f) => ({ ...f, observations: e.target.value }))}
                     />
                   </div>
+
+                  {Object.keys(uploadProgress).length > 0 && loading && (
+                    <div className="grid gap-2 pt-2">
+                      {Object.keys(uploadProgress).map((fileName) => (
+                        <div key={fileName} className="space-y-1">
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span className="truncate max-w-[200px]">{fileName}</span>
+                            <span>{uploadProgress[fileName]}%</span>
+                          </div>
+                          <Progress value={uploadProgress[fileName]} className="h-2" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {uploadError && (
+                    <div className="mt-2 p-3 bg-destructive/10 text-destructive text-sm rounded-md border border-destructive/20 font-medium">
+                      ❌ {uploadError}
+                    </div>
+                  )}
                 </div>
               </div>
             </form>
@@ -806,7 +846,7 @@ export function CustomerFormDialog({
               }
             >
               {loading || checkingDoc ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-              Salvar
+              {uploadError ? 'Tentar Novamente' : 'Salvar'}
             </Button>
           </DialogFooter>
         </DialogContent>

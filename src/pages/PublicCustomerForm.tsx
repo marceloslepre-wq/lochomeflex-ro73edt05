@@ -25,6 +25,8 @@ import { CheckCircle2, Loader2, CloudUpload, Trash2, XCircle } from 'lucide-reac
 import { Address } from '@/stores/main'
 import { customerService } from '@/services/customers'
 import { useToast } from '@/hooks/use-toast'
+import { compressImage } from '@/lib/utils'
+import { Progress } from '@/components/ui/progress'
 
 const emptyAddress: Address = {
   street: '',
@@ -61,6 +63,10 @@ export default function PublicCustomerForm() {
 
   const [duplicateDocError, setDuplicateDocError] = useState(false)
   const [checkingDoc, setCheckingDoc] = useState(false)
+
+  const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({})
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [createdCustomerId, setCreatedCustomerId] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
     name: '',
@@ -237,33 +243,47 @@ export default function PublicCustomerForm() {
 
     try {
       setLoading(true)
+      setUploadError(null)
 
       const exists = await customerService.checkDocumentExists(formData.document)
-      if (exists) {
+      // Only fail if exists and it's not the one we just created
+      if (exists && !createdCustomerId) {
         setDuplicateDocError(true)
         setLoading(false)
         return
       }
 
-      const payload: any = { ...formData, matricula: 'AUTO' }
-      delete payload.phone
-      payload.phone_cell = formData.phoneCell
-      payload.phone_res = formData.phoneRes
+      let targetCustomerId = createdCustomerId
 
-      const newCustomer = await customerService.createCustomer(payload)
+      if (!targetCustomerId) {
+        const payload: any = { ...formData, matricula: 'AUTO' }
+        delete payload.phone
+        payload.phone_cell = formData.phoneCell
+        payload.phone_res = formData.phoneRes
 
-      if (pendingFiles.length > 0) {
+        const newCustomer = await customerService.createCustomer(payload)
+        targetCustomerId = newCustomer.id
+        setCreatedCustomerId(targetCustomerId)
+      }
+
+      if (pendingFiles.length > 0 && targetCustomerId) {
         const newDocs = []
         for (const file of pendingFiles) {
           try {
-            const doc = await customerService.uploadDocument(newCustomer.id, file)
+            const compressed = await compressImage(file, 5)
+            setUploadProgress((prev) => ({ ...prev, [file.name]: 0 }))
+            const doc = await customerService.uploadDocument(targetCustomerId, compressed, (p) => {
+              setUploadProgress((prev) => ({ ...prev, [file.name]: p }))
+            })
             newDocs.push(doc)
-          } catch (uploadError) {
-            console.error('Failed to upload attachment', uploadError)
+          } catch (err: any) {
+            setUploadError(err.message || `Erro ao enviar ${file.name}`)
+            setLoading(false)
+            return // Stop execution
           }
         }
         if (newDocs.length > 0) {
-          await customerService.updateCustomer(newCustomer.id, {
+          await customerService.updateCustomer(targetCustomerId, {
             documento_url: newDocs,
           })
         }
@@ -271,11 +291,13 @@ export default function PublicCustomerForm() {
 
       setSubmitted(true)
     } catch (error) {
-      toast({
-        title: 'Erro',
-        description: 'Não foi possível enviar o formulário.',
-        variant: 'destructive',
-      })
+      if (!uploadError) {
+        toast({
+          title: 'Erro',
+          description: 'Não foi possível enviar o formulário.',
+          variant: 'destructive',
+        })
+      }
     } finally {
       setLoading(false)
     }
@@ -631,6 +653,26 @@ export default function PublicCustomerForm() {
                       placeholder="Alguma informação adicional que gostaria de compartilhar?"
                     />
                   </div>
+
+                  {Object.keys(uploadProgress).length > 0 && loading && (
+                    <div className="grid gap-2 pt-2">
+                      {Object.keys(uploadProgress).map((fileName) => (
+                        <div key={fileName} className="space-y-1">
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span className="truncate max-w-[200px]">{fileName}</span>
+                            <span>{uploadProgress[fileName]}%</span>
+                          </div>
+                          <Progress value={uploadProgress[fileName]} className="h-2" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {uploadError && (
+                    <div className="mt-2 p-3 bg-destructive/10 text-destructive text-sm rounded-md border border-destructive/20 font-medium">
+                      ❌ {uploadError}
+                    </div>
+                  )}
                 </div>
               </form>
             </CardContent>
@@ -642,7 +684,7 @@ export default function PublicCustomerForm() {
                 disabled={loading || duplicateDocError || checkingDoc || pendingFiles.length === 0}
               >
                 {loading || checkingDoc ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                Enviar Cadastro
+                {uploadError ? 'Tentar Novamente' : 'Enviar Cadastro'}
               </Button>
             </CardFooter>
           </Card>
