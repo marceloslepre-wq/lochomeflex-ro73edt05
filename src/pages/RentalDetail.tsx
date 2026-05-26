@@ -26,6 +26,31 @@ export default function RentalDetail() {
   const rental = rentals.find((r) => r.id === id)
   const customer = customers.find((c) => c?.id === rental?.customerId)
 
+  useEffect(() => {
+    if (rental && rental.status === 'Ativo' && !rental.actualReturnDate) {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const dateStr = rental.expectedReturnDate.split('T')[0]
+      const returnDate = new Date(dateStr + 'T00:00:00')
+      if (returnDate < today) {
+        supabase
+          .rpc('update_overdue_rentals')
+          .then(({ error }) => {
+            if (!error && updateRental) {
+              updateRental(rental.id, { status: 'Atrasado' })
+            }
+          })
+          .catch(console.error)
+      }
+    }
+  }, [
+    rental?.id,
+    rental?.status,
+    rental?.expectedReturnDate,
+    rental?.actualReturnDate,
+    updateRental,
+  ])
+
   const [editStartDate, setEditStartDate] = useState('')
   const [editReturnDate, setEditReturnDate] = useState('')
   const [contractText, setContractText] = useState('')

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import useMainStore, { Rental } from '@/stores/main'
 import { Card, CardContent } from '@/components/ui/card'
@@ -43,9 +43,10 @@ import { RentalsReportDialog } from '@/components/rentals/RentalsReportDialog'
 import { RenewDialog } from '@/components/rentals/RenewDialog'
 import { ReceiptDialog } from '@/components/rentals/ReceiptDialog'
 import { ExchangeDialog } from '@/components/rentals/ExchangeDialog'
+import { supabase } from '@/lib/supabase/client'
 
 export default function Rentals() {
-  const { rentals, customers, globalSearch, settings, deleteRental } = useMainStore()
+  const { rentals, customers, globalSearch, settings, deleteRental, updateRental } = useMainStore()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('Todos')
   const [returnDateStart, setReturnDateStart] = useState('')
@@ -60,6 +61,40 @@ export default function Rentals() {
   const [receiptRental, setReceiptRental] = useState<Rental | null>(null)
   const [receiptType, setReceiptType] = useState<'new' | 'renewal'>('new')
   const [receiptRenewalInfo, setReceiptRenewalInfo] = useState<any>(null)
+
+  useEffect(() => {
+    if (rentals.length === 0) return
+
+    let hasOverdueLocal = false
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const overdueIds: string[] = []
+
+    rentals.forEach((r) => {
+      if (r.status === 'Ativo' && !r.actualReturnDate) {
+        const dateStr = r.expectedReturnDate.split('T')[0]
+        const returnDate = new Date(dateStr + 'T00:00:00')
+        if (returnDate < today) {
+          hasOverdueLocal = true
+          overdueIds.push(r.id)
+        }
+      }
+    })
+
+    if (hasOverdueLocal) {
+      supabase
+        .rpc('update_overdue_rentals')
+        .then(({ error }) => {
+          if (!error && updateRental) {
+            overdueIds.forEach((id) => {
+              updateRental(id, { status: 'Atrasado' })
+            })
+          }
+        })
+        .catch(console.error)
+    }
+  }, [rentals.length, updateRental])
 
   const formatDateStr = (dateStr?: string) => {
     if (!dateStr) return '-'

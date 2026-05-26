@@ -22,12 +22,23 @@ import PublicAssetForm from './pages/PublicAssetForm'
 import PublicTransfer from './pages/PublicTransfer'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
+import { useEffect } from 'react'
+import { supabase } from '@/lib/supabase/client'
+
+const OverdueChecker = () => {
+  useEffect(() => {
+    // Run once on app initialization
+    supabase.rpc('update_overdue_rentals').catch(console.error)
+  }, [])
+  return null
+}
 
 const App = () => (
   <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>
     <AuthProvider>
       <StoreProvider>
         <TooltipProvider>
+          <OverdueChecker />
           <Toaster />
           <Sonner />
           <Routes>

@@ -679,6 +679,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      update_overdue_rentals: { Args: never; Returns: number }
       update_rental_secure:
         | {
             Args: {
@@ -1184,10 +1185,13 @@ export const Constants = {
 //           OR
 //           (v_item->>'inventory_id' IS NOT NULL AND (v_item->>'inventory_id')::uuid = p_old_inventory_id)
 //           OR
+//           (v_item->>'itemId' IS NOT NULL AND (v_item->>'itemId')::uuid = p_old_inventory_id)
+//           OR
 //           (v_item->>'id' IS NOT NULL AND (v_item->>'id')::uuid = p_old_inventory_id))
 //          AND NOT v_found THEN
 //
 //         v_item := jsonb_build_object(
+//           'itemId', p_new_inventory_id,
 //           'inventoryId', p_new_inventory_id,
 //           'inventory_id', p_new_inventory_id,
 //           'id', p_new_inventory_id,
@@ -1439,6 +1443,26 @@ export const Constants = {
 //   END;
 //   $function$
 //
+// FUNCTION update_overdue_rentals()
+//   CREATE OR REPLACE FUNCTION public.update_overdue_rentals()
+//    RETURNS integer
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//   AS $function$
+//   DECLARE
+//     updated_count integer;
+//   BEGIN
+//     UPDATE public.rentals
+//     SET status = 'Atrasado'
+//     WHERE status = 'Ativo'
+//       AND expected_return_date < CURRENT_DATE
+//       AND actual_return_date IS NULL;
+//
+//     GET DIAGNOSTICS updated_count = ROW_COUNT;
+//     RETURN updated_count;
+//   END;
+//   $function$
+//
 // FUNCTION update_patrimonio_updated_at()
 //   CREATE OR REPLACE FUNCTION public.update_patrimonio_updated_at()
 //    RETURNS trigger
@@ -1447,54 +1471,6 @@ export const Constants = {
 //   BEGIN
 //       NEW.updated_at = NOW();
 //       RETURN NEW;
-//   END;
-//   $function$
-//
-// FUNCTION update_rental_secure(uuid, date, date, text, uuid)
-//   CREATE OR REPLACE FUNCTION public.update_rental_secure(p_rental_id uuid, p_start_date date, p_expected_return_date date, p_custom_text text, p_user_id uuid)
-//    RETURNS void
-//    LANGUAGE plpgsql
-//    SECURITY DEFINER
-//   AS $function$
-//   DECLARE
-//     v_count int;
-//     v_old_start date;
-//     v_old_return date;
-//     v_old_text text;
-//   BEGIN
-//     -- Rate limit check
-//     SELECT count(*) INTO v_count
-//     FROM public.auditoria_contratos
-//     WHERE usuario_id = p_user_id
-//       AND created_at >= NOW() - INTERVAL '1 minute';
-//
-//     IF v_count >= 5 THEN
-//       RAISE EXCEPTION 'Rate limit exceeded: max 5 edits per minute.';
-//     END IF;
-//
-//     -- Get old values
-//     SELECT start_date, expected_return_date, custom_contract_text
-//     INTO v_old_start, v_old_return, v_old_text
-//     FROM public.rentals
-//     WHERE id = p_rental_id;
-//
-//     -- Update
-//     UPDATE public.rentals
-//     SET start_date = p_start_date,
-//         expected_return_date = p_expected_return_date,
-//         custom_contract_text = p_custom_text
-//     WHERE id = p_rental_id;
-//
-//     -- Audit
-//     INSERT INTO public.auditoria_contratos (rental_id, usuario_id, acao, campos_antigos, campos_novos, ip_usuario)
-//     VALUES (
-//       p_rental_id,
-//       p_user_id,
-//       'EDIT',
-//       jsonb_build_object('start_date', v_old_start, 'expected_return_date', v_old_return, 'custom_contract_text', v_old_text),
-//       jsonb_build_object('start_date', p_start_date, 'expected_return_date', p_expected_return_date, 'custom_contract_text', p_custom_text),
-//       'rpc-call'
-//     );
 //   END;
 //   $function$
 //
@@ -1541,6 +1517,54 @@ export const Constants = {
 //       'EDIT',
 //       jsonb_build_object('start_date', v_old_start, 'expected_return_date', v_old_return, 'custom_contract_text', v_old_text),
 //       jsonb_build_object('start_date', p_start_date, 'expected_return_date', p_expected_return_date, 'custom_contract_text', p_custom_text, 'justificativa', p_justificativa),
+//       'rpc-call'
+//     );
+//   END;
+//   $function$
+//
+// FUNCTION update_rental_secure(uuid, date, date, text, uuid)
+//   CREATE OR REPLACE FUNCTION public.update_rental_secure(p_rental_id uuid, p_start_date date, p_expected_return_date date, p_custom_text text, p_user_id uuid)
+//    RETURNS void
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//   AS $function$
+//   DECLARE
+//     v_count int;
+//     v_old_start date;
+//     v_old_return date;
+//     v_old_text text;
+//   BEGIN
+//     -- Rate limit check
+//     SELECT count(*) INTO v_count
+//     FROM public.auditoria_contratos
+//     WHERE usuario_id = p_user_id
+//       AND created_at >= NOW() - INTERVAL '1 minute';
+//
+//     IF v_count >= 5 THEN
+//       RAISE EXCEPTION 'Rate limit exceeded: max 5 edits per minute.';
+//     END IF;
+//
+//     -- Get old values
+//     SELECT start_date, expected_return_date, custom_contract_text
+//     INTO v_old_start, v_old_return, v_old_text
+//     FROM public.rentals
+//     WHERE id = p_rental_id;
+//
+//     -- Update
+//     UPDATE public.rentals
+//     SET start_date = p_start_date,
+//         expected_return_date = p_expected_return_date,
+//         custom_contract_text = p_custom_text
+//     WHERE id = p_rental_id;
+//
+//     -- Audit
+//     INSERT INTO public.auditoria_contratos (rental_id, usuario_id, acao, campos_antigos, campos_novos, ip_usuario)
+//     VALUES (
+//       p_rental_id,
+//       p_user_id,
+//       'EDIT',
+//       jsonb_build_object('start_date', v_old_start, 'expected_return_date', v_old_return, 'custom_contract_text', v_old_text),
+//       jsonb_build_object('start_date', p_start_date, 'expected_return_date', p_expected_return_date, 'custom_contract_text', p_custom_text),
 //       'rpc-call'
 //     );
 //   END;
