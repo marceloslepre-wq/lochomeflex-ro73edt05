@@ -27,8 +27,16 @@ import { supabase } from '@/lib/supabase/client'
 
 const OverdueChecker = () => {
   useEffect(() => {
+    const checkOverdue = async () => {
+      try {
+        await supabase.rpc('update_overdue_rentals')
+      } catch (error) {
+        console.error('Erro ao atualizar locações atrasadas:', error)
+      }
+    }
+
     // Run once on app initialization
-    supabase.rpc('update_overdue_rentals').catch(console.error)
+    checkOverdue()
   }, [])
   return null
 }
