@@ -1050,6 +1050,9 @@ export const Constants = {
 //     WITH CHECK: true
 //   Policy "anon_select" (SELECT, PERMISSIVE) roles={anon}
 //     USING: true
+//   Policy "anon_update" (UPDATE, PERMISSIVE) roles={anon}
+//     USING: (created_at > (now() - '02:00:00'::interval))
+//     WITH CHECK: (created_at > (now() - '02:00:00'::interval))
 //   Policy "authenticated_delete" (DELETE, PERMISSIVE) roles={authenticated}
 //     USING: true
 //   Policy "authenticated_insert" (INSERT, PERMISSIVE) roles={authenticated}
@@ -1107,6 +1110,9 @@ export const Constants = {
 // Table: rentals
 //   Policy "authenticated_all" (ALL, PERMISSIVE) roles={authenticated}
 //     USING: true
+//     WITH CHECK: true
+// Table: rentals_backup_dates
+//   Policy "Link Public" (INSERT, PERMISSIVE) roles={anon}
 //     WITH CHECK: true
 // Table: settings
 //   Policy "anon_select" (SELECT, PERMISSIVE) roles={anon}
