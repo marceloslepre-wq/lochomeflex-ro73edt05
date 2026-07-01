@@ -79,7 +79,7 @@ export const customerService = {
     const { data, error } = await supabase
       .from('customers')
       .select('*')
-      .order('created_at', { ascending: true })
+      .order('matricula', { ascending: false })
     if (error) throw error
     return data.map(mapFromDb)
   },

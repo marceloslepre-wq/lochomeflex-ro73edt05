@@ -25,6 +25,7 @@ export type InventoryItem = {
   assets?: Asset[]
   monthlyPrice?: number
   dailyPrice?: number
+  salePrice?: number
 }
 
 export type Address = {
@@ -196,7 +197,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           supabase
             .from('inventory')
             .select(
-              'id, code, name, category, description, total_qty, available_qty, rented_qty, condition_status, image, monthly_price, daily_price',
+              'id, code, name, category, description, total_qty, available_qty, rented_qty, condition_status, image, monthly_price, daily_price, sale_price',
             )
             .order('created_at', { ascending: false }),
           supabase.from('settings').select('*').limit(1).maybeSingle(),
@@ -221,6 +222,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               assets: row.assets || [],
               monthlyPrice: Number(row.monthly_price) || 0,
               dailyPrice: Number(row.daily_price) || 0,
+              salePrice: Number(row.sale_price) || 0,
             })),
           )
         }
@@ -475,6 +477,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         assets: item.assets || [],
         monthly_price: item.monthlyPrice,
         daily_price: item.dailyPrice,
+        sale_price: item.salePrice,
       })
       .select()
       .single()
@@ -502,6 +505,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (data.assets !== undefined) dbUpdate.assets = data.assets
     if (data.monthlyPrice !== undefined) dbUpdate.monthly_price = data.monthlyPrice
     if (data.dailyPrice !== undefined) dbUpdate.daily_price = data.dailyPrice
+    if (data.salePrice !== undefined) dbUpdate.sale_price = data.salePrice
 
     await supabase.from('inventory').update(dbUpdate).eq('id', id)
   }

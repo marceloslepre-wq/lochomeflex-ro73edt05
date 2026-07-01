@@ -49,6 +49,7 @@ export function EditItemDialog({ item }: { item: InventoryItem }) {
     conditionStatus: item.conditionStatus,
     monthlyPrice: item.monthlyPrice?.toString() || '',
     dailyPrice: item.dailyPrice?.toString() || '',
+    salePrice: item.salePrice?.toString() || '',
   })
 
   const [locs, setLocs] = useState<any[]>([])
@@ -154,6 +155,7 @@ export function EditItemDialog({ item }: { item: InventoryItem }) {
       conditionStatus: formData.conditionStatus,
       monthlyPrice: parseFloat(formData.monthlyPrice) || 0,
       dailyPrice: parseFloat(formData.dailyPrice) || 0,
+      salePrice: parseFloat(formData.salePrice) || 0,
     })
 
     await supabase.from('inventory_locations').delete().eq('inventory_id', item.id)

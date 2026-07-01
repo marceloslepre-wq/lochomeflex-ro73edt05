@@ -39,6 +39,7 @@ export function CreateItemDialog() {
     conditionStatus: 'Disponível' as InventoryItem['conditionStatus'],
     monthlyPrice: '',
     dailyPrice: '',
+    salePrice: '',
   })
 
   if (!can('items:write')) return null
@@ -76,6 +77,7 @@ export function CreateItemDialog() {
         `https://img.usecurling.com/p/200/200?q=${encodeURIComponent(formData.category || 'tool')}`,
       monthlyPrice: parseFloat(formData.monthlyPrice) || 0,
       dailyPrice: parseFloat(formData.dailyPrice) || 0,
+      salePrice: parseFloat(formData.salePrice) || 0,
     })
 
     // Aguarda a inserção no banco de dados para evitar erro de Foreign Key
@@ -104,6 +106,7 @@ export function CreateItemDialog() {
       conditionStatus: 'Disponível',
       monthlyPrice: '',
       dailyPrice: '',
+      salePrice: '',
     })
   }
 
@@ -186,6 +189,16 @@ export function CreateItemDialog() {
               onChange={(e) => setFormData((f) => ({ ...f, description: e.target.value }))}
               placeholder="Detalhes adicionais do equipamento..."
               className="resize-none h-20"
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label>Valor de Venda (R$)</Label>
+            <Input
+              type="number"
+              step="0.01"
+              value={formData.salePrice}
+              onChange={(e) => setFormData((f) => ({ ...f, salePrice: e.target.value }))}
+              placeholder="0.00"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
