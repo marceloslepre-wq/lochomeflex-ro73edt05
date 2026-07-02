@@ -13,7 +13,14 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Plus, Trash2, Briefcase, Save, X } from 'lucide-react'
+import { Plus, Trash2, Briefcase, Save, X, Download } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu'
+import { handleExport } from '@/lib/export'
 import { ShareAssetLinkDialog } from '@/components/assets/ShareAssetLinkDialog'
 import {
   Select,
@@ -346,6 +353,46 @@ export default function Assets() {
     return matchesModel
   })
 
+  const handleExportAssets = async (format: 'csv' | 'excel' | 'pdf') => {
+    const { data, error } = await supabase
+      .from('patrimonio')
+      .select('*, inventory:inventory_id(name)')
+      .order('created_at', { ascending: false })
+
+    if (error || !data) {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível buscar os dados para exportação.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    const headers = [
+      'Nº Patrimônio',
+      'Produto',
+      'Data de Aquisição',
+      'Valor de Compra',
+      'Fornecedor',
+      'Estado',
+      'Localização',
+      'Observações',
+    ]
+
+    const exportRows = data.map((p: any) => [
+      p.numero_patrimonio || '-',
+      p.inventory?.name || '-',
+      p.data_aquisicao ? new Date(p.data_aquisicao).toLocaleDateString('pt-BR') : '-',
+      p.valor_compra ? `R$ ${Number(p.valor_compra).toFixed(2)}` : '-',
+      p.fornecedor || '-',
+      p.estado || '-',
+      p.localizacao || '-',
+      p.observacoes || '-',
+    ])
+
+    handleExport(format, 'patrimonios', headers, exportRows, settings.companyName, settings.logoUrl)
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
@@ -368,6 +415,24 @@ export default function Assets() {
           </p>
         </div>
         <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto mt-2 sm:mt-0">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <Download className="w-4 h-4 mr-2" /> Exportar
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => handleExportAssets('csv')}>
+                Exportar CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExportAssets('excel')}>
+                Exportar Excel (.xlsx)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExportAssets('pdf')}>
+                Exportar PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <ShareAssetLinkDialog />
           <Input
             placeholder="Busca por Patrimônio (Nº)..."

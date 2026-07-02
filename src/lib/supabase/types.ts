@@ -61,8 +61,10 @@ export type Database = {
         Row: {
           address: Json | null
           attachment: string | null
+          comprovante_endereco_url: string | null
           created_at: string
           delivery_address: Json | null
+          doc_identificacao_url: string | null
           document: string
           documento_url: Json | null
           email: string | null
@@ -79,8 +81,10 @@ export type Database = {
         Insert: {
           address?: Json | null
           attachment?: string | null
+          comprovante_endereco_url?: string | null
           created_at?: string
           delivery_address?: Json | null
+          doc_identificacao_url?: string | null
           document: string
           documento_url?: Json | null
           email?: string | null
@@ -97,8 +101,10 @@ export type Database = {
         Update: {
           address?: Json | null
           attachment?: string | null
+          comprovante_endereco_url?: string | null
           created_at?: string
           delivery_address?: Json | null
+          doc_identificacao_url?: string | null
           document?: string
           documento_url?: Json | null
           email?: string | null

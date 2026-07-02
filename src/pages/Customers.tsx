@@ -16,6 +16,13 @@ import { CustomerFormDialog } from '@/components/customers/CustomerFormDialog'
 import { ShareCustomerLinkDialog } from '@/components/customers/ShareCustomerLinkDialog'
 import { Button } from '@/components/ui/button'
 import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu'
+import { handleExport } from '@/lib/export'
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -30,7 +37,7 @@ import { usePermissions } from '@/hooks/use-permissions'
 import { useToast } from '@/hooks/use-toast'
 
 export default function Customers() {
-  const { globalSearch } = useMainStore()
+  const { globalSearch, settings } = useMainStore()
   const { can } = usePermissions()
   const { toast } = useToast()
   const [search, setSearch] = useState('')
@@ -62,6 +69,47 @@ export default function Customers() {
     (c) => c.name.toLowerCase().includes(term.toLowerCase()) || c.document.includes(term),
   )
 
+  const formatAddress = (addr: any) => {
+    if (!addr) return ''
+    if (typeof addr === 'string') return addr
+    const parts = [
+      addr.street || addr.rua || '',
+      addr.number || addr.numero || '',
+      addr.complement || addr.complemento || '',
+      addr.district || addr.bairro || '',
+      addr.city || addr.cidade || '',
+      addr.state || addr.estado || '',
+      addr.zip || addr.cep || '',
+    ].filter(Boolean)
+    return parts.join(', ')
+  }
+
+  const exportData = () => {
+    const headers = [
+      'Matrícula',
+      'Nome',
+      'Documento',
+      'Email',
+      'Telefone Celular',
+      'Telefone Comercial',
+      'Telefone Residencial',
+      'Endereço',
+      'Data de Cadastro',
+    ]
+    const data = filtered.map((c) => [
+      c.matricula || '-',
+      c.name,
+      c.document,
+      c.email || '-',
+      c.phoneCell || '-',
+      c.phoneCom || '-',
+      c.phoneRes || '-',
+      formatAddress(c.address),
+      c.created_at ? new Date(c.created_at).toLocaleDateString('pt-BR') : '-',
+    ])
+    return { headers, data }
+  }
+
   const handleDelete = async (id: string) => {
     try {
       await customerService.deleteCustomer(id)
@@ -84,6 +132,46 @@ export default function Customers() {
           <p className="text-muted-foreground mt-1">Gerencie a base de clientes e empresas.</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <Download className="w-4 h-4 mr-2" /> Exportar
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem
+                onClick={() => {
+                  const { headers, data } = exportData()
+                  handleExport('csv', 'clientes', headers, data)
+                }}
+              >
+                Exportar CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  const { headers, data } = exportData()
+                  handleExport('excel', 'clientes', headers, data)
+                }}
+              >
+                Exportar Excel (.xlsx)
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  const { headers, data } = exportData()
+                  handleExport(
+                    'pdf',
+                    'clientes',
+                    headers,
+                    data,
+                    settings.companyName,
+                    settings.logoUrl,
+                  )
+                }}
+              >
+                Exportar PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <ShareCustomerLinkDialog />
           {can('customers:write') && <CustomerFormDialog onSuccess={fetchCustomers} />}
         </div>
