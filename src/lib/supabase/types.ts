@@ -314,6 +314,7 @@ export type Database = {
           monthly_price: number | null
           name: string
           rented_qty: number
+          sale_price: number | null
           total_qty: number
         }
         Insert: {
@@ -330,6 +331,7 @@ export type Database = {
           monthly_price?: number | null
           name: string
           rented_qty?: number
+          sale_price?: number | null
           total_qty?: number
         }
         Update: {
@@ -346,6 +348,7 @@ export type Database = {
           monthly_price?: number | null
           name?: string
           rented_qty?: number
+          sale_price?: number | null
           total_qty?: number
         }
         Relationships: []

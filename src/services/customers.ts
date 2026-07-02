@@ -23,6 +23,8 @@ export interface Customer {
   deliveryAddress?: Address
   observations?: string
   documento_url?: CustomerDocument[]
+  docIdentificacaoPath?: string | null
+  comprovanteEnderecoPath?: string | null
 }
 
 const mapFromDb = (row: any): Customer => ({
@@ -40,6 +42,8 @@ const mapFromDb = (row: any): Customer => ({
   deliveryAddress: row.delivery_address,
   observations: row.observations,
   documento_url: row.documento_url || [],
+  docIdentificacaoPath: row.doc_identificacao_url || null,
+  comprovanteEnderecoPath: row.comprovante_endereco_url || null,
 })
 
 const mapToDb = (customer: Partial<Customer>) => {
@@ -57,6 +61,10 @@ const mapToDb = (customer: Partial<Customer>) => {
   if (customer.deliveryAddress !== undefined) db.delivery_address = customer.deliveryAddress
   if (customer.observations !== undefined) db.observations = customer.observations
   if (customer.documento_url !== undefined) db.documento_url = customer.documento_url
+  if (customer.docIdentificacaoPath !== undefined)
+    db.doc_identificacao_url = customer.docIdentificacaoPath
+  if (customer.comprovanteEnderecoPath !== undefined)
+    db.comprovante_endereco_url = customer.comprovanteEnderecoPath
   return db
 }
 

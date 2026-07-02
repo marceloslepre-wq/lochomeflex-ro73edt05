@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import {
   Card,
   CardContent,
@@ -21,12 +21,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Textarea } from '@/components/ui/textarea'
-import { CheckCircle2, Loader2, CloudUpload, Trash2, XCircle } from 'lucide-react'
+import { CheckCircle2, Loader2, XCircle } from 'lucide-react'
 import { Address } from '@/stores/main'
 import { customerService } from '@/services/customers'
 import { useToast } from '@/hooks/use-toast'
 import { compressImage } from '@/lib/utils'
-import { Progress } from '@/components/ui/progress'
+import { SingleFileUploadField } from '@/components/customers/SingleFileUploadField'
 
 const emptyAddress: Address = {
   street: '',
@@ -58,13 +58,13 @@ export default function PublicCustomerForm() {
   const [loading, setLoading] = useState(false)
   const [validationErrors, setValidationErrors] = useState<string[]>([])
 
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const [pendingFiles, setPendingFiles] = useState<File[]>([])
+  const [docIdentificacaoFile, setDocIdentificacaoFile] = useState<File | null>(null)
+  const [comprovanteEnderecoFile, setComprovanteEnderecoFile] = useState<File | null>(null)
 
   const [duplicateDocError, setDuplicateDocError] = useState(false)
   const [checkingDoc, setCheckingDoc] = useState(false)
 
-  const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({})
+  const [uploadProgressMsg, setUploadProgressMsg] = useState<string | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [createdCustomerId, setCreatedCustomerId] = useState<string | null>(null)
 
@@ -81,48 +81,6 @@ export default function PublicCustomerForm() {
   })
 
   const [docError, setDocError] = useState('')
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || [])
-
-    if (pendingFiles.length + files.length > 5) {
-      toast({
-        title: 'Limite excedido',
-        description: 'Máximo de 5 arquivos permitidos.',
-        variant: 'destructive',
-      })
-      if (e.target) e.target.value = ''
-      return
-    }
-
-    const validFiles = files.filter((f) => {
-      const isValidSize = f.size <= 10 * 1024 * 1024
-      const isValidType = ['application/pdf', 'image/jpeg', 'image/png'].includes(f.type)
-
-      if (!isValidSize) {
-        toast({
-          title: 'Erro',
-          description: `Arquivo ${f.name} excede o limite de 10MB.`,
-          variant: 'destructive',
-        })
-      }
-      if (!isValidType) {
-        toast({
-          title: 'Erro',
-          description: `Tipo inválido: ${f.name}. Apenas PDF, JPG, PNG.`,
-          variant: 'destructive',
-        })
-      }
-      return isValidSize && isValidType
-    })
-
-    setPendingFiles((prev) => [...prev, ...validFiles])
-    if (e.target) e.target.value = ''
-  }
-
-  const handleRemovePending = (idx: number) => {
-    setPendingFiles((prev) => prev.filter((_, i) => i !== idx))
-  }
 
   const validateDocument = (doc: string) => {
     const cleanDoc = doc.replace(/\D/g, '')
@@ -205,32 +163,31 @@ export default function PublicCustomerForm() {
     }
   }
 
+  const updateAddress = (field: keyof Address, value: string, isDelivery: boolean = false) => {
+    setFormData((prev) => {
+      if (isDelivery) {
+        return { ...prev, deliveryAddress: { ...prev.deliveryAddress, [field]: value } }
+      }
+      return { ...prev, address: { ...prev.address, [field]: value } }
+    })
+  }
+
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
 
     const errors: string[] = []
-
-    if (duplicateDocError) {
-      errors.push('CPF já cadastrado. Não é permitido duplicar cadastro')
-    }
-
+    if (duplicateDocError) errors.push('CPF já cadastrado. Não é permitido duplicar cadastro')
     if (!formData.name?.trim()) errors.push('Nome Completo / Razão Social')
     if (!formData.document?.trim()) {
       errors.push('CPF / CNPJ')
     } else if (!validateDocument(formData.document)) {
       errors.push('CPF / CNPJ (inválido)')
     }
-
     if (!formData.address?.number?.trim()) errors.push('Número do Imóvel')
-
     const phoneCellClean = formData.phoneCell.replace(/\D/g, '')
     if (phoneCellClean.length < 10) errors.push('Telefone Celular (formato: (11) 99999-9999)')
-
     const phoneResClean = formData.phoneRes.replace(/\D/g, '')
     if (phoneResClean.length < 10) errors.push('2ª Opção de Contato (formato: (11) 99999-9999)')
-
-    if (pendingFiles.length < 1) errors.push('Mínimo 1 arquivo de upload')
-
     if (formData.hasDifferentDeliveryAddress) {
       if (!formData.deliveryAddress?.number?.trim())
         errors.push('Número do Imóvel (Endereço de Entrega)')
@@ -246,7 +203,6 @@ export default function PublicCustomerForm() {
       setUploadError(null)
 
       const exists = await customerService.checkDocumentExists(formData.document)
-      // Only fail if exists and it's not the one we just created
       if (exists && !createdCustomerId) {
         setDuplicateDocError(true)
         setLoading(false)
@@ -266,37 +222,50 @@ export default function PublicCustomerForm() {
         setCreatedCustomerId(targetCustomerId)
       }
 
-      if (pendingFiles.length > 0 && targetCustomerId) {
-        const newDocs = []
-        for (const file of pendingFiles) {
-          try {
-            const compressed = await compressImage(file, 5)
-            setUploadProgress((prev) => ({ ...prev, [file.name]: 0 }))
-            const doc = await customerService.uploadDocument(targetCustomerId, compressed, (p) => {
-              setUploadProgress((prev) => ({ ...prev, [file.name]: p }))
-            })
-            newDocs.push(doc)
-          } catch (err: any) {
-            setUploadError(err.message || `Erro ao enviar ${file.name}`)
-            setLoading(false)
-            return // Stop execution
-          }
-        }
-        if (newDocs.length > 0) {
-          try {
-            await customerService.updateCustomer(targetCustomerId, {
-              documento_url: newDocs,
-            })
-          } catch (updateErr: any) {
-            setUploadError(
-              'Erro ao salvar os anexos no cadastro. Verifique sua conexão e tente novamente.',
-            )
-            setLoading(false)
-            return
-          }
+      const updatePayload: any = {}
+
+      if (docIdentificacaoFile && targetCustomerId) {
+        try {
+          setUploadProgressMsg('Enviando documento de identificação...')
+          const compressed = await compressImage(docIdentificacaoFile, 5)
+          const doc = await customerService.uploadDocument(targetCustomerId, compressed)
+          updatePayload.docIdentificacaoPath = doc.path
+        } catch (err: any) {
+          setUploadError(err.message || 'Erro ao enviar documento de identificação')
+          setLoading(false)
+          setUploadProgressMsg(null)
+          return
         }
       }
 
+      if (comprovanteEnderecoFile && targetCustomerId) {
+        try {
+          setUploadProgressMsg('Enviando comprovante de endereço...')
+          const compressed = await compressImage(comprovanteEnderecoFile, 5)
+          const doc = await customerService.uploadDocument(targetCustomerId, compressed)
+          updatePayload.comprovanteEnderecoPath = doc.path
+        } catch (err: any) {
+          setUploadError(err.message || 'Erro ao enviar comprovante de endereço')
+          setLoading(false)
+          setUploadProgressMsg(null)
+          return
+        }
+      }
+
+      if (Object.keys(updatePayload).length > 0 && targetCustomerId) {
+        try {
+          await customerService.updateCustomer(targetCustomerId, updatePayload)
+        } catch (updateErr: any) {
+          setUploadError(
+            'Erro ao salvar os anexos no cadastro. Verifique sua conexão e tente novamente.',
+          )
+          setLoading(false)
+          setUploadProgressMsg(null)
+          return
+        }
+      }
+
+      setUploadProgressMsg(null)
       setSubmitted(true)
     } catch (error: any) {
       if (!uploadError) {
@@ -309,15 +278,6 @@ export default function PublicCustomerForm() {
     } finally {
       setLoading(false)
     }
-  }
-
-  const updateAddress = (field: keyof Address, value: string, isDelivery: boolean = false) => {
-    setFormData((prev) => {
-      if (isDelivery) {
-        return { ...prev, deliveryAddress: { ...prev.deliveryAddress, [field]: value } }
-      }
-      return { ...prev, address: { ...prev.address, [field]: value } }
-    })
   }
 
   if (submitted) {
@@ -570,86 +530,23 @@ export default function PublicCustomerForm() {
                     )}
                   </div>
 
-                  <div className="grid gap-2 pt-4 border-t">
-                    <Label>
-                      Documentos / Fotos <span className="text-destructive">*</span>:
-                    </Label>
-                    <div className="flex flex-col gap-2">
-                      <div
-                        className="border-2 border-dashed border-[#007BFF] bg-[#f8f9fa] rounded-lg p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-blue-50 transition-colors"
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        <CloudUpload className="w-12 h-12 text-[#007BFF] mb-2" />
-                        <p className="font-medium text-sm text-foreground">
-                          Arraste até 5 arquivos ou clique para selecionar.
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Mínimo 1 arquivo obrigatório.
-                          <br />
-                          Tipos aceitos: PDF, JPG, PNG.
-                        </p>
-                      </div>
-                      <input
-                        type="file"
-                        className="hidden"
-                        ref={fileInputRef}
-                        accept=".jpg,.jpeg,.png,.pdf"
-                        multiple
-                        onChange={handleFileChange}
-                      />
-
-                      {pendingFiles.length === 0 && (
-                        <p className="text-xs text-destructive font-medium mt-1">
-                          ❌ Obrigatório anexar pelo menos 1 documento
-                        </p>
-                      )}
-
-                      {pendingFiles.length > 0 && (
-                        <div className="flex flex-col gap-2 mt-2">
-                          {pendingFiles.map((file, idx) => {
-                            const isImage = file.type.startsWith('image/')
-                            const previewUrl = isImage ? URL.createObjectURL(file) : null
-
-                            return (
-                              <div
-                                key={`pending-${idx}`}
-                                className="flex items-center justify-between bg-blue-50/50 p-2 rounded text-sm border border-blue-100"
-                              >
-                                <div className="flex items-center gap-2 truncate">
-                                  {isImage && previewUrl ? (
-                                    <img
-                                      src={previewUrl}
-                                      alt={file.name}
-                                      className="w-8 h-8 object-cover rounded border bg-white"
-                                    />
-                                  ) : (
-                                    <div className="w-8 h-8 bg-white border flex items-center justify-center rounded text-[10px] font-bold text-muted-foreground">
-                                      PDF
-                                    </div>
-                                  )}
-                                  <div
-                                    className="truncate max-w-[150px] sm:max-w-[250px]"
-                                    title={file.name}
-                                  >
-                                    {file.name}
-                                  </div>
-                                </div>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                                  onClick={() => handleRemovePending(idx)}
-                                  title="Deletar"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      )}
-                    </div>
+                  <div className="grid gap-4 pt-4 border-t">
+                    <SingleFileUploadField
+                      label="Documento de Identificação"
+                      description="CNH, documento de identidade, etc."
+                      pendingFile={docIdentificacaoFile}
+                      onSelect={setDocIdentificacaoFile}
+                      onRemovePending={() => setDocIdentificacaoFile(null)}
+                      disabled={loading}
+                    />
+                    <SingleFileUploadField
+                      label="Comprovante de Endereço"
+                      description="água, energia, telefone, etc."
+                      pendingFile={comprovanteEnderecoFile}
+                      onSelect={setComprovanteEnderecoFile}
+                      onRemovePending={() => setComprovanteEnderecoFile(null)}
+                      disabled={loading}
+                    />
                   </div>
 
                   <div className="grid gap-2 pt-4 border-t">
@@ -662,17 +559,10 @@ export default function PublicCustomerForm() {
                     />
                   </div>
 
-                  {Object.keys(uploadProgress).length > 0 && loading && (
-                    <div className="grid gap-2 pt-2">
-                      {Object.keys(uploadProgress).map((fileName) => (
-                        <div key={fileName} className="space-y-1">
-                          <div className="flex justify-between text-xs text-muted-foreground">
-                            <span className="truncate max-w-[200px]">{fileName}</span>
-                            <span>{uploadProgress[fileName]}%</span>
-                          </div>
-                          <Progress value={uploadProgress[fileName]} className="h-2" />
-                        </div>
-                      ))}
+                  {uploadProgressMsg && loading && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      {uploadProgressMsg}
                     </div>
                   )}
 
@@ -689,7 +579,7 @@ export default function PublicCustomerForm() {
                 type="submit"
                 form="public-customer-form"
                 className="w-full sm:w-auto"
-                disabled={loading || duplicateDocError || checkingDoc || pendingFiles.length === 0}
+                disabled={loading || duplicateDocError || checkingDoc}
               >
                 {loading || checkingDoc ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                 {uploadError ? 'Tentar Novamente' : 'Enviar Cadastro'}
