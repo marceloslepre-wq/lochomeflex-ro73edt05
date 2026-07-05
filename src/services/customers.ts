@@ -25,6 +25,7 @@ export interface Customer {
   documento_url?: CustomerDocument[]
   docIdentificacaoPath?: string | null
   comprovanteEnderecoPath?: string | null
+  attachment?: string | null
   created_at?: string
 }
 
@@ -45,6 +46,7 @@ const mapFromDb = (row: any): Customer => ({
   documento_url: row.documento_url || [],
   docIdentificacaoPath: row.doc_identificacao_url || null,
   comprovanteEnderecoPath: row.comprovante_endereco_url || null,
+  attachment: row.attachment || null,
   created_at: row.created_at,
 })
 
