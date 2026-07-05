@@ -21,6 +21,7 @@ import {
 import useMainStore, { Rental } from '@/stores/main'
 import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/lib/supabase/client'
+import { useLocations } from '@/hooks/use-locations'
 import { differenceInDays } from 'date-fns'
 import { Loader2 } from 'lucide-react'
 
@@ -39,8 +40,8 @@ export function ReturnDialog({
   const { toast } = useToast()
   const today = new Date().toISOString().split('T')[0]
   const [returnDate, setReturnDate] = useState(today)
+  const { locations: locais } = useLocations()
   const [returnLocationId, setReturnLocationId] = useState('')
-  const [locais, setLocais] = useState<{ id: string; nome: string }[]>([])
   const [selectedItems, setSelectedItems] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(false)
 
@@ -50,13 +51,6 @@ export function ReturnDialog({
       setReturnLocationId('')
       setSelectedItems({})
       setLoading(false)
-      supabase
-        .from('locais')
-        .select('id, nome')
-        .eq('ativo', true)
-        .then(({ data }) => {
-          if (data) setLocais(data as { id: string; nome: string }[])
-        })
     }
   }, [open, today])
 

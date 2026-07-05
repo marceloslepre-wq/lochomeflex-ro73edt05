@@ -59,7 +59,7 @@ export function EditItemDialog({ item }: { item: InventoryItem }) {
           } else {
             setLocs([
               {
-                location_id: 'Galpão',
+                location_id: locations[0]?.id || '',
                 quantity: item.totalQty,
                 rented_qty: item.rentedQty,
                 available_qty: item.availableQty,
@@ -86,7 +86,7 @@ export function EditItemDialog({ item }: { item: InventoryItem }) {
   const addLoc = () => {
     setLocs([
       ...locs,
-      { location_id: locations[0]?.nome || 'Galpão', quantity: 1, rented_qty: 0, available_qty: 1 },
+      { location_id: locations[0]?.id || '', quantity: 1, rented_qty: 0, available_qty: 1 },
     ])
   }
 
@@ -121,17 +121,6 @@ export function EditItemDialog({ item }: { item: InventoryItem }) {
       toast({
         title: 'Erro',
         description: 'Existem locais duplicados. Agrupe as quantidades no mesmo local.',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    const galpaoLoc = locs.find((l) => l.location_id === 'Galpão')
-    if (!galpaoLoc || galpaoLoc.quantity <= 0) {
-      toast({
-        title: 'Erro',
-        description:
-          'O estoque deve ser primeiramente recebido e mantido no Galpão antes de distribuição.',
         variant: 'destructive',
       })
       return
@@ -290,7 +279,7 @@ export function EditItemDialog({ item }: { item: InventoryItem }) {
                         </SelectTrigger>
                         <SelectContent>
                           {locations.map((loc) => (
-                            <SelectItem key={loc.id} value={loc.nome}>
+                            <SelectItem key={loc.id} value={loc.id}>
                               {loc.nome}
                             </SelectItem>
                           ))}

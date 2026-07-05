@@ -42,6 +42,7 @@ export function CreateItemDialog() {
     monthlyPrice: '',
     dailyPrice: '',
     salePrice: '',
+    locationId: '',
   })
 
   if (!can('items:write')) return null
@@ -85,19 +86,22 @@ export function CreateItemDialog() {
     // Aguarda a inserção no banco de dados para evitar erro de Foreign Key
     await new Promise((resolve) => setTimeout(resolve, 500))
 
-    const defaultLocation = locations.length > 0 ? locations[0].nome : 'Galpão'
+    const locationId = formData.locationId || locations[0]?.id || ''
+    const locationName = locations.find((l) => l.id === locationId)?.nome || 'estoque'
 
-    await supabase.from('inventory_locations').insert({
-      inventory_id: newItemId,
-      location_id: defaultLocation,
-      quantity: qty,
-      available_qty: qty,
-      rented_qty: 0,
-    })
+    if (locationId) {
+      await supabase.from('inventory_locations').insert({
+        inventory_id: newItemId,
+        location_id: locationId,
+        quantity: qty,
+        available_qty: qty,
+        rented_qty: 0,
+      })
+    }
 
     toast({
       title: 'Item Cadastrado',
-      description: `${formData.name} adicionado ao estoque do ${defaultLocation}.`,
+      description: `${formData.name} adicionado ao estoque do ${locationName}.`,
     })
     setOpen(false)
     setFormData({
@@ -111,6 +115,7 @@ export function CreateItemDialog() {
       monthlyPrice: '',
       dailyPrice: '',
       salePrice: '',
+      locationId: '',
     })
   }
 
@@ -233,6 +238,24 @@ export function CreateItemDialog() {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+          <div className="grid gap-2">
+            <Label>Local de Estoque Inicial</Label>
+            <Select
+              value={formData.locationId}
+              onValueChange={(v) => setFormData((f) => ({ ...f, locationId: v }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o local..." />
+              </SelectTrigger>
+              <SelectContent>
+                {locations.map((loc) => (
+                  <SelectItem key={loc.id} value={loc.id}>
+                    {loc.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="grid gap-2">
             <Label>Upload de Imagem</Label>

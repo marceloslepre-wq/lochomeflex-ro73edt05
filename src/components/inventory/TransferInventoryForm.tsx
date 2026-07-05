@@ -166,7 +166,7 @@ export function TransferInventoryForm({ onSuccess }: { onSuccess?: () => void })
             </SelectTrigger>
             <SelectContent>
               {locations.map((loc) => (
-                <SelectItem key={loc.id} value={loc.nome}>
+                <SelectItem key={loc.id} value={loc.id}>
                   {loc.nome}
                 </SelectItem>
               ))}
@@ -181,9 +181,9 @@ export function TransferInventoryForm({ onSuccess }: { onSuccess?: () => void })
             </SelectTrigger>
             <SelectContent>
               {locations
-                .filter((loc) => loc.nome !== origin)
+                .filter((loc) => loc.id !== origin)
                 .map((loc) => (
-                  <SelectItem key={loc.id} value={loc.nome}>
+                  <SelectItem key={loc.id} value={loc.id}>
                     {loc.nome}
                   </SelectItem>
                 ))}
