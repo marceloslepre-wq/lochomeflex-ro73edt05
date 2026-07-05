@@ -61,7 +61,7 @@ export default function Inventory() {
   const [locationsStock, setLocationsStock] = useState<any[]>([])
 
   const fetchLocations = async () => {
-    const { data } = await supabase.from('inventory_locations').select('*')
+    const { data } = await supabase.from('estoque_por_local').select('*')
     if (data) setLocationsStock(data)
   }
 
@@ -71,6 +71,27 @@ export default function Inventory() {
 
   const categories = Array.from(new Set(inventory.map((i) => i.category)))
 
+  const getLocStock = (itemId: string, locId: string) => {
+    return locationsStock.find((ls) => ls.inventory_id === itemId && ls.local_id === locId)
+  }
+
+  const getLocTotal = (item: any) => {
+    if (locationFilter === 'TODOS') return item.totalQty
+    return getLocStock(item.id, locationFilter)?.quantidade_total || 0
+  }
+
+  const getLocRented = (item: any) => {
+    if (locationFilter === 'TODOS') return item.rentedQty
+    return getLocStock(item.id, locationFilter)?.quantidade_locada || 0
+  }
+
+  const getLocAvailable = (item: any) => {
+    if (locationFilter === 'TODOS') return item.availableQty
+    const ls = getLocStock(item.id, locationFilter)
+    if (!ls) return 0
+    return (ls.quantidade_total || 0) - (ls.quantidade_locada || 0)
+  }
+
   const filtered = inventory.filter((i) => {
     const term = search || globalSearch
     const matchesSearch =
@@ -79,17 +100,11 @@ export default function Inventory() {
     const matchesCategory = categoryFilter === 'Todas' || i.category === categoryFilter
 
     if (locationFilter !== 'TODOS') {
-      const locStock = locationsStock.find(
-        (ls) => ls.inventory_id === i.id && ls.location_id === locationFilter,
-      )
-      if (!locStock || locStock.quantity <= 0) return false
+      const locStock = getLocStock(i.id, locationFilter)
+      if (!locStock || locStock.quantidade_total <= 0) return false
     }
 
-    const itemAvailableQty =
-      locationFilter === 'TODOS'
-        ? i.availableQty
-        : locationsStock.find((ls) => ls.inventory_id === i.id && ls.location_id === locationFilter)
-            ?.available_qty || 0
+    const itemAvailableQty = getLocAvailable(i)
 
     let matchesStatus = true
     if (statusFilter === 'Disponíveis')
@@ -103,28 +118,6 @@ export default function Inventory() {
 
     return matchesSearch && matchesCategory && matchesStatus
   })
-
-  const getTotal = (item: any) => {
-    if (locationFilter === 'TODOS') return item.totalQty
-    return (
-      locationsStock.find((ls) => ls.inventory_id === item.id && ls.location_id === locationFilter)
-        ?.quantity || 0
-    )
-  }
-  const getRented = (item: any) => {
-    if (locationFilter === 'TODOS') return item.rentedQty
-    return (
-      locationsStock.find((ls) => ls.inventory_id === item.id && ls.location_id === locationFilter)
-        ?.rented_qty || 0
-    )
-  }
-  const getAvailable = (item: any) => {
-    if (locationFilter === 'TODOS') return item.availableQty
-    return (
-      locationsStock.find((ls) => ls.inventory_id === item.id && ls.location_id === locationFilter)
-        ?.available_qty || 0
-    )
-  }
 
   const exportData = () => {
     const headers = [
@@ -142,9 +135,9 @@ export default function Inventory() {
       i.name,
       i.category,
       locationFilter,
-      getTotal(i),
-      getRented(i),
-      i.conditionStatus === 'Disponível' ? getAvailable(i) : 0,
+      getLocTotal(i),
+      getLocRented(i),
+      i.conditionStatus === 'Disponível' ? getLocAvailable(i) : 0,
       i.conditionStatus || 'Disponível',
     ])
     return { headers, data }
@@ -302,12 +295,12 @@ export default function Inventory() {
                       {item.monthlyPrice ? `R$ ${item.monthlyPrice.toFixed(2)}` : '-'}
                     </TableCell>
                     <TableCell>{item.category}</TableCell>
-                    <TableCell className="text-right font-medium">{getTotal(item)}</TableCell>
+                    <TableCell className="text-right font-medium">{getLocTotal(item)}</TableCell>
                     <TableCell className="text-right text-amber-600 font-medium">
-                      {getRented(item)}
+                      {getLocRented(item)}
                     </TableCell>
                     <TableCell className="text-right font-bold text-emerald-600">
-                      {item.conditionStatus === 'Disponível' ? getAvailable(item) : 0}
+                      {item.conditionStatus === 'Disponível' ? getLocAvailable(item) : 0}
                     </TableCell>
                     <TableCell className="text-center">
                       {item.conditionStatus === 'Manutenção' ? (
@@ -325,7 +318,7 @@ export default function Inventory() {
                         <Badge className="bg-slate-700 hover:bg-slate-800 text-white border-none">
                           Esgotado
                         </Badge>
-                      ) : getAvailable(item) > 0 ? (
+                      ) : getLocAvailable(item) > 0 ? (
                         <Badge className="bg-emerald-500 hover:bg-emerald-600 border-none">
                           Disponível
                         </Badge>

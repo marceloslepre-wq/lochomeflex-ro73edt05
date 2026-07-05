@@ -60,6 +60,7 @@ export type Rental = {
   customContractHtml?: string
   userId?: string
   pickupLocationId?: string
+  paymentMethod?: string
   contractNumber?: string
 }
 
@@ -317,7 +318,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (rented) {
           return {
             ...item,
-            availableQty: item.availableQty - rented.qty,
+            availableQty: Math.max(0, item.availableQty - rented.qty),
             rentedQty: item.rentedQty + rented.qty,
           }
         }
@@ -325,40 +326,58 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }),
     )
 
-    const { data } = await supabase
-      .from('rentals')
-      .insert({
-        customer_id: rental.customerId,
-        start_date: rental.startDate,
-        expected_return_date: rental.expectedReturnDate,
-        status: rental.status,
-        total: rental.total,
-        custom_contract_text: rental.customContractText,
-        custom_contract_html: rental.customContractHtml,
-        user_id: rental.userId,
-        pickup_location_id: rental.pickupLocationId,
-        items: rental.items,
-      })
-      .select()
-      .single()
+    const localRetiradaId =
+      rental.pickupLocationId && rental.pickupLocationId !== 'delivery'
+        ? rental.pickupLocationId
+        : null
+
+    const { data: rpcData, error: rpcError } = await supabase.rpc('create_rental_atomic', {
+      p_customer_id: rental.customerId,
+      p_local_retirada_id: localRetiradaId,
+      p_start_date: rental.startDate,
+      p_expected_return_date: rental.expectedReturnDate,
+      p_items: rental.items,
+      p_payment_method: rental.paymentMethod || 'PIX',
+      p_total: rental.total,
+      p_custom_contract_html: rental.customContractHtml || null,
+      p_contract_number: null,
+    })
 
     let newRental = rental
-    if (data) {
-      newRental = { ...rental, id: data.id, contractNumber: data.contract_number }
-      setRentals((prev) => prev.map((r) => (r.id === tempId || r.id === rental.id ? newRental : r)))
-    }
+    if (rpcData && !rpcError) {
+      const { data: rentData } = await supabase
+        .from('rentals')
+        .select('*')
+        .eq('id', rpcData)
+        .single()
 
-    for (const rentItem of rental.items) {
-      const inv = inventory.find((i) => i.id === rentItem.itemId)
-      if (inv) {
-        await supabase
-          .from('inventory')
-          .update({
-            available_qty: inv.availableQty - rentItem.qty,
-            rented_qty: inv.rentedQty + rentItem.qty,
-          })
-          .eq('id', inv.id)
+      if (rentData) {
+        newRental = {
+          ...rental,
+          id: rentData.id,
+          contractNumber: rentData.contract_number,
+        }
+        setRentals((prev) =>
+          prev.map((r) => (r.id === tempId || r.id === rental.id ? newRental : r)),
+        )
       }
+    } else if (rpcError) {
+      console.error('Error creating rental via RPC:', rpcError)
+      setRentals((prev) => prev.filter((r) => r.id !== tempId && r.id !== rental.id))
+      setInventory((prev) =>
+        prev.map((item) => {
+          const rented = rental.items.find((ri) => ri.itemId === item.id)
+          if (rented) {
+            return {
+              ...item,
+              availableQty: item.availableQty + rented.qty,
+              rentedQty: Math.max(0, item.rentedQty - rented.qty),
+            }
+          }
+          return item
+        }),
+      )
+      return null
     }
 
     return newRental

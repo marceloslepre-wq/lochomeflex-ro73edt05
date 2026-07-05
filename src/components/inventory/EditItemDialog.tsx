@@ -19,12 +19,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Edit, Trash2 } from 'lucide-react'
+import { Edit } from 'lucide-react'
 import useMainStore, { InventoryItem } from '@/stores/main'
 import { useToast } from '@/hooks/use-toast'
 import { usePermissions } from '@/hooks/use-permissions'
 import { useLocations } from '@/hooks/use-locations'
 import { ScrollArea } from '@/components/ui/scroll-area'
+
+interface StockLoc {
+  local_id: string
+  quantidade_total: number
+  quantidade_locada: number
+}
 
 export function EditItemDialog({ item }: { item: InventoryItem }) {
   const { updateInventoryItem, settings } = useMainStore()
@@ -36,7 +42,6 @@ export function EditItemDialog({ item }: { item: InventoryItem }) {
     name: item.name,
     code: item.code,
     category: item.category,
-    qty: item.totalQty.toString(),
     description: item.description || '',
     image: item.image,
     conditionStatus: item.conditionStatus,
@@ -44,31 +49,27 @@ export function EditItemDialog({ item }: { item: InventoryItem }) {
     dailyPrice: item.dailyPrice?.toString() || '',
     salePrice: item.salePrice?.toString() || '',
   })
-
-  const [locs, setLocs] = useState<any[]>([])
+  const [locs, setLocs] = useState<StockLoc[]>([])
 
   useEffect(() => {
     if (open) {
       supabase
-        .from('inventory_locations')
-        .select('*')
+        .from('estoque_por_local')
+        .select('local_id, quantidade_total, quantidade_locada')
         .eq('inventory_id', item.id)
         .then(({ data }) => {
-          if (data && data.length > 0) {
-            setLocs(data)
-          } else {
-            setLocs([
-              {
-                location_id: locations[0]?.id || '',
-                quantity: item.totalQty,
-                rented_qty: item.rentedQty,
-                available_qty: item.availableQty,
-              },
-            ])
-          }
+          const merged: StockLoc[] = locations.map((loc) => {
+            const existing = data?.find((d: any) => d.local_id === loc.id)
+            return {
+              local_id: loc.id,
+              quantidade_total: existing?.quantidade_total || 0,
+              quantidade_locada: existing?.quantidade_locada || 0,
+            }
+          })
+          setLocs(merged)
         })
     }
-  }, [open, item.id, item.totalQty, item.rentedQty, item.availableQty])
+  }, [open, item.id, locations])
 
   if (!can('items:write')) return null
 
@@ -83,30 +84,16 @@ export function EditItemDialog({ item }: { item: InventoryItem }) {
     }
   }
 
-  const addLoc = () => {
-    setLocs([
-      ...locs,
-      { location_id: locations[0]?.id || '', quantity: 1, rented_qty: 0, available_qty: 1 },
-    ])
-  }
-
-  const removeLoc = (idx: number) => {
-    setLocs(locs.filter((_, i) => i !== idx))
-  }
-
-  const updateLoc = (idx: number, field: string, value: any) => {
+  const updateLoc = (idx: number, value: number) => {
     const newLocs = [...locs]
-    newLocs[idx][field] = value
-    if (field === 'quantity') {
-      newLocs[idx].available_qty = Math.max(0, value - (newLocs[idx].rented_qty || 0))
-    }
+    newLocs[idx] = { ...newLocs[idx], quantidade_total: value }
     setLocs(newLocs)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    const totalSum = locs.reduce((acc, curr) => acc + curr.quantity, 0)
+    const totalSum = locs.reduce((acc, curr) => acc + curr.quantidade_total, 0)
     if (totalSum <= 0) {
       toast({
         title: 'Erro',
@@ -116,18 +103,8 @@ export function EditItemDialog({ item }: { item: InventoryItem }) {
       return
     }
 
-    const locIds = locs.map((l) => l.location_id)
-    if (new Set(locIds).size !== locIds.length) {
-      toast({
-        title: 'Erro',
-        description: 'Existem locais duplicados. Agrupe as quantidades no mesmo local.',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    const diff = totalSum - item.totalQty
-    const newAvailable = Math.max(0, item.availableQty + diff)
+    const totalRented = locs.reduce((acc, curr) => acc + curr.quantidade_locada, 0)
+    const newAvailable = Math.max(0, totalSum - totalRented)
 
     updateInventoryItem(item.id, {
       name: formData.name,
@@ -136,6 +113,7 @@ export function EditItemDialog({ item }: { item: InventoryItem }) {
       description: formData.description,
       totalQty: totalSum,
       availableQty: newAvailable,
+      rentedQty: totalRented,
       image: formData.image || item.image,
       conditionStatus: formData.conditionStatus,
       monthlyPrice: parseFloat(formData.monthlyPrice) || 0,
@@ -143,17 +121,17 @@ export function EditItemDialog({ item }: { item: InventoryItem }) {
       salePrice: parseFloat(formData.salePrice) || 0,
     })
 
-    await supabase.from('inventory_locations').delete().eq('inventory_id', item.id)
-    const toInsert = locs.map((l) => ({
+    const toUpsert = locs.map((l) => ({
       inventory_id: item.id,
-      location_id: l.location_id,
-      quantity: l.quantity,
-      rented_qty: l.rented_qty || 0,
-      available_qty: l.quantity - (l.rented_qty || 0),
+      local_id: l.local_id,
+      quantidade_total: l.quantidade_total,
+      quantidade_locada: l.quantidade_locada,
     }))
 
-    if (toInsert.length > 0) {
-      await supabase.from('inventory_locations').insert(toInsert)
+    if (toUpsert.length > 0) {
+      await supabase
+        .from('estoque_por_local')
+        .upsert(toUpsert, { onConflict: 'inventory_id,local_id' })
     }
 
     toast({ title: 'Item Atualizado', description: `${formData.name} modificado com sucesso.` })
@@ -260,57 +238,53 @@ export function EditItemDialog({ item }: { item: InventoryItem }) {
               </div>
 
               <div className="grid gap-2 p-3 bg-muted/30 rounded-md border">
-                <div className="flex items-center justify-between">
-                  <Label className="text-base font-semibold">Distribuição de Estoque</Label>
-                  <Button type="button" variant="outline" size="sm" onClick={addLoc}>
-                    + Adicionar Local
-                  </Button>
-                </div>
-                {locs.map((l, idx) => (
-                  <div key={idx} className="flex items-end gap-2 mt-2">
-                    <div className="flex-1">
-                      <Label className="text-xs">Local</Label>
-                      <Select
-                        value={l.location_id}
-                        onValueChange={(v) => updateLoc(idx, 'location_id', v)}
-                      >
-                        <SelectTrigger className="bg-background">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {locations.map((loc) => (
-                            <SelectItem key={loc.id} value={loc.id}>
-                              {loc.nome}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                <Label className="text-base font-semibold">Distribuição de Estoque</Label>
+                {locs.map((l, idx) => {
+                  const locName = locations.find((loc) => loc.id === l.local_id)?.nome || 'Local'
+                  const available = l.quantidade_total - l.quantidade_locada
+                  return (
+                    <div key={l.local_id} className="flex items-end gap-2 mt-2">
+                      <div className="flex-1">
+                        <Label className="text-xs">{locName}</Label>
+                        <div className="h-9 flex items-center px-3 bg-muted rounded-md text-sm text-muted-foreground">
+                          {locName}
+                        </div>
+                      </div>
+                      <div className="w-20">
+                        <Label className="text-xs">Total</Label>
+                        <Input
+                          type="number"
+                          className="bg-background"
+                          value={l.quantidade_total}
+                          onChange={(e) => updateLoc(idx, parseInt(e.target.value) || 0)}
+                          min={l.quantidade_locada}
+                        />
+                      </div>
+                      <div className="w-20">
+                        <Label className="text-xs">Locados</Label>
+                        <Input
+                          type="number"
+                          className="bg-muted text-muted-foreground"
+                          disabled
+                          value={l.quantidade_locada}
+                        />
+                      </div>
+                      <div className="w-20">
+                        <Label className="text-xs">Livre</Label>
+                        <Input
+                          type="number"
+                          className="bg-muted text-muted-foreground"
+                          disabled
+                          value={available}
+                        />
+                      </div>
                     </div>
-                    <div className="w-24">
-                      <Label className="text-xs">Qtd</Label>
-                      <Input
-                        type="number"
-                        className="bg-background"
-                        value={l.quantity}
-                        onChange={(e) => updateLoc(idx, 'quantity', parseInt(e.target.value) || 0)}
-                        min={l.rented_qty || 0}
-                      />
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive mb-0.5 hover:bg-destructive/10"
-                      onClick={() => removeLoc(idx)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ))}
+                  )
+                })}
                 <div className="flex justify-between items-center bg-background p-2 rounded border mt-2">
                   <span className="text-sm font-medium">Total Consolidado</span>
                   <span className="font-bold text-lg">
-                    {locs.reduce((a, b) => a + b.quantity, 0)}
+                    {locs.reduce((a, b) => a + b.quantidade_total, 0)}
                   </span>
                 </div>
               </div>

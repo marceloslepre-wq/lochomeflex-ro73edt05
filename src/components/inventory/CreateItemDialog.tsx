@@ -89,13 +89,15 @@ export function CreateItemDialog() {
     const locationId = formData.locationId || locations[0]?.id || ''
     const locationName = locations.find((l) => l.id === locationId)?.nome || 'estoque'
 
-    if (locationId) {
-      await supabase.from('inventory_locations').insert({
+    if (locations.length > 0) {
+      const stockEntries = locations.map((loc) => ({
         inventory_id: newItemId,
-        location_id: locationId,
-        quantity: qty,
-        available_qty: qty,
-        rented_qty: 0,
+        local_id: loc.id,
+        quantidade_total: loc.id === locationId ? qty : 0,
+        quantidade_locada: 0,
+      }))
+      await supabase.from('estoque_por_local').upsert(stockEntries, {
+        onConflict: 'inventory_id,local_id',
       })
     }
 

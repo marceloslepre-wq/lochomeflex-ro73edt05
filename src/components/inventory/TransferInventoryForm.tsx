@@ -42,9 +42,9 @@ export function TransferInventoryForm({ onSuccess }: { onSuccess?: () => void })
       if (invData) setInventory(invData)
 
       const { data: locData, error: locError } = await supabase
-        .from('inventory_locations')
-        .select('inventory_id, location_id, available_qty')
-      if (locError) console.error('Erro ao buscar locais:', locError)
+        .from('estoque_por_local')
+        .select('inventory_id, local_id, quantidade_total, quantidade_locada')
+      if (locError) console.error('Erro ao buscar estoque:', locError)
       if (locData) setLocationsStock(locData)
     } catch (e) {
       console.error('Falha na comunicação:', e)
@@ -53,9 +53,10 @@ export function TransferInventoryForm({ onSuccess }: { onSuccess?: () => void })
 
   const getAvailableQty = (inventoryId: string, locationId: string) => {
     const stock = locationsStock.find(
-      (ls) => ls.inventory_id === inventoryId && ls.location_id === locationId,
+      (ls) => ls.inventory_id === inventoryId && ls.local_id === locationId,
     )
-    return stock?.available_qty || 0
+    if (!stock) return 0
+    return (stock.quantidade_total || 0) - (stock.quantidade_locada || 0)
   }
 
   const handleAddItem = () => {
