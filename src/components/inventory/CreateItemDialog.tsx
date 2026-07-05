@@ -23,11 +23,13 @@ import useMainStore, { InventoryItem } from '@/stores/main'
 import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 import { usePermissions } from '@/hooks/use-permissions'
+import { useLocations } from '@/hooks/use-locations'
 
 export function CreateItemDialog() {
   const { addInventoryItem, settings } = useMainStore()
   const { toast } = useToast()
   const { can } = usePermissions()
+  const { locations } = useLocations()
   const [open, setOpen] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
@@ -83,9 +85,11 @@ export function CreateItemDialog() {
     // Aguarda a inserção no banco de dados para evitar erro de Foreign Key
     await new Promise((resolve) => setTimeout(resolve, 500))
 
+    const defaultLocation = locations.length > 0 ? locations[0].nome : 'Galpão'
+
     await supabase.from('inventory_locations').insert({
       inventory_id: newItemId,
-      location_id: 'Galpão',
+      location_id: defaultLocation,
       quantity: qty,
       available_qty: qty,
       rented_qty: 0,
@@ -93,7 +97,7 @@ export function CreateItemDialog() {
 
     toast({
       title: 'Item Cadastrado',
-      description: `${formData.name} adicionado ao estoque do Galpão.`,
+      description: `${formData.name} adicionado ao estoque do ${defaultLocation}.`,
     })
     setOpen(false)
     setFormData({

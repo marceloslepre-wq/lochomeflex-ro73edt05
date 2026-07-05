@@ -23,21 +23,14 @@ import { Edit, Trash2 } from 'lucide-react'
 import useMainStore, { InventoryItem } from '@/stores/main'
 import { useToast } from '@/hooks/use-toast'
 import { usePermissions } from '@/hooks/use-permissions'
+import { useLocations } from '@/hooks/use-locations'
 import { ScrollArea } from '@/components/ui/scroll-area'
-
-const LOCATIONS = [
-  'Galpão',
-  'Loja Vitória',
-  'Loja Cariacica',
-  'Loja Vila Velha',
-  'Loja Serra',
-  'Matriz',
-]
 
 export function EditItemDialog({ item }: { item: InventoryItem }) {
   const { updateInventoryItem, settings } = useMainStore()
   const { toast } = useToast()
   const { can } = usePermissions()
+  const { locations } = useLocations()
   const [open, setOpen] = useState(false)
   const [formData, setFormData] = useState({
     name: item.name,
@@ -91,7 +84,10 @@ export function EditItemDialog({ item }: { item: InventoryItem }) {
   }
 
   const addLoc = () => {
-    setLocs([...locs, { location_id: LOCATIONS[0], quantity: 1, rented_qty: 0, available_qty: 1 }])
+    setLocs([
+      ...locs,
+      { location_id: locations[0]?.nome || 'Galpão', quantity: 1, rented_qty: 0, available_qty: 1 },
+    ])
   }
 
   const removeLoc = (idx: number) => {
@@ -293,9 +289,9 @@ export function EditItemDialog({ item }: { item: InventoryItem }) {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {LOCATIONS.map((loc) => (
-                            <SelectItem key={loc} value={loc}>
-                              {loc}
+                          {locations.map((loc) => (
+                            <SelectItem key={loc.id} value={loc.nome}>
+                              {loc.nome}
                             </SelectItem>
                           ))}
                         </SelectContent>

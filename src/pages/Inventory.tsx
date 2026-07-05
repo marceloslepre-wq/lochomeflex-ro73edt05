@@ -47,20 +47,13 @@ import { TransferHistoryDialog } from '@/components/inventory/TransferHistoryDia
 import { handleExport } from '@/lib/export'
 import { usePermissions } from '@/hooks/use-permissions'
 import { useToast } from '@/hooks/use-toast'
-
-const LOCATIONS = [
-  'Galpão',
-  'Loja Vitória',
-  'Loja Cariacica',
-  'Loja Vila Velha',
-  'Loja Serra',
-  'Matriz',
-]
+import { useLocations } from '@/hooks/use-locations'
 
 export default function Inventory() {
   const { inventory, globalSearch, deleteInventoryItem, settings } = useMainStore()
   const { can } = usePermissions()
   const { toast } = useToast()
+  const { locations } = useLocations()
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('Todas')
   const [statusFilter, setStatusFilter] = useState('Todos')
@@ -259,9 +252,9 @@ export default function Inventory() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="TODOS">Todos os Locais</SelectItem>
-              {LOCATIONS.map((loc) => (
-                <SelectItem key={loc} value={loc}>
-                  {loc}
+              {locations.map((loc) => (
+                <SelectItem key={loc.id} value={loc.nome}>
+                  {loc.nome}
                 </SelectItem>
               ))}
             </SelectContent>

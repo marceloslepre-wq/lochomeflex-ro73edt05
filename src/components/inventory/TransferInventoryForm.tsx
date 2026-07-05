@@ -12,15 +12,7 @@ import {
 } from '@/components/ui/select'
 import { Plus, Trash2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-
-const LOCATIONS = [
-  'Galpão',
-  'Loja Vitória',
-  'Loja Cariacica',
-  'Loja Vila Velha',
-  'Loja Serra',
-  'Matriz',
-]
+import { useLocations } from '@/hooks/use-locations'
 
 interface TransferItem {
   inventory_id: string
@@ -29,6 +21,7 @@ interface TransferItem {
 
 export function TransferInventoryForm({ onSuccess }: { onSuccess?: () => void }) {
   const { toast } = useToast()
+  const { locations } = useLocations()
   const [origin, setOrigin] = useState('')
   const [destination, setDestination] = useState('')
   const [items, setItems] = useState<TransferItem[]>([])
@@ -172,9 +165,9 @@ export function TransferInventoryForm({ onSuccess }: { onSuccess?: () => void })
               <SelectValue placeholder="Selecione a origem" />
             </SelectTrigger>
             <SelectContent>
-              {LOCATIONS.map((loc) => (
-                <SelectItem key={loc} value={loc}>
-                  {loc}
+              {locations.map((loc) => (
+                <SelectItem key={loc.id} value={loc.nome}>
+                  {loc.nome}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -187,11 +180,13 @@ export function TransferInventoryForm({ onSuccess }: { onSuccess?: () => void })
               <SelectValue placeholder="Selecione o destino" />
             </SelectTrigger>
             <SelectContent>
-              {LOCATIONS.filter((loc) => loc !== origin).map((loc) => (
-                <SelectItem key={loc} value={loc}>
-                  {loc}
-                </SelectItem>
-              ))}
+              {locations
+                .filter((loc) => loc.nome !== origin)
+                .map((loc) => (
+                  <SelectItem key={loc.id} value={loc.nome}>
+                    {loc.nome}
+                  </SelectItem>
+                ))}
             </SelectContent>
           </Select>
         </div>
