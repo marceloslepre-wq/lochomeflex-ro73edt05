@@ -253,7 +253,7 @@ export default function Inventory() {
             <SelectContent>
               <SelectItem value="TODOS">Todos os Locais</SelectItem>
               {locations.map((loc) => (
-                <SelectItem key={loc.id} value={loc.nome}>
+                <SelectItem key={loc.id} value={loc.id}>
                   {loc.nome}
                 </SelectItem>
               ))}

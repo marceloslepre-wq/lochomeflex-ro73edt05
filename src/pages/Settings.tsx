@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import useMainStore, { User } from '@/stores/main'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
@@ -46,6 +46,7 @@ import { CheckCircle, FileText, Plus, Trash2, Upload, Edit, Save } from 'lucide-
 import { PermissionKey, usePermissions } from '@/hooks/use-permissions'
 import logoImg from '@/assets/logo_hospital_home_final-f2434.jpg'
 import { supabase } from '@/lib/supabase/client'
+import { refreshLocations } from '@/hooks/use-locations'
 
 const PERMISSIONS_LIST: { id: PermissionKey; label: string }[] = [
   { id: 'items:write', label: 'Cadastrar/Editar Itens' },
@@ -76,12 +77,22 @@ export default function Settings() {
   const [editingLocId, setEditingLocId] = useState<string | null>(null)
   const [editLocName, setEditLocName] = useState('')
   const [editLocAddress, setEditLocAddress] = useState('')
+  const [locationsList, setLocationsList] = useState<any[]>([])
+
+  const fetchLocais = async () => {
+    const { data } = await supabase.from('locais').select('*').order('nome')
+    if (data) setLocationsList(data)
+  }
+
+  useEffect(() => {
+    fetchLocais()
+  }, [])
 
   const handleOpenLocForm = (loc?: any) => {
     if (loc) {
       setEditingLocId(loc.id)
-      setEditLocName(loc.name)
-      setEditLocAddress(loc.address)
+      setEditLocName(loc.nome)
+      setEditLocAddress(loc.endereco || '')
     } else {
       setEditingLocId(null)
       setEditLocName('')
@@ -90,19 +101,22 @@ export default function Settings() {
     setLocDialogOpen(true)
   }
 
-  const handleSaveLoc = (e: React.FormEvent) => {
+  const handleSaveLoc = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!editLocName || !editLocAddress) return
+    if (!editLocName) return
 
     if (editingLocId) {
-      const newLocs = settings.locations?.map((l) =>
-        l.id === editingLocId ? { ...l, name: editLocName, address: editLocAddress } : l,
-      )
-      updateSettings({ locations: newLocs })
+      await supabase
+        .from('locais')
+        .update({ nome: editLocName, endereco: editLocAddress })
+        .eq('id', editingLocId)
     } else {
-      const newLoc = { id: Math.random().toString(), name: editLocName, address: editLocAddress }
-      updateSettings({ locations: [...(settings.locations || []), newLoc] })
+      await supabase
+        .from('locais')
+        .insert({ nome: editLocName, ativo: true, endereco: editLocAddress })
     }
+    refreshLocations()
+    fetchLocais()
     setLocDialogOpen(false)
     toast({ title: 'Local salvo com sucesso!' })
   }
@@ -732,17 +746,17 @@ export default function Settings() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {!settings.locations || settings.locations.length === 0 ? (
+                {locationsList.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={3} className="text-center text-muted-foreground py-4">
                       Nenhum local cadastrado.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  settings.locations.map((loc) => (
+                  locationsList.map((loc) => (
                     <TableRow key={loc.id} className="group">
-                      <TableCell className="font-medium">{loc.name}</TableCell>
-                      <TableCell>{loc.address}</TableCell>
+                      <TableCell className="font-medium">{loc.nome}</TableCell>
+                      <TableCell>{loc.endereco || '-'}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Button
@@ -774,11 +788,10 @@ export default function Settings() {
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
                                 <AlertDialogAction
-                                  onClick={() => {
-                                    const newLocs = settings.locations?.filter(
-                                      (l) => l.id !== loc.id,
-                                    )
-                                    updateSettings({ locations: newLocs })
+                                  onClick={async () => {
+                                    await supabase.from('locais').delete().eq('id', loc.id)
+                                    refreshLocations()
+                                    fetchLocais()
                                     toast({ title: 'Local Excluído' })
                                   }}
                                   className="bg-destructive text-white"

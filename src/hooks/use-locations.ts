@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase/client'
 export interface LocationItem {
   id: string
   nome: string
+  endereco?: string
 }
 
 let cachedLocations: LocationItem[] | null = null
@@ -26,7 +27,7 @@ export function useLocations() {
     const fetchLocations = async () => {
       const { data, error } = await supabase
         .from('locais')
-        .select('id, nome')
+        .select('id, nome, endereco')
         .eq('ativo', true)
         .order('nome')
 

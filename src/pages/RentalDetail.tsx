@@ -9,6 +9,7 @@ import { ArrowLeft, Save, Edit2, Printer, Link as LinkIcon, History } from 'luci
 import { useState, useMemo, useEffect } from 'react'
 import { useToast } from '@/hooks/use-toast'
 import { usePermissions } from '@/hooks/use-permissions'
+import { useLocations } from '@/hooks/use-locations'
 import logoImg from '@/assets/logo_hospital_home_final-f2434.jpg'
 import { supabase } from '@/lib/supabase/client'
 
@@ -18,6 +19,7 @@ export default function RentalDetail() {
   const { rentals, customers, inventory, settings, updateRental } = useMainStore()
   const { toast } = useToast()
   const { can, currentUser } = usePermissions()
+  const { locations: locaisList } = useLocations()
 
   const [isEditing, setIsEditing] = useState(false)
   const [docType, setDocType] = useState<'contract' | 'delivery' | 'return' | 'history'>('contract')
@@ -101,13 +103,13 @@ export default function RentalDetail() {
       dAddrStr = `${dAddr.street || ''}, ${dAddr.number || 'S/N'}${dAddr.complement ? ' - ' + dAddr.complement : ''}, Bairro: ${dAddr.neighborhood || ''}, Cidade: ${dAddr.city || ''}, Estado: ${dAddr.state || ''}, CEP: ${dAddr.zipCode || ''}`
     }
 
-    const pickupLoc = settings.locations?.find((l: any) => l.id === rental.pickupLocationId)
-    let pAddress = pickupLoc?.address || ''
+    const pickupLoc = locaisList.find((l) => l.id === rental.pickupLocationId)
+    let pAddress = pickupLoc?.endereco || ''
     let pickupText =
       rental.pickupLocationId === 'delivery'
         ? 'Entrega no Endereço do Cliente'
-        : pickupLoc?.name
-          ? `${pickupLoc.name}${pAddress ? ` - ${pAddress}` : ''}`
+        : pickupLoc?.nome
+          ? `${pickupLoc.nome}${pAddress ? ` - ${pAddress}` : ''}`
           : 'Não informado'
     pickupText = pickupText
       .replace(/ - CEP: Sem CEP/gi, '')
@@ -239,12 +241,12 @@ export default function RentalDetail() {
       dAddrStr = `${dAddr.street || ''}, ${dAddr.number || 'S/N'}${dAddr.complement ? ' - ' + dAddr.complement : ''}, Bairro: ${dAddr.neighborhood || ''}, Cidade: ${dAddr.city || ''}, Estado: ${dAddr.state || ''}, CEP: ${dAddr.zipCode || ''}`
     }
 
-    const pickupLoc = settings.locations?.find((l: any) => l.id === rental.pickupLocationId)
+    const pickupLoc = locaisList.find((l) => l.id === rental.pickupLocationId)
     let pickupText =
       rental.pickupLocationId === 'delivery'
         ? 'Entrega no Endereço do Cliente'
-        : pickupLoc?.name
-          ? `${pickupLoc.name} - ${pickupLoc.address || ''}`
+        : pickupLoc?.nome
+          ? `${pickupLoc.nome} - ${pickupLoc.endereco || ''}`
           : 'Não informado'
     pickupText = pickupText
       .replace(/ - CEP: Sem CEP/gi, '')

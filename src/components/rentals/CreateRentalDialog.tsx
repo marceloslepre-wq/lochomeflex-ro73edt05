@@ -32,11 +32,13 @@ import useMainStore, { Rental, RentalItem } from '@/stores/main'
 import { useToast } from '@/hooks/use-toast'
 import { usePermissions } from '@/hooks/use-permissions'
 import { cn } from '@/lib/utils'
+import { useLocations } from '@/hooks/use-locations'
 
 export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental) => void }) {
   const { customers, inventory, addRental, settings } = useMainStore()
   const { toast } = useToast()
   const { can } = usePermissions()
+  const { locations: locaisList } = useLocations()
   const [open, setOpen] = useState(false)
 
   const [customerId, setCustomerId] = useState('')
@@ -205,12 +207,11 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
           .join(' / ') || 'Não informado'
 
       let locationName = 'Não informado'
-      const locationsList = Array.isArray(settings?.locations) ? settings.locations : []
       if (pickupLocationId === 'delivery') locationName = 'Entrega no Endereço do Cliente'
       else if (pickupLocationId) {
-        const loc = locationsList.find((l: any) => l.id === pickupLocationId)
+        const loc = locaisList.find((l) => l.id === pickupLocationId)
         if (loc) {
-          locationName = `${(loc as any).name} - ${(loc as any).address || ''}`
+          locationName = `${loc.nome} - ${loc.endereco || ''}`
         }
       }
       locationName = locationName
@@ -421,13 +422,11 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
                   <SelectValue placeholder="Selecione o local..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {(Array.isArray(settings?.locations) ? settings.locations : []).map(
-                    (loc: any) => (
-                      <SelectItem key={loc.id} value={loc.id}>
-                        {loc.name}
-                      </SelectItem>
-                    ),
-                  )}
+                  {locaisList.map((loc) => (
+                    <SelectItem key={loc.id} value={loc.id}>
+                      {loc.nome}
+                    </SelectItem>
+                  ))}
                   <SelectItem value="delivery">Entrega no Endereço do Cliente</SelectItem>
                 </SelectContent>
               </Select>
