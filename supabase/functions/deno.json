@@ -1,6 +1,7 @@
 {
   "_versions": {
     "manage-users": 10,
-    "update-overdue-rentals": 7
+    "update-overdue-rentals": 8,
+    "whatsapp-send": 1
   }
 }
