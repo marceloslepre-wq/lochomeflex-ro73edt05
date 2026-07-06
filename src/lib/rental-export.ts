@@ -98,6 +98,19 @@ function getItemValue(item: any): number {
   return typeof val === 'string' ? parseFloat(val) || 0 : val
 }
 
+function normalizeDate(dateStr?: string | null): string {
+  if (!dateStr) return ''
+  const parts = dateStr.split('T')[0].split('-')
+  if (parts.length !== 3) return dateStr.split('T')[0] || ''
+  const [y, m, d] = parts
+  return `${y}-${m}-${d}`
+}
+
+function normalizeCurrency(value: number | string | undefined | null): string {
+  const num = typeof value === 'string' ? parseFloat(value) || 0 : (value ?? 0)
+  return num.toFixed(2)
+}
+
 export function buildDetailedRentalExport(
   rentals: any[],
   customers: any[],
@@ -108,20 +121,20 @@ export function buildDetailedRentalExport(
   const allLocations = [...cachedLocs, ...(settingsLocations || [])]
 
   const headers = [
-    'numero do contrato',
-    'Status',
-    'nome',
-    'CPF/CNPJ',
-    'telefone',
-    'endereço completo',
-    'Endereço de Entrega',
-    'Local de Retirada/Entrega',
-    'Produto',
-    'Quantidade',
-    'Código/Referência',
-    'Retirada',
-    'Devolução',
-    'Valor',
+    'contrato_numero',
+    'cliente_nome',
+    'cliente_documento',
+    'cliente_telefone',
+    'cliente_endereco',
+    'endereco_entrega',
+    'local_retirada',
+    'produto_nome',
+    'produto_codigo',
+    'quantidade',
+    'valor_unitario',
+    'data_inicio',
+    'data_devolucao_prevista',
+    'status',
   ]
 
   const data: any[][] = []
@@ -131,8 +144,8 @@ export function buildDetailedRentalExport(
     const contractNumber =
       r.contractNumber || r.contract_number || r.id.substring(0, 8).toUpperCase()
     const status = r.status || 'Ativo'
-    const customerName = customer?.name || '-'
-    const document = customer?.document || '-'
+    const customerName = customer?.name || ''
+    const document = customer?.document || ''
     const phone =
       customer?.phone_cell ||
       customer?.phoneCell ||
@@ -144,53 +157,51 @@ export function buildDetailedRentalExport(
     const fullAddress = formatAddress(customer?.address)
     const deliveryAddr = getDeliveryAddress(customer)
     const locationName = getLocationName(r, allLocations)
-    const returnDate =
-      r.actualReturnDate || r.actual_return_date || r.expectedReturnDate || r.expected_return_date
+    const expectedReturnDate = r.expectedReturnDate || r.expected_return_date
     const items = Array.isArray(r.items) ? r.items : []
 
     if (items.length === 0) {
       data.push([
         contractNumber,
-        status,
         customerName,
         document,
-        formatPhoneExport(phone),
+        phone,
         fullAddress,
         deliveryAddr,
         locationName,
-        '-',
-        '-',
-        '-',
-        formatDateExport(r.startDate),
-        formatDateExport(returnDate),
-        '-',
+        '',
+        '',
+        '',
+        '',
+        normalizeDate(r.startDate),
+        normalizeDate(expectedReturnDate),
+        status,
       ])
     } else {
       items.forEach((item: any) => {
         const itemId = item.itemId || item.id || item.inventory_id
         const invItem = inventory.find((i) => i.id === itemId)
-        const productName = item.name || item.itemName || item.productName || invItem?.name || '-'
+        const productName = item.name || item.itemName || item.productName || invItem?.name || ''
         const itemQty = item.qty || item.quantity || item.quantidade || 1
         const productCode =
           item.code || item.itemCode || item.reference || item.referencia || invItem?.code || ''
         const itemValue = getItemValue(item)
-        const totalItemValue = typeof itemQty === 'number' ? itemValue * itemQty : itemValue
 
         data.push([
           contractNumber,
-          status,
           customerName,
           document,
-          formatPhoneExport(phone),
+          phone,
           fullAddress,
           deliveryAddr,
           locationName,
           productName,
-          String(itemQty),
           productCode,
-          formatDateExport(r.startDate),
-          formatDateExport(returnDate),
-          `R$ ${Number(totalItemValue || itemValue).toFixed(2)}`,
+          String(itemQty),
+          normalizeCurrency(itemValue),
+          normalizeDate(r.startDate),
+          normalizeDate(expectedReturnDate),
+          status,
         ])
       })
     }

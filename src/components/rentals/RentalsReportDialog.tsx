@@ -77,11 +77,6 @@ export function RentalsReportDialog() {
       settings.locations,
     )
 
-    const totalRow = Array(12)
-      .fill('')
-      .concat(['TOTAL', `R$ ${totalValue.toFixed(2)}`])
-    data.push(totalRow)
-
     handleExport(
       format,
       'relatorio_locacoes',
