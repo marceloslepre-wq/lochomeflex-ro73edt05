@@ -13,6 +13,10 @@ export function refreshLocations() {
   cachedLocations = null
 }
 
+export function getCachedLocations(): LocationItem[] | null {
+  return cachedLocations
+}
+
 export function useLocations() {
   const [locations, setLocations] = useState<LocationItem[]>(cachedLocations || [])
   const [loading, setLoading] = useState(!cachedLocations)

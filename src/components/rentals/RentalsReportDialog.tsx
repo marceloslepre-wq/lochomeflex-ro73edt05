@@ -33,6 +33,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { handleExport } from '@/lib/export'
+import { buildDetailedRentalExport } from '@/lib/rental-export'
 import { ScrollArea } from '@/components/ui/scroll-area'
 
 export function RentalsReportDialog() {
@@ -69,48 +70,17 @@ export function RentalsReportDialog() {
   const totalValue = filteredRentals.reduce((sum, r) => sum + r.total, 0)
 
   const handleExportData = (format: 'pdf' | 'csv' | 'excel') => {
-    const headers = [
-      'Contrato',
-      'Cliente',
-      'Telefone',
-      'Retirada',
-      'Previsão',
-      'Status',
-      'Forma de Pagamento',
-      'Total',
-    ]
-    const data = filteredRentals.map((r) => {
-      const c = customers.find((cust) => cust.id === r.customerId)
+    const { headers, data } = buildDetailedRentalExport(
+      filteredRentals,
+      customers,
+      inventory,
+      settings.locations,
+    )
 
-      const phone = c?.phone_cell || c?.phone_res || c?.phone_com || ''
-      let formattedPhone = phone
-      const justNumbers = phone.replace(/\D/g, '')
-      if (justNumbers.length === 11) {
-        formattedPhone = `(${justNumbers.slice(0, 2)}) ${justNumbers.slice(2, 7)}-${justNumbers.slice(7)}`
-      } else if (justNumbers.length === 10) {
-        formattedPhone = `(${justNumbers.slice(0, 2)}) ${justNumbers.slice(2, 6)}-${justNumbers.slice(6)}`
-      }
-
-      const rPayment = (r as any).paymentMethod || (r as any).payment_method || 'PIX'
-
-      return [
-        (r as any).contractNumber ||
-          (r as any).contract_number ||
-          r.id.substring(0, 8).toUpperCase(),
-        c?.name || '-',
-        formattedPhone,
-        new Date(r.startDate).toLocaleDateString('pt-BR'),
-        (r as any).expectedReturnDate
-          ? new Date((r as any).expectedReturnDate).toLocaleDateString('pt-BR')
-          : '-',
-        r.status || 'Ativo',
-        rPayment,
-        `R$ ${r.total.toFixed(2)}`,
-      ]
-    })
-
-    // Add total row
-    data.push(['', '', '', '', '', '', 'TOTAL', `R$ ${totalValue.toFixed(2)}`])
+    const totalRow = Array(12)
+      .fill('')
+      .concat(['TOTAL', `R$ ${totalValue.toFixed(2)}`])
+    data.push(totalRow)
 
     handleExport(
       format,

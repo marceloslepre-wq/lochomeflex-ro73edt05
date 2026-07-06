@@ -43,10 +43,12 @@ import { RentalsReportDialog } from '@/components/rentals/RentalsReportDialog'
 import { RenewDialog } from '@/components/rentals/RenewDialog'
 import { ReceiptDialog } from '@/components/rentals/ReceiptDialog'
 import { ExchangeDialog } from '@/components/rentals/ExchangeDialog'
+import { buildDetailedRentalExport } from '@/lib/rental-export'
 import { supabase } from '@/lib/supabase/client'
 
 export default function Rentals() {
-  const { rentals, customers, globalSearch, settings, deleteRental, updateRental } = useMainStore()
+  const { rentals, customers, inventory, globalSearch, settings, deleteRental, updateRental } =
+    useMainStore()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('Todos')
   const [returnDateStart, setReturnDateStart] = useState('')
@@ -126,35 +128,7 @@ export default function Rentals() {
   })
 
   const exportData = () => {
-    const headers = ['Contrato', 'Cliente', 'Telefone', 'Retirada', 'Previsão', 'Status', 'Total']
-    const data = filtered.map((r) => {
-      const c = customers.find((cust) => cust.id === r.customerId)
-
-      let formattedPhone = ''
-      if (c) {
-        const rawPhone =
-          c.phone_cell || (c as any).phoneCell || c.phone_res || (c as any).phoneRes || ''
-        const cleaned = rawPhone.replace(/\D/g, '')
-        if (cleaned.length === 11) {
-          formattedPhone = `(${cleaned.substring(0, 2)}) ${cleaned.substring(2, 7)}-${cleaned.substring(7, 11)}`
-        } else if (cleaned.length === 10) {
-          formattedPhone = `(${cleaned.substring(0, 2)}) ${cleaned.substring(2, 6)}-${cleaned.substring(6, 10)}`
-        } else {
-          formattedPhone = rawPhone
-        }
-      }
-
-      return [
-        r.contractNumber || r.id.split('-')[0].toUpperCase(),
-        c?.name || '-',
-        formattedPhone || '-',
-        formatDateStr(r.startDate),
-        formatDateStr(r.expectedReturnDate),
-        r.status,
-        `R$ ${r.total.toFixed(2)}`,
-      ]
-    })
-    return { headers, data }
+    return buildDetailedRentalExport(filtered, customers, inventory, settings.locations)
   }
 
   return (
