@@ -23,6 +23,7 @@ import {
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu'
 import { handleExport } from '@/lib/export'
+import { supabase } from '@/lib/supabase/client'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -70,44 +71,64 @@ export default function Customers() {
     (c) => c.name.toLowerCase().includes(term.toLowerCase()) || c.document.includes(term),
   )
 
-  const formatAddress = (addr: any) => {
-    if (!addr) return ''
-    if (typeof addr === 'string') return addr
-    const parts = [
-      addr.street || addr.rua || '',
-      addr.number || addr.numero || '',
-      addr.complement || addr.complemento || '',
-      addr.district || addr.bairro || '',
-      addr.city || addr.cidade || '',
-      addr.state || addr.estado || '',
-      addr.zip || addr.cep || '',
-    ].filter(Boolean)
-    return parts.join(', ')
+  const digitsOnly = (val: string | undefined | null): string => {
+    if (!val) return ''
+    return val.replace(/\D/g, '')
+  }
+
+  const getAddressField = (addr: any, keys: string[]): string => {
+    if (!addr || typeof addr === 'string') return ''
+    for (const key of keys) {
+      if (addr[key]) return String(addr[key])
+    }
+    return ''
+  }
+
+  const getStoragePublicUrl = (path: string | null | undefined): string => {
+    if (!path) return ''
+    if (path.startsWith('http')) return path
+    return supabase.storage.from('documentos_clientes').getPublicUrl(path).data.publicUrl
   }
 
   const exportData = () => {
     const headers = [
-      'Matrícula',
+      'Matricula',
       'Nome',
       'Documento',
+      'CEP',
+      'Endereco',
+      'Numero',
+      'Bairro',
+      'Cidade',
+      'Estado',
+      'Telefone_Celular',
+      'Segunda_Opcao_Contato',
       'Email',
-      'Telefone Celular',
-      'Telefone Comercial',
-      'Telefone Residencial',
-      'Endereço',
-      'Data de Cadastro',
+      'Observacoes',
+      'Link_Doc_Identificacao',
+      'Link_Comprovante_Endereco',
     ]
-    const data = filtered.map((c) => [
-      c.matricula || '-',
-      c.name,
-      c.document,
-      c.email || '-',
-      c.phoneCell || '-',
-      c.phoneCom || '-',
-      c.phoneRes || '-',
-      formatAddress(c.address),
-      c.created_at ? new Date(c.created_at).toLocaleDateString('pt-BR') : '-',
-    ])
+    const data = filtered.map((c) => {
+      const addr = c.address as any
+      const segundaOpcao = c.phoneCom || c.phoneRes || ''
+      return [
+        c.matricula || '',
+        c.name || '',
+        digitsOnly(c.document),
+        digitsOnly(getAddressField(addr, ['cep', 'zipCode', 'zip', 'cep_code'])),
+        getAddressField(addr, ['logradouro', 'street', 'rua', 'endereco']),
+        getAddressField(addr, ['numero', 'number']),
+        getAddressField(addr, ['bairro', 'district', 'neighborhood']),
+        getAddressField(addr, ['localidade', 'city', 'cidade']),
+        getAddressField(addr, ['uf', 'state', 'estado']),
+        digitsOnly(c.phoneCell),
+        digitsOnly(segundaOpcao),
+        c.email || '',
+        c.observations || '',
+        getStoragePublicUrl(c.docIdentificacaoPath),
+        getStoragePublicUrl(c.comprovanteEnderecoPath),
+      ]
+    })
     return { headers, data }
   }
 
