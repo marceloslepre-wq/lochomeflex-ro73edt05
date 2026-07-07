@@ -33,6 +33,8 @@ import { useToast } from '@/hooks/use-toast'
 import { usePermissions } from '@/hooks/use-permissions'
 import { cn } from '@/lib/utils'
 import { useLocations } from '@/hooks/use-locations'
+import { useStockByLocation } from '@/hooks/use-stock-by-location'
+import { supabase } from '@/lib/supabase/client'
 
 export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental) => void }) {
   const { customers, inventory, addRental, settings } = useMainStore()
@@ -52,6 +54,11 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
 
   const [customerOpen, setCustomerOpen] = useState(false)
   const [itemOpen, setItemOpen] = useState(false)
+
+  const isDelivery = pickupLocationId === 'delivery'
+  const { getAvailableQty } = useStockByLocation(
+    !isDelivery && pickupLocationId ? pickupLocationId : null,
+  )
 
   const applyDuration = (days: number) => {
     setDefaultDuration(days)
@@ -131,7 +138,17 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
     const numQty = parseInt(qty)
     if (!item || isNaN(numQty) || numQty <= 0) return
 
-    if (numQty > item.availableQty) {
+    if (!isDelivery && pickupLocationId) {
+      const localAvailable = getAvailableQty(selectedItemId)
+      if (numQty > localAvailable) {
+        toast({
+          title: 'Erro',
+          description: `Estoque insuficiente no local selecionado. Quantidade disponível: ${localAvailable}`,
+          variant: 'destructive',
+        })
+        return
+      }
+    } else if (numQty > item.availableQty) {
       toast({
         title: 'Erro',
         description: `Apenas ${item.availableQty} unidades disponíveis.`,
@@ -291,6 +308,46 @@ export function CreateRentalDialog({ onCreated }: { onCreated?: (rental: Rental)
         variant: 'destructive',
       })
       return
+    }
+
+    if (!isDelivery && pickupLocationId) {
+      const rentalItemIds = items.filter((i) => i.itemId !== 'freight').map((i) => i.itemId)
+
+      if (rentalItemIds.length > 0) {
+        const { data: stockData, error: stockError } = await supabase
+          .from('estoque_por_local')
+          .select('inventory_id, quantidade_total, quantidade_locada')
+          .eq('local_id', pickupLocationId)
+          .in('inventory_id', rentalItemIds)
+
+        if (stockError) {
+          toast({
+            title: 'Erro',
+            description: 'Não foi possível verificar o estoque. Tente novamente.',
+            variant: 'destructive',
+          })
+          return
+        }
+
+        const stockMap: Record<string, number> = {}
+        for (const row of stockData || []) {
+          stockMap[row.inventory_id] = (row.quantidade_total || 0) - (row.quantidade_locada || 0)
+        }
+
+        for (const ri of items) {
+          if (ri.itemId === 'freight') continue
+          const localAvailable = stockMap[ri.itemId] ?? 0
+          if (ri.qty > localAvailable) {
+            const item = inventory.find((inv) => inv.id === ri.itemId)
+            toast({
+              title: 'Erro de Estoque',
+              description: `Estoque insuficiente no local selecionado. Quantidade disponível: ${localAvailable}`,
+              variant: 'destructive',
+            })
+            return
+          }
+        }
+      }
     }
 
     const startDates = items.map((i) => i.startDate || todayStr).sort()
