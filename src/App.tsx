@@ -27,16 +27,30 @@ import { supabase } from '@/lib/supabase/client'
 
 const OverdueChecker = () => {
   useEffect(() => {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 10000)
+
     const checkOverdue = async () => {
       try {
-        await supabase.rpc('update_overdue_rentals')
-      } catch (error) {
-        console.error('Erro ao atualizar locações atrasadas:', error)
+        const { error } = await supabase.rpc('update_overdue_rentals')
+        if (error && !controller.signal.aborted) {
+          console.warn('RPC update_overdue_rentals retornou erro:', error.message)
+        }
+      } catch (err) {
+        if (!controller.signal.aborted) {
+          console.warn('Falha de rede ao atualizar locações atrasadas:', err)
+        }
+      } finally {
+        clearTimeout(timeoutId)
       }
     }
 
-    // Run once on app initialization
     checkOverdue()
+
+    return () => {
+      controller.abort()
+      clearTimeout(timeoutId)
+    }
   }, [])
   return null
 }
