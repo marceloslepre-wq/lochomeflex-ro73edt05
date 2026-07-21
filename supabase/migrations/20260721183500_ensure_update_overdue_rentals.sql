@@ -1,8 +1,10 @@
+SET statement_timeout = 0;
+
 CREATE OR REPLACE FUNCTION public.update_overdue_rentals()
 RETURNS integer
 LANGUAGE plpgsql
 SECURITY DEFINER
-AS $$
+AS $func$
 DECLARE
   updated_count integer;
 BEGIN
@@ -15,6 +17,6 @@ BEGIN
   GET DIAGNOSTICS updated_count = ROW_COUNT;
   RETURN updated_count;
 END;
-$$;
+$func$;
 
 GRANT EXECUTE ON FUNCTION public.update_overdue_rentals() TO anon, authenticated;
