@@ -31,11 +31,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     let mounted = true
-    let isFetching = false
+    let profileFetchId = 0
 
     const fetchProfile = async (userId: string) => {
-      if (isFetching) return
-      isFetching = true
+      const currentFetchId = ++profileFetchId
       try {
         const { data, error } = await supabase
           .from('profiles')
@@ -43,80 +42,66 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .eq('auth_user_id', userId)
           .single()
 
+        if (!mounted || currentFetchId !== profileFetchId) return
+
+        if (data) {
+          setProfile(data)
+          return
+        }
+
         if (error && error.code !== 'PGRST116') {
           console.error('Profile fetch error:', error)
         }
 
-        if (!mounted) return
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single()
 
-        if (data) {
-          setProfile(data)
-        } else {
-          // Fallback se não encontrar por auth_user_id
-          const { data: fallbackData, error: fallbackError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', userId)
-            .single()
+        if (!mounted || currentFetchId !== profileFetchId) return
 
-          if (fallbackError && fallbackError.code !== 'PGRST116') {
-            console.error('Fallback profile fetch error:', fallbackError)
-          }
-
-          if (mounted && fallbackData) setProfile(fallbackData)
+        if (fallbackError && fallbackError.code !== 'PGRST116') {
+          console.error('Fallback profile fetch error:', fallbackError)
         }
+
+        if (fallbackData) setProfile(fallbackData)
       } catch (err) {
-        console.error('Error fetching profile:', err)
-      } finally {
-        isFetching = false
-        if (mounted) setLoading(false)
-      }
-    }
-
-    const initAuth = async () => {
-      try {
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.getSession()
-
-        if (error) throw error
-        if (!mounted) return
-
-        setSession(session)
-        setUser(session?.user ?? null)
-
-        if (session?.user) {
-          fetchProfile(session.user.id)
-        } else {
-          setProfile(null)
-        }
-      } catch (err) {
-        console.error('Auth init error:', err)
-        if (mounted) {
-          setProfile(null)
-          setUser(null)
-          setSession(null)
+        if (mounted && currentFetchId === profileFetchId) {
+          console.error('Error fetching profile:', err)
         }
       } finally {
-        if (mounted) setLoading(false)
+        if (mounted && currentFetchId === profileFetchId) {
+          setLoading(false)
+        }
       }
     }
-
-    initAuth()
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return
+
       setSession(session)
       setUser(session?.user ?? null)
-      setLoading(false)
+
+      if (event === 'INITIAL_SESSION') {
+        if (session?.user) {
+          fetchProfile(session.user.id)
+        } else {
+          setProfile(null)
+          setLoading(false)
+        }
+        return
+      }
 
       if (event === 'SIGNED_OUT') {
         setProfile(null)
+        setLoading(false)
       } else if (session?.user) {
         fetchProfile(session.user.id)
+      } else {
+        setLoading(false)
       }
     })
 
